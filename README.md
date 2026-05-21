@@ -1,4 +1,4 @@
-# 🎬 Smart Media Analytics (SMA)
+# Smart Media Analytics (SMA)
 
 > An AI-powered, Local-First Media Asset Management and Semantic Search System — built for Video Editors and Designers who need to search mixed local media assets using natural language and seek to exact timestamps.
 
