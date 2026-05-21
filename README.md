@@ -1,6 +1,6 @@
-# Smart Media Analytics (SMA)
+# 🎬 Smart Media Analytics (SMA)
 
-> An AI-powered, Local-First Media Asset Management and Semantic Search System — built for Video Editors and Designers who need to search mixed local media assets using natural language and seek to exact timestamps.
+> An AI-powered, Local-First Media Asset Management and Semantic Search System — built for Video Editors and Designers who need to search mixed local media assets using natural language and seek [...]
 
 ---
 
@@ -19,9 +19,9 @@
 
 ## Overview
 
-**Smart Media Analytics (SMA)** is a local-first media asset management system that lets creative professionals — video editors and designers — ingest, index, and semantically search through large libraries of images and videos without relying on cloud infrastructure during day-to-day use.
+**Smart Media Analytics (SMA)** is a local-first media asset management system that lets creative professionals — video editors and designers — ingest, index, and semantically search through l[...]
 
-Under the hood, SMA uses multimodal AI models for visual understanding, automatic speech recognition for dialogue and narration indexing, and scene-change detection to build a frame-accurate, searchable knowledge base of every asset in your library.
+Under the hood, SMA uses multimodal AI models for visual understanding, automatic speech recognition for dialogue and narration indexing, and scene-change detection to build a frame-accurate, sear[...]
 
 When you're ready to scale, SMA's architecture maps cleanly onto AWS production targets (S3, Bedrock, Transcribe, OpenSearch Serverless) with minimal refactoring.
 
@@ -68,6 +68,8 @@ When you're ready to scale, SMA's architecture maps cleanly onto AWS production 
 ---
 
 ## 📁 Project Structure
+
+```
 sma/
 ├── docker-compose.yml
 ├── .env.example
@@ -136,9 +138,10 @@ sma/
 │           └── api.js             # Axios API client
 │
 └── data/
-├── media/                     # Drop source assets here
-├── chromadb/                  # Persisted vector store
-└── whisper_cache/             # Cached Whisper model weights
+    ├── media/                     # Drop source assets here
+    ├── chromadb/                  # Persisted vector store
+    └── whisper_cache/             # Cached Whisper model weights
+```
 
 ---
 
