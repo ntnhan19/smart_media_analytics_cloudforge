@@ -16,10 +16,14 @@ router = APIRouter(prefix=API_PREFIX)
 
 @router.get("/health", tags=["system"])
 async def health_check() -> dict[str, str]:
+    """
+    Health check endpoint — used by Docker healthcheck and monitoring tools.
+    Returns {"status": "ok", "version": "0.1.0"} when the service is ready.
+    """
     return {
         "status": "ok",
-        "service": "echoscene-backend",
         "version": "0.1.0",
+        "service": "echoscene-backend",
     }
 
 
