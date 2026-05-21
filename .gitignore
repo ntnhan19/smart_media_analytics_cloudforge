@@ -1,71 +1,254 @@
 # =============================================================================
 # EchoScene — .gitignore
+# Stack: Python (FastAPI) + React/Vite + Docker + AI/ML (Whisper, OpenCV)
 # =============================================================================
 
-# ---------------------------------------------------------------------------
-# Environment & Secrets — NEVER commit these files
-# ---------------------------------------------------------------------------
+
+# =============================================================================
+# SECRETS & ENVIRONMENT — NEVER commit these
+# =============================================================================
 .env
 .env.local
 .env.*.local
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
 
-# ---------------------------------------------------------------------------
-# Python
-# ---------------------------------------------------------------------------
+
+# =============================================================================
+# PYTHON
+# =============================================================================
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
+
+# Virtual environments
 .venv/
 venv/
 env/
-*.egg-info/
+ENV/
+.python-version
+
+# Distribution / packaging
 dist/
 build/
+*.egg-info/
+*.egg
+MANIFEST
+.eggs/
+wheels/
+
+# Testing & coverage
 .pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+nosetests.xml
+test-results/
+junit*.xml
+
+# Type checking & linting
 .mypy_cache/
 .ruff_cache/
-htmlcov/
-.coverage
-coverage.xml
+.dmypy.json
+dmypy.json
+pyrightconfig.json
 
-# ---------------------------------------------------------------------------
-# Node / Frontend
-# ---------------------------------------------------------------------------
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# pyenv / pipenv / poetry
+Pipfile.lock
+poetry.lock
+
+
+# =============================================================================
+# NODE / FRONTEND (React + Vite)
+# =============================================================================
+
 node_modules/
+.npm/
+.yarn/
+.pnp.*
+.yarn-integrity
+
+# Build output
 frontend/dist/
 frontend/build/
-.npm/
+frontend/.vite/
+dist/
+build/
 
-# ---------------------------------------------------------------------------
-# Data directories — contain media files and model weights (too large for git)
-# ---------------------------------------------------------------------------
+# Vite cache
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+
+# =============================================================================
+# AI / ML — Model weights and large binary files
+# =============================================================================
+
+# Whisper model weights (can be hundreds of MB each)
+*.pt
+*.pth
+*.bin
+*.onnx
+*.gguf
+*.safetensors
+
+# HuggingFace / sentence-transformers cache
+.cache/
+models/
+model_cache/
+
+# FAISS index files
+*.faiss
+*.index
+
+
+# =============================================================================
+# DATA DIRECTORIES — Media files and generated data (too large for git)
+# =============================================================================
+
+# User media files (videos, images, audio)
 data/media/*
-data/chromadb/*
-data/whisper_cache/*
-# Keep .gitkeep so git tracks the empty directories
 !data/media/.gitkeep
+
+# ChromaDB vector store
+data/chromadb/*
 !data/chromadb/.gitkeep
+
+# Whisper model cache
+data/whisper_cache/*
 !data/whisper_cache/.gitkeep
 
-# ---------------------------------------------------------------------------
-# Docker
-# ---------------------------------------------------------------------------
-.docker/
+# Storage directories
+storage/uploads/*
+!storage/uploads/.gitkeep
 
-# ---------------------------------------------------------------------------
-# IDE & OS
-# ---------------------------------------------------------------------------
-.vscode/
+storage/processed/*
+!storage/processed/.gitkeep
+
+# Mock data (large sample files only — keep metadata JSON)
+mock_data/media/*
+!mock_data/media/.gitkeep
+
+# Generated thumbnails
+thumbnails/
+*.thumbnail.*
+
+
+# =============================================================================
+# DOCKER
+# =============================================================================
+
+.docker/
+docker-compose.override.yml
+
+
+# =============================================================================
+# DATABASE
+# =============================================================================
+
+# SQLite (local dev fallback)
+*.db
+*.sqlite
+*.sqlite3
+
+# PostgreSQL dumps
+*.sql.gz
+*.dump
+
+# Alembic — keep migrations, ignore compiled artifacts
+backend/app/db/versions/__pycache__/
+
+
+# =============================================================================
+# LOGS & TEMPORARY FILES
+# =============================================================================
+
+*.log
+*.log.*
+logs/
+log/
+tmp/
+temp/
+.tmp/
+
+# Crash reports
+crash-*.txt
+hs_err_pid*
+
+
+# =============================================================================
+# IDE & EDITORS
+# =============================================================================
+
+# VS Code — keep .vscode/extensions.json and .vscode/settings.json if shared
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+# JetBrains (PyCharm, WebStorm, etc.)
 .idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim / Emacs
 *.swp
 *.swo
-.DS_Store
-Thumbs.db
+*~
+\#*\#
+.\#*
 
-# ---------------------------------------------------------------------------
-# Logs
-# ---------------------------------------------------------------------------
-*.log
-logs/
+
+# =============================================================================
+# OPERATING SYSTEM
+# =============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+
+
+# =============================================================================
+# MISCELLANEOUS
+# =============================================================================
+
+# Compressed archives (likely large media or model exports)
+*.zip
+*.tar.gz
+*.tar.bz2
+*.rar
+*.7z
+
+# Keep scripts and infra directories tracked (they contain config, not data)
+!scripts/.gitkeep
+!infra/.gitkeep
+!infra/postgres/init/
