@@ -70,7 +70,7 @@ When you're ready to scale, SMA's architecture maps cleanly onto AWS production 
 ## 📁 Project Structure
 
 ```
-sma/
+smart_media_analytics_cloudforge/
 ├── docker-compose.yml
 ├── .env.example
 ├── README.md

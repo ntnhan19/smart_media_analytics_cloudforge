@@ -1,0 +1,15 @@
+# docker-compose.prod.yml
+name: echoscene-local
+
+services:
+  backend:
+    image: ntnhan1801/echoscene-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+  frontend:
+    image: ntnhan1801/echoscene-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile

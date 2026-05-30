@@ -1,21 +1,8 @@
-# =============================================================================
-# EchoScene — Backend Dockerfile
-# Base image: python:3.11-slim (lightweight, suitable for production)
-# Owner: M2 (Backend Engineer)
-# =============================================================================
-
 FROM python:3.11-slim
 
-# Metadata
 LABEL maintainer="EchoScene Team"
 LABEL description="FastAPI backend for EchoScene AI media management"
 
-# ---------------------------------------------------------------------------
-# System dependencies
-# ffmpeg  — required by Whisper and OpenCV for video/audio processing
-# curl    — used by Docker healthcheck
-# libgl1  — required by OpenCV for OpenGL support
-# ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
@@ -23,31 +10,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory inside the container
 WORKDIR /app
 
-# ---------------------------------------------------------------------------
-# Install Python dependencies first (leverage Docker layer cache)
-# Copy only requirements.txt first — if source code changes but deps do not,
-# Docker skips the pip install step entirely
-# ---------------------------------------------------------------------------
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
 
-# Copy full source code into the container
-# (In dev mode, the bind-mount will override this directory)
+RUN pip install --no-cache-dir "pip==23.3.2" "setuptools==70.3.0" "wheel"
+
+RUN pip install --no-cache-dir \
+    "torch==2.2.0+cpu" \
+    "torchvision==0.17.0+cpu" \
+    "torchaudio==2.2.0+cpu" \
+    --index-url https://download.pytorch.org/whl/cpu
+
+RUN pip install --no-cache-dir --no-build-isolation "openai-whisper==20240930"
+
+# Loại trừ torch/whisper đã cài + transformers để tránh bị overwrite
+# Sau đó cài transformers đúng version riêng
+RUN grep -vE "^\s*(torch|torchvision|torchaudio|openai-whisper|whisperx|#|$)" requirements.txt \
+    > /tmp/req_filtered.txt \
+    && pip install --no-cache-dir -r /tmp/req_filtered.txt
+
 COPY . .
 
-# Create data directories if they do not exist
 RUN mkdir -p /app/data/media /app/data/chromadb
 
-# Expose FastAPI port
 EXPOSE 8000
 
-# ---------------------------------------------------------------------------
-# Entrypoint — run uvicorn with hot-reload for development
-# --host 0.0.0.0  required to accept connections from outside the container
-# --reload        auto-restart on code changes (dev only)
-# ---------------------------------------------------------------------------
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
