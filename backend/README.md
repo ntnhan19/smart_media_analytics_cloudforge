@@ -165,6 +165,7 @@ backend/
 ## Prerequisites
 
 ### 1. **System Requirements**
+
 - **OS**: macOS, Linux, or Windows (with WSL2)
 - **CPU**: 4+ cores (8+ recommended for video processing)
 - **RAM**: 8GB minimum, 16GB recommended
@@ -173,14 +174,17 @@ backend/
 ### 2. **Required Software**
 
 #### Docker & Docker Compose
+
 ```bash
 # Verify installation
 docker --version        # v24.0+
 docker compose version  # v2.20+
 ```
+
 👉 [Install Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 #### Ollama (Local Vision Model)
+
 ```bash
 # Download and install
 # macOS / Linux: https://ollama.ai
@@ -191,11 +195,13 @@ ollama --version
 ```
 
 #### Python 3.11+ (for local development only)
+
 ```bash
 python --version  # 3.11+
 ```
 
 #### FFmpeg
+
 ```bash
 # macOS
 brew install ffmpeg
@@ -249,7 +255,31 @@ cp .env.example .env
 # (See Environment Variables section below)
 ```
 
-### Step 3: (Optional) Local Development Setup
+### Step 3: Pull Pre-built Docker Images (Recommended for Members)
+
+> **Why?** The backend image is ~5.66 GB and takes 10–15 minutes to build from scratch.
+> Pulling from Docker Hub is significantly faster.
+
+```bash
+docker pull ntnhan1801/echoscene-backend:latest
+docker pull ntnhan1801/echoscene-frontend:latest
+```
+
+Then start the full stack using the prod compose override (no build required):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+```
+
+### Step 4: (Optional) Build from Source
+
+Only needed if you are modifying the Dockerfile or dependencies:
+
+```bash
+docker compose up --build
+```
+
+### Step 5: (Optional) Local Development Setup
 
 If you want to run the backend locally without Docker:
 
@@ -274,97 +304,88 @@ mkdir -p data/media data/chromadb
 
 ## Running the Backend
 
-### Option 1: Using Docker Compose (Recommended)
+### Option 1: Using Pre-built Images from Docker Hub ✅ Recommended for Members
 
-#### Start the Full Stack
+This is the fastest way to get started — no build step required.
 
 ```bash
-# Build and start all services (backend, frontend, databases)
-make up
+# 1. Pull images (one-time, ~6 GB total)
+docker pull ntnhan1801/echoscene-backend:latest
+docker pull ntnhan1801/echoscene-frontend:latest
 
-# Or manually:
-docker compose up --build
+# 2. Start the full stack
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up
 
 # Expected output:
-# ✓ Backend:  http://localhost:8000
-# ✓ Frontend: http://localhost:5173
-# ✓ ChromaDB: http://localhost:8001
+# ✓ Backend:    http://localhost:8000
+# ✓ Frontend:   http://localhost:5173
+# ✓ ChromaDB:   http://localhost:8001
 # ✓ PostgreSQL: localhost:5432
+# ✓ MinIO:      http://localhost:9000 (console: 9001)
 ```
 
-#### Check Service Health
+To stop:
 
 ```bash
-# Quick health check
-make health
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+```
 
-# Or manually:
+---
+
+### Option 2: Build from Source (For Backend Developers)
+
+Use this option only when you need to modify `Dockerfile` or `requirements.txt`.
+
+```bash
+# Build and start all services
+docker compose up --build
+
+# Start in background
+docker compose up --build -d
+```
+
+---
+
+### Option 3: Run Backend Locally (Hot-Reload Development)
+
+Start only the infrastructure services in Docker, run the backend directly on your machine.
+
+```bash
+# Step 1: Start databases only
+docker compose up -d postgres chromadb minio
+
+# Step 2: Wait for services to initialize
+sleep 5
+
+# Step 3: Activate virtual environment
+source venv/bin/activate  # macOS/Linux
+# or
+venv\Scripts\activate     # Windows
+
+# Step 4: Start FastAPI with hot-reload
+cd backend
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+---
+
+### Check Service Health
+
+```bash
 curl http://localhost:8000/health
 
 # Expected response:
 # {"status": "ok", "version": "0.1.0", "service": "echoscene-backend"}
 ```
 
-#### View Logs
+### View Logs
 
 ```bash
 # All services
-make logs
+docker compose logs -f
 
 # Backend only
-make logs-backend
-
-# Stream live logs
 docker compose logs -f backend
-```
-
-#### Stop the Stack
-
-```bash
-# Stop and remove containers (volumes are preserved)
-make down
-
-# Or manually:
-docker compose down
-```
-
----
-
-### Option 2: Run Backend Locally (Development)
-
-#### Prerequisites
-- Python 3.11+
-- Virtual environment activated (see Installation & Setup)
-- PostgreSQL and ChromaDB running in Docker
-
-Start only the databases:
-
-```bash
-# Start only postgresql and chromadb services
-docker compose up -d postgres chromadb
-
-# Wait for services to be ready
-sleep 5
-
-# Verify they're healthy
-curl http://localhost:8001/api/v1/heartbeat  # ChromaDB
-psql -U echoscene -d echoscene -c "SELECT 1"  # PostgreSQL
-```
-
-Run the backend:
-
-```bash
-cd backend
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start FastAPI with hot-reload
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-# Expected output:
-# INFO:     Uvicorn running on http://0.0.0.0:8000
-# INFO:     Application startup complete
 ```
 
 ---
@@ -456,17 +477,17 @@ LOG_LEVEL=INFO                                # DEBUG | INFO | WARNING | ERROR |
 
 ### Environment Variable Reference
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `OLLAMA_BASE_URL` | Ollama API endpoint | `http://host.docker.internal:11434` | ✅ Yes |
-| `OLLAMA_MODEL` | Vision model name | `llama3.2-vision` | ✅ Yes |
-| `CHROMA_HOST` | ChromaDB hostname | `chromadb` | ✅ Yes |
-| `CHROMA_PORT` | ChromaDB port | `8000` | ✅ Yes |
-| `DATABASE_URL` | PostgreSQL connection string | — | ✅ Yes |
-| `WHISPER_MODEL_SIZE` | Speech-to-text model | `base` | ✅ Yes |
-| `SCENE_DETECTION_THRESHOLD` | Scene change sensitivity | `27.0` | ❌ No |
-| `MEDIA_SOURCE_PATH` | Local media directory | `/app/data/media` | ✅ Yes |
-| `LOG_LEVEL` | Logging verbosity | `INFO` | ❌ No |
+| Variable                    | Description                  | Default                             | Required |
+| --------------------------- | ---------------------------- | ----------------------------------- | -------- |
+| `OLLAMA_BASE_URL`           | Ollama API endpoint          | `http://host.docker.internal:11434` | ✅ Yes   |
+| `OLLAMA_MODEL`              | Vision model name            | `llama3.2-vision`                   | ✅ Yes   |
+| `CHROMA_HOST`               | ChromaDB hostname            | `chromadb`                          | ✅ Yes   |
+| `CHROMA_PORT`               | ChromaDB port                | `8000`                              | ✅ Yes   |
+| `DATABASE_URL`              | PostgreSQL connection string | —                                   | ✅ Yes   |
+| `WHISPER_MODEL_SIZE`        | Speech-to-text model         | `base`                              | ✅ Yes   |
+| `SCENE_DETECTION_THRESHOLD` | Scene change sensitivity     | `27.0`                              | ❌ No    |
+| `MEDIA_SOURCE_PATH`         | Local media directory        | `/app/data/media`                   | ✅ Yes   |
+| `LOG_LEVEL`                 | Logging verbosity            | `INFO`                              | ❌ No    |
 
 ---
 
@@ -482,6 +503,7 @@ Once the backend is running, visit:
 ### Core Endpoints
 
 #### Health Check
+
 ```bash
 GET /health
 
@@ -494,6 +516,7 @@ GET /health
 ```
 
 #### Asset Management
+
 ```bash
 # List all media assets
 GET /api/v1/media
@@ -511,6 +534,7 @@ DELETE /api/v1/media/{asset_id}
 ```
 
 #### Ingestion & Indexing
+
 ```bash
 # Start ingesting a media file
 POST /api/v1/ingest
@@ -524,6 +548,7 @@ GET /api/v1/ingest/jobs/{job_id}
 ```
 
 #### Semantic Search
+
 ```bash
 # Search media assets by natural language query
 GET /api/v1/search?q=sunset+over+ocean&limit=10
@@ -547,6 +572,7 @@ GET /api/v1/search?q=sunset+over+ocean&limit=10
 ## Core Services
 
 ### 1. **Vision Tagger** (`core/ingest/vision_tagger.py`)
+
 - Accepts: image file path or video frame (numpy array from OpenCV)
 - Returns: Natural language scene description via Ollama `llama3.2-vision`
 - Features:
@@ -556,19 +582,23 @@ GET /api/v1/search?q=sunset+over+ocean&limit=10
   - Async/await support
 
 ### 2. **Transcriber** (`core/ingest/transcriber.py`)
+
 - Extracts audio from video
 - Runs OpenAI Whisper for speech-to-text
 - Returns: List of caption segments with timestamps
 
 ### 3. **Scene Detector** (`core/ingest/scene_detector.py`)
+
 - Detects scene changes in videos
 - Returns: Frame timecodes and keyframes for each scene
 
 ### 4. **Vector Embedder** (`core/embeddings/embedder.py`)
+
 - Generates multimodal embeddings from text/captions
 - Stores vectors in ChromaDB
 
 ### 5. **Semantic Search** (`core/search/semantic_search.py`)
+
 - Converts natural language queries to embeddings
 - Retrieves similar scenes from ChromaDB
 - Returns timestamp-linked results
@@ -648,7 +678,6 @@ pytest --cov=app tests/
 #### Test Vision Captioning
 
 ```bash
-# Inside container or local environment
 python -c "
 from app.core.ingest.vision_tagger import VisionTagger
 import asyncio
@@ -658,7 +687,6 @@ tagger = VisionTagger(
     model_name='llama3.2-vision'
 )
 
-# Test with a sample image
 caption = asyncio.run(tagger.caption_image('sample.jpg'))
 print(caption)
 "
@@ -679,13 +707,10 @@ for seg in segments:
 ### Health Check
 
 ```bash
-# Verify all services are ready
 curl -s http://localhost:8000/health | jq .
 
-# Check database connectivity
 docker compose exec postgres psql -U echoscene -d echoscene -c "SELECT 1"
 
-# Check ChromaDB connectivity
 curl -s http://localhost:8001/api/v1/heartbeat | jq .
 ```
 
@@ -697,7 +722,6 @@ curl -s http://localhost:8001/api/v1/heartbeat | jq .
 
 **Error**: `Connection refused: Ollama not running`
 
-**Solution**:
 ```bash
 # Terminal 1: Start Ollama
 ollama serve
@@ -715,15 +739,9 @@ docker compose up -d backend
 
 **Error**: `psycopg.OperationalError: connection failed`
 
-**Solution**:
 ```bash
-# Ensure postgres container is running
 docker compose ps postgres
-
-# If not running, start it
 docker compose up -d postgres
-
-# Wait 5 seconds for it to initialize, then start backend
 docker compose up -d backend
 ```
 
@@ -733,31 +751,35 @@ docker compose up -d backend
 
 **Error**: `httpx.ConnectError: Connection refused`
 
-**Solution**:
 ```bash
-# Check if chromadb is running
 docker compose ps chromadb
-
-# Check chromadb logs
 docker compose logs chromadb
-
-# Restart chromadb
 docker compose restart chromadb
+```
+
+---
+
+### Image Pull Fails
+
+**Error**: `pull access denied for ntnhan1801/echoscene-backend`
+
+```bash
+# Login to Docker Hub first
+docker login
+
+# Then pull again
+docker pull ntnhan1801/echoscene-backend:latest
 ```
 
 ---
 
 ### Vision Captioning is Very Slow
 
-**Possible Causes**:
-1. Ollama is running on CPU (no GPU acceleration)
-2. `llama3.2-vision` is very large (~7-8 GB)
+**Possible Causes**: Ollama is running on CPU (no GPU acceleration)
 
-**Solution**:
 ```bash
-# Check Ollama is using GPU
+# Check if Ollama is using GPU
 ollama list
-# If you see "CPU: True", Ollama is on CPU
 
 # Enable GPU (platform-specific):
 # macOS: GPU support is automatic if available
@@ -771,35 +793,24 @@ ollama list
 
 **Error**: `No space left on device`
 
-**Solution**:
 ```bash
-# Check disk usage
 df -h
-
-# Remove old Ollama models
-ollama rm llama3.2-vision   # (only if you want to free space)
-
-# Clean Docker system
 docker system prune -a
-
-# Increase available space on your machine
+ollama rm llama3.2-vision   # Only if you want to free space
 ```
 
 ---
 
 ### Port Already in Use
 
-**Error**: `Error starting userland proxy: bind: address already in use :::8000`
+**Error**: `bind: address already in use :::8000`
 
-**Solution**:
 ```bash
-# Find what's using port 8000
-lsof -i :8000   # macOS/Linux
-netstat -ano | findstr :8000  # Windows
+# macOS/Linux
+lsof -i :8000
 
-# Stop the conflicting process or use a different port
-docker compose down
-# Edit docker-compose.yml to use a different port if needed
+# Windows
+netstat -ano | findstr :8000
 ```
 
 ---
@@ -808,13 +819,8 @@ docker compose down
 
 **Error**: `ERROR: .env file not found`
 
-**Solution**:
 ```bash
-# Copy the example config
 cp .env.example .env
-
-# Edit with your values
-nano .env
 ```
 
 ---
@@ -822,8 +828,6 @@ nano .env
 ## Performance Tips
 
 ### 1. **Whisper Model Size**
-
-Use smaller models for faster transcription (at the cost of accuracy):
 
 ```dotenv
 WHISPER_MODEL_SIZE=tiny    # Fastest, ~39 MB
@@ -833,26 +837,11 @@ WHISPER_MODEL_SIZE=small   # Slower, better accuracy, ~244 MB
 
 ### 2. **Scene Detection Threshold**
 
-Adjust based on your content:
-
 ```dotenv
 SCENE_DETECTION_THRESHOLD=27.0  # Default
 # Lower = more scenes detected (slower, more detailed)
 # Higher = fewer scenes detected (faster, less detail)
 ```
-
-### 3. **Enable GPU for Ollama**
-
-If you have a CUDA-capable GPU:
-
-```bash
-# Install NVIDIA Docker support (Linux)
-# Then Ollama will automatically detect and use GPU
-```
-
-### 4. **Batch Processing**
-
-Process multiple videos asynchronously to avoid blocking the main thread.
 
 ---
 
