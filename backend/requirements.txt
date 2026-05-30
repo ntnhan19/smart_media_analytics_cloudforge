@@ -9,3 +9,7 @@ scenedetect==0.6.3
 ffmpeg-python==0.2.0
 sqlalchemy==2.0.29
 alembic==1.13.1
+aiosqlite==0.20.0
+pytest-asyncio==0.23.6
+greenlet==3.0.3
+asyncpg==0.29.0
