@@ -151,7 +151,7 @@ services:
       POSTGRES_USER: echoscene
       POSTGRES_PASSWORD: echoscene_dev_password
     ports:
-      - "5432:5432"       # PostgreSQL -> localhost:5432
+      - "5433:5432"       # PostgreSQL -> localhost:5433
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # SQL init scripts run automatically on first DB creation

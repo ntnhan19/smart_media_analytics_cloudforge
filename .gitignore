@@ -107,7 +107,7 @@ build/
 
 # HuggingFace / sentence-transformers cache
 .cache/
-models/
+ml_models/
 model_cache/
 
 # FAISS index files
