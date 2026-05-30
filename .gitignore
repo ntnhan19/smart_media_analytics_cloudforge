@@ -1,0 +1,32 @@
+# Môi trường Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# File biến môi trường (Secrets/Configs)
+.env
+.env.*
+
+# Dữ liệu & Output của dự án (từ ai_pipeline/config.py)
+ai_pipeline/videos/
+ai_pipeline/proxies/
+ai_pipeline/thumbnails/
+ai_pipeline/keyframes/
+ai_pipeline/output/
+ai_pipeline/logs/
+ai_pipeline/database/
+
+# Các thư mục IDE sinh ra
+.vscode/
+.idea/
+*.swp
+
+# Hệ điều hành
+.DS_Store
+Thumbs.db
+Desktop.ini
