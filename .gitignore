@@ -114,6 +114,15 @@ model_cache/
 *.faiss
 *.index
 
+# Project-specific AI pipeline directories
+ai_pipeline/videos/
+ai_pipeline/proxies/
+ai_pipeline/thumbnails/
+ai_pipeline/keyframes/
+ai_pipeline/output/
+ai_pipeline/logs/
+ai_pipeline/database/
+
 
 # =============================================================================
 # DATA DIRECTORIES — Media files and generated data (too large for git)

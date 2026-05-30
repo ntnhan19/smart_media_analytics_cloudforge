@@ -1,0 +1,140 @@
+# ============================================================================
+# AI Pipeline Requirements
+# ============================================================================
+# Dependencies for video analysis, AI models, and processing
+#
+# Core components:
+# - Video processing: FFmpeg integration, scene detection
+# - Speech-to-text: WhisperX with word-level timestamps
+# - Vision models: Qwen-VL, Florence-2 with 4-bit quantization
+# - Embeddings: BGE-M3 semantic search, reranking
+# - LLM refinement: Qwen2 for output structuring
+# ============================================================================
+
+# ── Deep Learning & Model Inference ────────────────────────────────────────
+
+# PyTorch (GPU support for CUDA 12.1+)
+# For CPU-only: torch==2.4.1+cpu
+# For different CUDA versions: https://pytorch.org/get-started/locally/
+torch==2.2.0
+torchvision==0.17.0
+torchaudio==2.2.0
+
+# Hugging Face Transformers — Vision & LLM models
+transformers==4.40.0
+accelerate==0.33.0           # Model acceleration & device map management
+
+# 4-bit Quantization for memory efficiency (GTX 1650 optimization)
+bitsandbytes==0.43.1        # NF4 quantization
+
+# ── Vision Models ──────────────────────────────────────────────────────────
+
+# Qwen-VL & Florence-2 dependencies
+Pillow==11.0.0               # Image processing
+opencv-python==4.10.0.84     # Computer vision utilities
+opencv-contrib-python==4.10.0.84
+
+# ── Speech-to-Text (ASR) ───────────────────────────────────────────────────
+
+# WhisperX — word-level ASR with alignment
+# Install: pip install git+https://github.com/m-bain/whisperx.git
+# Or use: openai-whisper as alternative
+openai-whisper==20240930
+whisperx==3.1.1              # Optional: if needed alongside Whisper
+# openai-whisper==20240930
+# whisperx==3.1.1
+# Audio processing
+librosa==0.10.1              # Audio feature extraction
+soundfile==0.12.1            # Audio file I/O
+
+# ── Vector Search & Embeddings ────────────────────────────────────────────
+
+# BGE Embeddings (BGE-M3 for semantic search, BGE-Reranker for ranking)
+FlagEmbedding==1.2.8         # BAAI embeddings
+
+# Vector database client (ChromaDB handled by backend)
+sentence-transformers==3.3.1
+
+# Semantic search support
+scikit-learn==1.5.1          # For similarity metrics
+
+# ── Video Processing ──────────────────────────────────────────────────────
+
+# Scene detection using PySceneDetect
+scenedetect[opencv]==0.6.4   # Includes OpenCV dependency
+
+# Video metadata extraction
+mediainfo==6.1.0             # Extract video metadata via libmediainfo
+python-magic==0.4.27         # File type detection
+
+# ── Data Processing ───────────────────────────────────────────────────────
+
+# Numerical computing
+numpy==1.26.4
+scipy==1.14.1
+
+# Data structures & serialization
+pandas==2.2.2
+python-dotenv==1.0.1
+
+# ── Testing ────────────────────────────────────────────────────────────────
+
+# Testing framework
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-cov==5.0.0            # Coverage reporting
+pytest-timeout==2.1.0        # Timeout for long-running tests
+
+# Test data/mocking
+faker==28.0.0                # Generate fake data for tests
+
+# ── Code Quality & Development ────────────────────────────────────────────
+
+# Linting & formatting
+ruff==0.8.4                  # Fast Python linter
+black==24.10.0               # Code formatter
+isort==5.13.2                # Import sorting
+
+# Type checking
+mypy==1.14.0
+types-PyYAML==6.0.12.20240917
+
+# ── Logging & Monitoring ──────────────────────────────────────────────────
+
+# Structured logging
+python-json-logger==2.0.7    # JSON logging support
+
+# ── Utilities ──────────────────────────────────────────────────────────────
+
+# Date/time utilities
+python-dateutil==2.9.0.post0
+
+# UUID & hashing
+uuid==1.30
+
+# Configuration management
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# ── Performance Optimization ───────────────────────────────────────────────
+
+# Memory profiling (optional, for debugging)
+memory-profiler==0.61.0
+
+# ============================================================================
+# Installation Instructions
+# ============================================================================
+#
+# Basic installation (CPU):
+#   pip install -r ai_pipeline/requirements.txt
+#
+# With CUDA GPU support (recommended):
+#   pip install -r ai_pipeline/requirements.txt --index-url https://download.pytorch.org/whl/cu121
+#
+# For development with all testing tools:
+#   pip install -r ai_pipeline/requirements.txt
+#   pip install -e .  (if using setup.py)
+#
+# For specific CUDA versions, see: https://pytorch.org/get-started/locally/
+#
+# ============================================================================

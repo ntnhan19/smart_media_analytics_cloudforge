@@ -13,7 +13,7 @@ import numpy as np
 from scenedetect import open_video, SceneManager
 from scenedetect.detectors import ContentDetector
 
-from config import config, THUMBNAILS_DIR
+from ai_pipeline.config import config, THUMBNAILS_DIR
 from utils.logger import logger, log_exception
 
 
