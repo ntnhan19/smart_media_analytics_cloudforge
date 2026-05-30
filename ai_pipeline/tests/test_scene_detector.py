@@ -23,7 +23,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from utils.video_processor import SceneData, SceneDetector
+from ai_pipeline.scene_detection.scene_detector import SceneData, SceneDetector
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
