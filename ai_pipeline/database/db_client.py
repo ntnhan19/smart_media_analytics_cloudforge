@@ -211,7 +211,185 @@ class DatabaseClient:
         """Close all connections in pool"""
         for conn in self._connections:
             conn.disconnect()
-    
+
+    # ── VideoPipeline Mock Methods ────────────────────────────────────────
+
+    def create_video(self, video_id: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        [MOCK] Create a new video record.
+
+        Args:
+            video_id: Unique identifier for the video
+            metadata: Video metadata (filename, duration, fps, etc.)
+
+        Returns:
+            dict: Created video record
+        """
+        record = {
+            "video_id": video_id,
+            "metadata": metadata,
+            "status": "created",
+            "created_at": get_timestamp().isoformat(),
+        }
+        logger.info(f"[MOCK] create_video: video_id={video_id}, metadata_keys={list(metadata.keys())}")
+        return record
+
+    def get_video(self, video_id: str) -> Optional[Dict[str, Any]]:
+        """
+        [MOCK] Retrieve a video record by ID.
+
+        Args:
+            video_id: Unique identifier for the video
+
+        Returns:
+            dict: Video record, or None if not found
+        """
+        logger.info(f"[MOCK] get_video: video_id={video_id}")
+        return {
+            "video_id": video_id,
+            "status": "created",
+            "metadata": {},
+            "created_at": get_timestamp().isoformat(),
+        }
+
+    def update_video_status(self, video_id: str, status: str, error: Optional[str] = None) -> bool:
+        """
+        [MOCK] Update the processing status of a video.
+
+        Args:
+            video_id: Unique identifier for the video
+            status: New status string (e.g. 'processing', 'completed', 'failed')
+            error: Optional error message when status is 'failed'
+
+        Returns:
+            bool: True if update succeeded
+        """
+        if error:
+            logger.info(f"[MOCK] update_video_status: video_id={video_id}, status={status}, error={error}")
+        else:
+            logger.info(f"[MOCK] update_video_status: video_id={video_id}, status={status}")
+        return True
+
+    def save_scene(self, video_id: str, scenes: List[Dict[str, Any]]) -> bool:
+        """
+        [MOCK] Persist detected scenes for a video.
+
+        Args:
+            video_id: Unique identifier for the video
+            scenes: List of scene dicts (start_frame, end_frame, timestamp, etc.)
+
+        Returns:
+            bool: True if save succeeded
+        """
+        logger.info(f"[MOCK] save_scene: video_id={video_id}, scene_count={len(scenes)}")
+        return True
+
+    def save_keyframes(self, video_id: str, keyframes: List[Dict[str, Any]]) -> bool:
+        """
+        [MOCK] Persist extracted keyframes for a video.
+
+        Args:
+            video_id: Unique identifier for the video
+            keyframes: List of keyframe dicts (frame_index, timestamp, path, etc.)
+
+        Returns:
+            bool: True if save succeeded
+        """
+        logger.info(f"[MOCK] save_keyframes: video_id={video_id}, keyframe_count={len(keyframes)}")
+        return True
+
+    def save_embeddings(self, video_id: str, embeddings: List[Dict[str, Any]]) -> bool:
+        """
+        [MOCK] Persist feature embeddings for a video.
+
+        Args:
+            video_id: Unique identifier for the video
+            embeddings: List of embedding dicts (frame_id, vector, model, etc.)
+
+        Returns:
+            bool: True if save succeeded
+        """
+        logger.info(f"[MOCK] save_embeddings: video_id={video_id}, embedding_count={len(embeddings)}")
+        return True
+
+    def update_video_metadata(self, video_id: str, metadata: Dict[str, Any]) -> bool:
+        """
+        [MOCK] Update metadata fields for an existing video record.
+
+        Args:
+            video_id: Unique identifier for the video
+            metadata: Partial or full metadata dict to merge/overwrite
+
+        Returns:
+            bool: True if update succeeded
+        """
+        logger.info(f"[MOCK] update_video_metadata: video_id={video_id}, updated_keys={list(metadata.keys())}")
+        return True
+
+    def insert_video(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        [MOCK] Insert video record — alias for create_video().
+        Accepts a flat dict with 'video_id' key (matches VideoPipeline call signature).
+
+        Args:
+            data: Dict containing 'video_id' plus any metadata fields
+
+        Returns:
+            dict: Created video record
+        """
+        data = dict(data)
+        video_id = data.pop("video_id", generate_id())
+        logger.info(f"[MOCK] insert_video: video_id={video_id}, fields={list(data.keys())}")
+        return self.create_video(video_id, data)
+
+    def insert_scene(self, data: Dict[str, Any]) -> bool:
+        """
+        [MOCK] Insert a single scene record.
+        Called per-scene by VideoPipeline (contrast with save_scene which takes a list).
+
+        Args:
+            data: Scene dict with keys video_id, scene_id, start_time, end_time, keyframe_path
+
+        Returns:
+            bool: True if insert succeeded
+        """
+        video_id = data.get("video_id", "unknown")
+        scene_id = data.get("scene_id", "?")
+        logger.info(f"[MOCK] insert_scene: video_id={video_id}, scene_id={scene_id}")
+        return True
+
+    def insert_frame(self, data: Dict[str, Any]) -> bool:
+        """
+        [MOCK] Insert a single frame analysis record.
+
+        Args:
+            data: Frame dict with keys video_id, scene_id, frame_id, timestamp,
+                  frame_path, searchable_text, refined_analysis, metadata
+
+        Returns:
+            bool: True if insert succeeded
+        """
+        video_id = data.get("video_id", "unknown")
+        frame_id = data.get("frame_id", "?")
+        logger.info(f"[MOCK] insert_frame: video_id={video_id}, frame_id={frame_id}")
+        return True
+
+    def insert_transcript_segment(self, data: Dict[str, Any]) -> bool:
+        """
+        [MOCK] Insert a single transcript segment record.
+
+        Args:
+            data: Segment dict with keys video_id, segment_id, start, end, text, language, etc.
+
+        Returns:
+            bool: True if insert succeeded
+        """
+        video_id = data.get("video_id", "unknown")
+        start = data.get("start", "?")
+        text_preview = str(data.get("text", ""))[:40]
+        logger.info(f"[MOCK] insert_transcript_segment: video_id={video_id}, start={start}, text='{text_preview}'")
+        return True
+
     def __enter__(self):
         return self
     

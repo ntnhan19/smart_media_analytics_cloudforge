@@ -9,13 +9,31 @@ import uuid
 from datetime import datetime
 from PIL import Image
 
-from config import config
-from utils import logger, VideoProcessor, SceneDetector, KeyframeExtractor, FileManager
-from models import ModelManager, create_asr_model, create_refinement_llm, EmbeddingManager
-from database import get_db, get_vector_db
+from ai_pipeline.config import config
+from utils.logger import logger, ProgressTracker
+from ai_pipeline.scene_detection.scene_detector import VideoProcessor, SceneDetector, KeyframeExtractor
+from ai_pipeline.vision.vision_models import ModelManager
+from ai_pipeline.database.db_client import get_db_client
+from ai_pipeline.database.vectordb_client import get_vector_db_client
+from ai_pipeline.audio.transcriber import create_asr_model
+from ai_pipeline.models.refinement_llm import create_refinement_llm
+from ai_pipeline.embeddings.embedding_models import EmbeddingManager
+from pathlib import Path as PathlibPath
 
-from utils.logger import ProgressTracker
 
+class SimpleFileManager:
+    """Simple file manager for organizing output files"""
+    
+    def __init__(self, video_id: str, output_dir: Path):
+        self.video_id = video_id
+        self.output_dir = Path(output_dir)
+        self.video_dir = self.output_dir / video_id
+        self.video_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.proxy_path = self.video_dir / "proxy.mp4"
+        self.audio_path = self.video_dir / "audio.wav"
+        self.keyframes_dir = self.video_dir / "keyframes"
+        self.keyframes_dir.mkdir(parents=True, exist_ok=True)
 
 class VideoAnalysisPipeline:
     """Main pipeline for video analysis"""
@@ -30,8 +48,11 @@ class VideoAnalysisPipeline:
         self.keyframe_extractor = KeyframeExtractor()
         
         # Database
-        self.db = get_db()
-        self.vector_db = get_vector_db()
+        self.db = get_db_client()
+        self.vector_db = get_vector_db_client()
+        
+        if self.vector_db is None:
+            logger.warning("Vector database not available. Embeddings will not be stored.")
         
         # Models (lazy loading)
         self.model_manager = None
@@ -66,13 +87,13 @@ class VideoAnalysisPipeline:
             logger.info(f"Video ID: {self.video_id}")
             
             # Setup file manager
-            self.file_manager = FileManager(self.video_id, config.OUTPUT_DIR)
+            self.file_manager = SimpleFileManager(self.video_id, config.OUTPUT_DIR)
             
             # Initialize progress tracker
             total_steps = 8 if self.mode_config['use_refinement'] else 7
             progress = ProgressTracker(total_steps, "Video Processing")
             
-            # Step 1: Video info & validation
+            # Step 1: Video info & validation 
             progress.step("Extracting video information")
             video_info = self._extract_video_info(video_path)
             
@@ -153,7 +174,7 @@ class VideoAnalysisPipeline:
     
     def _extract_video_info(self, video_path: Path) -> Dict[str, Any]:
         """Extract and store video metadata"""
-        from utils.video_processor import VideoInfo
+        from ai_pipeline.core.video_processor import VideoInfo
         
         video_info = VideoInfo(video_path)
         info_dict = video_info.to_dict()
@@ -189,6 +210,7 @@ class VideoAnalysisPipeline:
         """Extract audio and transcribe"""
         try:
             # Extract audio
+            logger.info("Step 1: Extracting audio from video...")
             audio_path = self.file_manager.audio_path
             success = self.video_processor.extract_audio(video_path, audio_path)
             
@@ -196,13 +218,19 @@ class VideoAnalysisPipeline:
                 logger.warning("No audio track found")
                 return None
             
+            logger.info(f"Step 2: Audio extracted. Path: {audio_path}")
+            
             # Transcribe with WhisperX
+            logger.info("Step 3: Initializing WhisperX model...")
             if self.asr_model is None:
                 self.asr_model = create_asr_model()
             
+            logger.info(f"Step 4: Starting transcription...")
             transcript_data = self.asr_model.transcribe(audio_path)
+            logger.info(f"Step 5: Transcription completed. Segments: {len(transcript_data.get('segments', []))}")
             
             # Store transcript in database
+            logger.info("Step 6: Storing transcript in database...")
             for idx, segment in enumerate(transcript_data.get('segments', [])):
                 self.db.insert_transcript_segment({
                     'video_id': self.video_id,
@@ -214,10 +242,13 @@ class VideoAnalysisPipeline:
                     'language': transcript_data.get('language', 'unknown')
                 })
             
+            logger.info("Step 7: Audio processing complete")
             return transcript_data
             
         except Exception as e:
-            logger.error(f"Audio processing failed: {e}")
+            logger.error(f"Audio processing failed: {e}", exc_info=True)
+            import traceback
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
             return None
     
     def _detect_scenes(self, video_path: Path) -> List[tuple]:
@@ -398,13 +429,21 @@ class VideoAnalysisPipeline:
             logger.info("Generating embeddings...")
             embeddings = self.embedding_manager.encode(texts_to_embed)
             
-            # Store in ChromaDB
-            self.vector_db.add_embeddings(
-                embeddings=embeddings,
-                documents=texts_to_embed,
-                metadatas=metadatas,
-                ids=frame_ids
-            )
+            # Store in ChromaDB if available
+            if self.vector_db is not None:
+                success = self.vector_db.add_embeddings(
+                    embeddings=embeddings,
+                    documents=texts_to_embed,
+                    metadatas=metadatas,
+                    ids=frame_ids
+                )
+                if success:
+                    logger.info(f"Stored {len(embeddings)} embeddings in ChromaDB")
+                else:
+                    logger.warning("Failed to store embeddings in ChromaDB")
+            else:
+                logger.warning("Vector database not available, embeddings not stored in ChromaDB")
+                logger.info("Embeddings have been computed but not persisted to vector store")
     
     def _gather_stats(
         self,
@@ -424,9 +463,36 @@ class VideoAnalysisPipeline:
     def _cleanup(self):
         """Cleanup resources"""
         if self.model_manager:
-            self.model_manager.unload_all()
+            try:
+                self.model_manager.unload_all()
+            except Exception as e:
+                logger.warning(f"Error during model_manager cleanup: {e}")
+            finally:
+                self.model_manager = None
+
         if self.embedding_manager:
-            self.embedding_manager.unload_all()
+            try:
+                self.embedding_manager.unload_all()
+            except Exception as e:
+                logger.warning(f"Error during embedding_manager cleanup: {e}")
+            finally:
+                self.embedding_manager = None
+
+        if self.asr_model:
+            try:
+                self.asr_model.unload()
+            except Exception as e:
+                logger.warning(f"Error during asr_model cleanup: {e}")
+            finally:
+                self.asr_model = None
+
+        if self.refinement_llm:
+            try:
+                self.refinement_llm.unload()
+            except Exception as e:
+                logger.warning(f"Error during refinement_llm cleanup: {e}")
+            finally:
+                self.refinement_llm = None
 
 
 def process_video(

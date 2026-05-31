@@ -17,7 +17,7 @@ from transformers import (
     BitsAndBytesConfig,
 )
 
-from config import config
+from ai_pipeline.config import config
 from utils.logger import logger, log_model_loading, log_exception
 
 
@@ -231,6 +231,29 @@ class RefinementLLM:
         result["searchable_text"]  = qwen_text[:500]
         result["confidence_score"] = 0.3
         return result
+
+    def unload(self):
+        """Unload refinement LLM and free GPU memory."""
+        try:
+            if self.model is not None:
+                try:
+                    self.model.to("cpu")
+                except Exception:
+                    pass
+                del self.model
+            if self.tokenizer is not None:
+                del self.tokenizer
+        except Exception as e:
+            logger.warning(f"Lỗi khi unload RefinementLLM: {e}")
+        finally:
+            self.model = None
+            self.tokenizer = None
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                if hasattr(torch.cuda, "ipc_collect"):
+                    torch.cuda.ipc_collect()
+            logger.info("Refinement LLM unloaded")
 
 
 def create_refinement_llm() -> RefinementLLM:

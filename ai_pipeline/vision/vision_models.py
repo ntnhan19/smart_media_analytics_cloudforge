@@ -9,6 +9,7 @@ Vision Models — tối ưu GTX 1650 4GB
 
 import gc
 import torch
+import time
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 from PIL import Image
@@ -20,7 +21,7 @@ from transformers import (
     BitsAndBytesConfig,
 )
 
-from config import config
+from ai_pipeline.config import config
 from utils.logger import logger, log_model_loading, log_exception
 
 
@@ -376,16 +377,64 @@ class ModelManager:
         )
 
     def unload_qwen_vl(self):
-        """Unload Qwen để nhường VRAM cho model khác."""
+        """
+        Unload Qwen để nhường VRAM cho model khác.
+        FIX: phải xóa model khỏi GPU (cpu() + del) trước khi gán None,
+        nếu không PyTorch giữ tham chiếu và VRAM không thực sự được giải phóng.
+        """
         if self.qwen_vl is not None:
+            qwen_vl = self.qwen_vl
             self.qwen_vl = None
-            self.loaded_models.discard("qwen_vl")
-            _free_vram()
-            logger.info("Qwen-VL unloaded")
+            try:
+                if hasattr(qwen_vl, "model") and qwen_vl.model is not None:
+                    try:
+                        qwen_vl.model.cpu()
+                    except Exception:
+                        pass
+                    del qwen_vl.model
+                if hasattr(qwen_vl, "processor") and qwen_vl.processor is not None:
+                    del qwen_vl.processor
+            except Exception as e:
+                logger.warning(f"Lỗi khi unload Qwen-VL: {e}")
+            finally:
+                self.loaded_models.discard("qwen_vl")
+                _free_vram()
+                if torch.cuda.is_available() and hasattr(torch.cuda, "ipc_collect"):
+                    torch.cuda.ipc_collect()
+                time.sleep(1)
+                _free_vram()
+                vram = torch.cuda.memory_allocated() / 1e9 if torch.cuda.is_available() else 0
+                logger.info(f"Qwen-VL unloaded | VRAM còn lại: {vram:.2f} GB")
+                del qwen_vl
+
+    def unload_florence(self):
+        """Unload Florence-2 và giải phóng VRAM."""
+        if self.florence is not None:
+            try:
+                if hasattr(self.florence, "model") and self.florence.model is not None:
+                    self.florence.model.cpu()
+                    del self.florence.model
+                if hasattr(self.florence, "processor") and self.florence.processor is not None:
+                    del self.florence.processor
+            except Exception as e:
+                logger.warning(f"Lỗi khi unload Florence: {e}")
+            finally:
+                self.florence = None
+                self.loaded_models.discard("florence")
+                _free_vram()
+                logger.info("Florence-2 unloaded")
 
     def unload_all(self):
-        self.qwen_vl  = None
-        self.florence = None
+        """
+        Unload toàn bộ models và đảm bảo VRAM sạch hoàn toàn.
+        Gọi sau mỗi video để tránh VRAM fragmentation giữa các video.
+        """
+        self.unload_qwen_vl()
+        self.unload_florence()
         self.loaded_models.clear()
         _free_vram()
-        logger.info("All models unloaded")
+        _free_vram()  # gọi 2 lần để PyTorch allocator thực sự release
+        time.sleep(2)  # chờ PyTorch allocator settle, giúp VRAM sạch thực sự
+        vram = torch.cuda.memory_allocated() / 1e9 if torch.cuda.is_available() else 0
+        reserved = torch.cuda.memory_reserved() / 1e9 if torch.cuda.is_available() else 0
+        logger.info(f"All models unloaded | allocated: {vram:.2f} GB | reserved: {reserved:.2f} GB")

@@ -11,7 +11,7 @@ import numpy as np
 from typing import List, Dict, Any, Union
 from FlagEmbedding import BGEM3FlagModel, FlagReranker
 
-from config import config
+from ai_pipeline.config import config
 from utils.logger import logger, log_model_loading, log_exception
 
 
@@ -212,10 +212,40 @@ class EmbeddingManager:
                 ]
         return self.reranker_model.rerank(query, documents, top_k)
 
+    def unload_embedding_model(self):
+        """Unload BGE-M3 và giải phóng RAM."""
+        if self.embedding_model is not None:
+            try:
+                if hasattr(self.embedding_model, "model") and self.embedding_model.model is not None:
+                    del self.embedding_model.model
+            except Exception as e:
+                logger.warning(f"Lỗi khi unload embedding model: {e}")
+            finally:
+                self.embedding_model = None
+                logger.info("BGE-M3 unloaded")
+
+    def unload_reranker_model(self):
+        """Unload BGE-Reranker và giải phóng RAM."""
+        if self.reranker_model is not None:
+            try:
+                if hasattr(self.reranker_model, "model") and self.reranker_model.model is not None:
+                    del self.reranker_model.model
+            except Exception as e:
+                logger.warning(f"Lỗi khi unload reranker model: {e}")
+            finally:
+                self.reranker_model = None
+                logger.info("BGE-Reranker unloaded")
+
     def unload_all(self):
-        self.embedding_model = None
-        self.reranker_model  = None
+        """
+        Unload toàn bộ embedding models và đảm bảo RAM sạch hoàn toàn.
+        Gọi sau mỗi video để tránh memory fragmentation giữa các video.
+        """
+        self.unload_embedding_model()
+        self.unload_reranker_model()
         gc.collect()
+        gc.collect()  # gọi 2 lần để Python allocator thực sự release
+        logger.info("All embedding models unloaded")
 
 
 # Thêm Optional import bị thiếu

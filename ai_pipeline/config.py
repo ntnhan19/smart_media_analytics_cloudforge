@@ -40,7 +40,7 @@ class ModelConfig:
 
     # ── Vision ─────────────────────────────────────────────────────────────────
     # 2B thay 7B: fit vào 4GB VRAM sau quantization 4-bit (~1.2GB)
-    qwen_vl_model: str = "Qwen/Qwen2.5-VL-2B-Instruct"
+    qwen_vl_model: str = "Qwen/Qwen2-VL-2B-Instruct"
 
     # base thay large: ~270MB thay ~900MB, độ chính xác vẫn ổn cho object detection
     florence_model: str = "microsoft/Florence-2-base"
@@ -221,7 +221,7 @@ class Config:
         self.database = DatabaseConfig()
         self.web      = WebConfig()
         self.logging  = LoggingConfig()
-
+        self.OUTPUT_DIR = OUTPUT_DIR
     def get_processing_mode_config(self, mode: str) -> Dict[str, Any]:
         if mode not in self.analysis.processing_modes:
             raise ValueError(f"Invalid processing mode: {mode}")

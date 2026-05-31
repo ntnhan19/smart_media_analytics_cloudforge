@@ -2,12 +2,13 @@
 ASR Model - WhisperX for speech recognition
 """
 
+import gc
 import torch
 import whisperx
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-from config import config
+from ai_pipeline.config import config
 from utils.logger import logger, log_model_loading, log_exception
 
 
@@ -24,6 +25,36 @@ class WhisperXModel:
         self.metadata = None
         
         self._load_model()
+
+    def unload(self):
+        """Unload WhisperX models and free GPU memory."""
+        try:
+            if self.model is not None:
+                try:
+                    self.model.to("cpu")
+                except Exception:
+                    pass
+                del self.model
+            if self.model_a is not None:
+                try:
+                    self.model_a.to("cpu")
+                except Exception:
+                    pass
+                del self.model_a
+            if self.metadata is not None:
+                del self.metadata
+        except Exception as e:
+            logger.warning(f"Lỗi khi unload WhisperX: {e}")
+        finally:
+            self.model = None
+            self.model_a = None
+            self.metadata = None
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                if hasattr(torch.cuda, "ipc_collect"):
+                    torch.cuda.ipc_collect()
+            logger.info("WhisperX model unloaded")
     
     def _load_model(self):
         """Load WhisperX model"""
