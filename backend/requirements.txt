@@ -24,6 +24,10 @@ transformers==4.52.4
 accelerate==0.34.0          # 0.33 yêu cầu numpy<2.0, 0.34+ hỗ trợ numpy 2.x
 bitsandbytes==0.43.1
 
+# ── Ollama Client (Vision Models) ───────────────────────────────────────────
+ollama==0.3.0               # Python client for Ollama server (qwen2.5-vl:3b)
+requests==2.31.0            # HTTP requests for Ollama API endpoints
+
 # ── Video Processing & Computer Vision ──────────────────────────────────────
 opencv-python==4.10.0.84
 opencv-contrib-python==4.10.0.84

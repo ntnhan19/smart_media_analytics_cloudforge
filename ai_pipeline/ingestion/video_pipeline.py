@@ -296,6 +296,15 @@ class VideoAnalysisPipeline:
         """Load AI models based on mode"""
         logger.info("Loading AI models...")
         
+        # Free memory from previous models before loading new ones
+        if self.asr_model is not None:
+            try:
+                logger.info("Unloading ASR model to free memory...")
+                self.asr_model.unload()
+            except Exception as e:
+                logger.warning(f"Error unloading ASR model: {e}")
+            self.asr_model = None
+        
         # Vision models
         self.model_manager = ModelManager()
         self.model_manager.load_models_for_mode(self.processing_mode)
@@ -304,26 +313,41 @@ class VideoAnalysisPipeline:
         if self.mode_config['use_refinement']:
             self.refinement_llm = create_refinement_llm()
         
-        # Embedding model
+        # Embedding model (after unloading previous models)
         self.embedding_manager = EmbeddingManager()
         self.embedding_manager.load_all()
     
     def _analyze_frames(self, keyframes: List[Dict]) -> List[Dict]:
-        """Analyze keyframes with vision models"""
-        analyses = []
+        """Phân tích khung hình với concurrency - Tối ưu cho GTX 1650"""
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import threading
         
-        batch_size = self.mode_config['batch_size']
-        
-        for i in range(0, len(keyframes), batch_size):
-            batch = keyframes[i:i+batch_size]
-            
-            for kf in batch:
-                analysis = self._analyze_single_frame(kf)
-                analyses.append(analysis)
-                
-                if (i + 1) % 10 == 0:
-                    logger.info(f"Analyzed {i + 1}/{len(keyframes)} frames")
-        
+        analyses = [None] * len(keyframes)   # Giữ thứ tự sẵn
+        total_frames = len(keyframes)
+        logger.info(f"🚀 Phân tích {total_frames} keyframes | MAX_WORKERS=2")
+
+        MAX_WORKERS = 2
+        semaphore = threading.Semaphore(MAX_WORKERS)
+
+        def _safe_analyze(idx, kf):
+            with semaphore:
+                try:
+                    analysis = self._analyze_single_frame(kf)
+                    analyses[idx] = analysis
+                    if (idx + 1) % 3 == 0 or (idx + 1) == total_frames:
+                        logger.info(f"✅ Đã phân tích {idx + 1}/{total_frames} frames")
+                except Exception as e:
+                    logger.error(f"Lỗi frame {idx}: {e}")
+                    analyses[idx] = {
+                        'keyframe': kf,
+                        'vision_outputs': {'error': str(e)}
+                    }
+
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = [executor.submit(_safe_analyze, i, kf) for i, kf in enumerate(keyframes)]
+            for future in as_completed(futures):
+                future.result()  # Để bắt exception nếu có
+
         return analyses
     
     def _analyze_single_frame(self, keyframe: Dict) -> Dict:
@@ -333,17 +357,18 @@ class VideoAnalysisPipeline:
         
         vision_outputs = {}
         
-        # Qwen-VL analysis
+        # Qwen-VL analysis (giữ lại - quan trọng nhất)
         if self.mode_config['use_qwen_vl'] and self.model_manager.qwen_vl:
             qwen_result = self.model_manager.qwen_vl.analyze_image(image)
             vision_outputs['qwen_vl'] = qwen_result
         
-        # Florence-2 analysis
-        if self.mode_config['use_florence'] and self.model_manager.florence:
-            objects = self.model_manager.florence.detect_objects(image)
-            captions = self.model_manager.florence.dense_caption(image)
-            vision_outputs['florence_objects'] = objects
-            vision_outputs['florence_captions'] = captions
+        # ================== TẮT FLORENCE TẠM THỜI ==================
+        # if self.mode_config['use_florence'] and self.model_manager.florence:
+        #     objects = self.model_manager.florence.detect_objects(image)
+        #     captions = self.model_manager.florence.dense_caption(image)
+        #     vision_outputs['florence_objects'] = objects
+        #     vision_outputs['florence_captions'] = captions
+        # ============================================================
         
         return {
             'keyframe': keyframe,

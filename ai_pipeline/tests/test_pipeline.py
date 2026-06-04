@@ -12,12 +12,35 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from pathlib import Path
 import time
 import traceback
+from unittest.mock import patch, MagicMock
 
 from ai_pipeline.ingestion.video_pipeline import VideoAnalysisPipeline
+
+# Mock database client to avoid PostgreSQL connection requirement
+def mock_get_db_client():
+    """Return mock database client"""
+    mock_db = MagicMock()
+    mock_db.update_video_status = MagicMock(return_value=True)
+    mock_db.save_scene = MagicMock(return_value=True)
+    mock_db.save_keyframes = MagicMock(return_value=True)
+    mock_db.save_frame_analysis = MagicMock(return_value=True)
+    return mock_db
+
+def mock_get_vector_db_client():
+    """Return mock vector database client"""
+    return None  # Optional vector DB
 
 
 def main():
     """Main entry point for testing video analysis pipeline"""
+    
+    # Patch database clients to avoid PostgreSQL connection requirement
+    with patch('ai_pipeline.database.db_client.get_db_client', side_effect=mock_get_db_client):
+        with patch('ai_pipeline.database.vectordb_client.get_vector_db_client', side_effect=mock_get_vector_db_client):
+            _run_pipeline_test()
+
+def _run_pipeline_test():
+    """Internal function that runs the actual pipeline test"""
     
     # Configuration
     video_dir = Path(__file__).parent.parent / "videos"
