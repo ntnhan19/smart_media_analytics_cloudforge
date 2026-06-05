@@ -1,5 +1,6 @@
 # pyrefly: ignore [missing-import]
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 class Settings(BaseSettings):
     OLLAMA_BASE_URL: str
@@ -10,6 +11,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     APP_VERSION: str
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
-
+    model_config = SettingsConfigDict(
+            env_file=os.path.join(os.path.dirname(__file__), "..", ".env"),
+            env_file_encoding="utf-8",
+            extra="ignore"
+        )
 settings = Settings()
