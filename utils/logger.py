@@ -29,7 +29,7 @@ if not logger.handlers:
     )
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
-    
+
     # File handler
     file_handler = logging.FileHandler(LOG_FILE)
     file_handler.setLevel(logging.DEBUG)
@@ -40,12 +40,35 @@ if not logger.handlers:
     logger.addHandler(file_handler)
 
 
+# ── Module-level helpers gắn vào logger ───────────────────────────────────────
+# FIX: section() và success() phải ở module level, không nằm trong class.
+# logger.py gốc định nghĩa chúng bên trong ProgressTracker.log_step() (lỗi indent)
+# nên chúng không bao giờ được gán — gây AttributeError khi pipeline gọi
+# logger.section(...) ở dòng đầu tiên của process_video().
+
+def _section(title: str) -> None:
+    """In dòng phân cách rõ ràng để dễ đọc log theo từng bước lớn."""
+    logger.info("\n" + "=" * 70)
+    logger.info(title)
+    logger.info("=" * 70)
+
+
+def _success(msg: str) -> None:
+    """Log thông báo thành công có prefix ✓."""
+    logger.info(f"* {msg}")
+
+
+# Gắn vào logger object để pipeline có thể gọi logger.section() / logger.success()
+logger.section = _section  # type: ignore[attr-defined]
+logger.success = _success  # type: ignore[attr-defined]
+
+
 # ── Logging utilities ──────────────────────────────────────────────────────────
 
 def log_exception(e: Exception, context: str = "") -> None:
     """
     Log an exception with full traceback
-    
+
     Args:
         e: The exception to log
         context: Additional context about where the error occurred
@@ -60,7 +83,7 @@ def log_exception(e: Exception, context: str = "") -> None:
 def log_model_loading(model_name: str, status: str = "loading") -> None:
     """
     Log model loading status
-    
+
     Args:
         model_name: Name of the model
         status: Status message (loading, loaded, failed, etc.)
@@ -72,18 +95,36 @@ class ProgressTracker:
     """
     Track and log progress of long-running tasks
     """
-    
+
     def __init__(self, total: int, task_name: str = "Processing"):
         self.total = total
         self.task_name = task_name
         self.current = 0
-    
+
     def update(self, amount: int = 1) -> None:
-        """Update progress"""
+        """Update progress counter và log phần trăm."""
         self.current += amount
         percentage = (self.current / self.total) * 100 if self.total > 0 else 0
         logger.info(f"{self.task_name}: {self.current}/{self.total} ({percentage:.1f}%)")
-    
+
     def log_step(self, step: str) -> None:
-        """Log a processing step"""
+        """Log tên bước xử lý (không tăng counter)."""
         logger.info(f"{self.task_name}: {step}")
+
+    def step(self, msg: str) -> None:
+        """
+        Log tên bước VÀ tăng counter — đây là method pipeline gọi nhiều nhất.
+        FIX: method này bị thiếu trong logger.py gốc, gây AttributeError tại
+        mọi dòng progress.step(...) trong VideoAnalysisPipeline.process_video().
+        """
+        self.log_step(msg)
+        self.update()
+
+    def complete(self, msg: str = "") -> None:
+        """
+        Log thông báo hoàn tất toàn bộ task.
+        FIX: method này bị thiếu trong logger.py gốc, gây AttributeError tại
+        dòng progress.complete(...) cuối VideoAnalysisPipeline.process_video().
+        """
+        final = msg or f"{self.task_name} complete"
+        logger.info(f"✓ {final}")
