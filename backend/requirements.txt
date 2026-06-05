@@ -18,12 +18,6 @@ aiosqlite==0.20.0
 minio==7.2.12
 python-dotenv==1.0.1
 
-# ── Deep Learning & Model Inference ────────────────────────────────────────
-# torch/torchvision/torchaudio được cài riêng trong Dockerfile (CPU build)
-transformers==4.52.4
-accelerate==0.34.0          # 0.33 yêu cầu numpy<2.0, 0.34+ hỗ trợ numpy 2.x
-bitsandbytes==0.43.1
-
 # ── Ollama Client (Vision Models) ───────────────────────────────────────────
 ollama==0.3.0               # Python client for Ollama server (qwen2.5-vl:3b)
 requests==2.31.0            # HTTP requests for Ollama API endpoints
@@ -43,8 +37,6 @@ soundfile==0.12.1
 
 # ── Vector Search & Embeddings ────────────────────────────────────────────
 chromadb==0.5.23
-sentence-transformers==3.3.1
-FlagEmbedding==1.2.8
 scikit-learn==1.5.1
 
 # ── Data Processing ───────────────────────────────────────────────────────
