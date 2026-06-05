@@ -1,6 +1,5 @@
 """
-Video AI Editor Configuration — Thuần Ollama
-Tối ưu cho Ollama server + GTX 1650
+Video AI Editor Configuration — Thuần Ollama + Tối ưu tốc độ
 """
 
 import os
@@ -18,8 +17,7 @@ OUTPUT_DIR     = BASE_DIR / "output"
 LOGS_DIR       = BASE_DIR / "logs"
 DB_DIR         = BASE_DIR / "database"
 
-for _d in [VIDEOS_DIR, PROXIES_DIR, THUMBNAILS_DIR,
-           KEYFRAMES_DIR, OUTPUT_DIR, LOGS_DIR, DB_DIR]:
+for _d in [VIDEOS_DIR, PROXIES_DIR, THUMBNAILS_DIR, KEYFRAMES_DIR, OUTPUT_DIR, LOGS_DIR, DB_DIR]:
     _d.mkdir(parents=True, exist_ok=True)
 
 
@@ -45,7 +43,6 @@ class ModelConfig:
     max_new_tokens_vision:     int = 200
     max_new_tokens_refinement: int = 512
 
-    # Device
     device: str = "cuda"
     dtype: str = "float16"
     load_in_4bit: bool = True
@@ -54,16 +51,16 @@ class ModelConfig:
 
 @dataclass
 class VideoProcessingConfig:
-    """Cấu hình xử lý video"""
+    """Cấu hình xử lý video - Tối ưu tốc độ"""
 
     proxy_height: int = 480
     proxy_crf:    int = 28
     proxy_preset: str = "fast"
 
-    scene_threshold:   float = 10.0
-    min_scene_length:  float = 1.0
+    scene_threshold:   float = 27.0
+    min_scene_length:  float = 2.0
 
-    # Số frame phân tích mỗi scene
+    # Tối ưu tốc độ - Giảm mạnh số frame
     frames_per_scene_fast:  int = 1
     frames_per_scene_high:  int = 1
     frames_per_scene_ultra: int = 1
@@ -86,7 +83,7 @@ class AnalysisConfig:
             "use_qwen_vl":     True,
             "use_florence":    False,
             "use_internvideo": False,
-            "frames_per_scene": 1,          # Giảm để test nhanh
+            "frames_per_scene": 1,          # Giảm để nhanh
             "use_refinement":  True,
             "batch_size":      1,
         },
@@ -106,7 +103,7 @@ class AnalysisConfig:
     max_objects_per_frame: int = 25
 
 
-# Các class còn lại giữ nguyên
+# Các class còn lại giữ nguyên (SearchConfig, DatabaseConfig, WebConfig, LoggingConfig)
 @dataclass
 class SearchConfig:
     embedding_dimension: int   = 1024
@@ -165,17 +162,6 @@ class Config:
         if mode not in self.analysis.processing_modes:
             raise ValueError(f"Invalid processing mode: {mode}")
         return self.analysis.processing_modes[mode]
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "model":    self.model.__dict__,
-            "video":    self.video.__dict__,
-            "analysis": self.analysis.__dict__,
-            "search":   self.search.__dict__,
-            "database": self.database.__dict__,
-            "web":      self.web.__dict__,
-            "logging":  self.logging.__dict__,
-        }
 
 
 # Global instance

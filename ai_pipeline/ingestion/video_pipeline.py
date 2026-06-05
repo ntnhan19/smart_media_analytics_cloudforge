@@ -129,6 +129,12 @@ class VideoAnalysisPipeline:
                 progress.step("Refining analysis with LLM")
                 frame_analyses = self._refine_analyses(frame_analyses)
             
+            # Giải phóng VRAM hoàn toàn trước khi chạy Embedding Model
+            if self.model_manager:
+                logger.info("Unloading Vision models to free VRAM for Embeddings...")
+                self.model_manager.unload_all()
+                self.model_manager = None
+
             # Step 9: Generate embeddings & store
             progress.step("Generating embeddings and storing")
             self._store_results(
@@ -324,9 +330,9 @@ class VideoAnalysisPipeline:
         
         analyses = [None] * len(keyframes)   # Giữ thứ tự sẵn
         total_frames = len(keyframes)
-        logger.info(f"🚀 Phân tích {total_frames} keyframes | MAX_WORKERS=2")
+        logger.info(f"Phan tich {total_frames} keyframes | MAX_WORKERS=1")
 
-        MAX_WORKERS = 2
+        MAX_WORKERS = 1
         semaphore = threading.Semaphore(MAX_WORKERS)
 
         def _safe_analyze(idx, kf):
@@ -335,7 +341,7 @@ class VideoAnalysisPipeline:
                     analysis = self._analyze_single_frame(kf)
                     analyses[idx] = analysis
                     if (idx + 1) % 3 == 0 or (idx + 1) == total_frames:
-                        logger.info(f"✅ Đã phân tích {idx + 1}/{total_frames} frames")
+                        logger.info(f"Da phan tich {idx + 1}/{total_frames} frames")
                 except Exception as e:
                     logger.error(f"Lỗi frame {idx}: {e}")
                     analyses[idx] = {

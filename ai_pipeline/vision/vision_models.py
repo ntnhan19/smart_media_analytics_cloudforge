@@ -133,10 +133,8 @@ class QwenVLModel:
 
     def _get_default_prompt(self) -> str:
         return (
-            "Describe this video frame concisely covering: "
-            "1) Scene type and setting 2) People (appearance, action) "
-            "3) Lighting and time of day 4) Camera angle 5) Mood and colors "
-            "6) Key objects. Be specific. Max 150 words."
+            "Briefly list: 1) Scene type 2) Main subjects 3) Actions. "
+            "Keep it under 40 words. Be concise."
         )
 
     def batch_analyze_images(

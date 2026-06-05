@@ -1,292 +1,214 @@
 """
-ASR Model - WhisperX for speech recognition
+ASR Model - Faster-Whisper (Production Optimized)
+- Hỗ trợ word-level timestamps chính xác
+- CPU-first, nhẹ, ổn định trên Windows
 """
 
-import gc
-import torch
-import whisperx
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+import time
+
+import faster_whisper
 
 from ai_pipeline.config import config
 from utils.logger import logger, log_model_loading, log_exception
 
 
-class WhisperXModel:
-    """WhisperX model for accurate speech recognition with word-level timestamps"""
-    
-    def __init__(self, model_size: str = None, device: str = None):
-        self.model_size = model_size or config.model.whisper_model
-        self.device = device or config.model.device
-        self.compute_type = "float16" if config.model.dtype == "float16" else "int8"
-        
+class WhisperModel:
+    """Faster-Whisper ASR Model - High Performance & Reliable"""
+
+    def __init__(self, model_size: str = None):
+        self.model_size = model_size or getattr(config.model, 'whisper_model', 'base')
         self.model = None
-        self.model_a = None  # Alignment model
-        self.metadata = None
-        
         self._load_model()
 
-    def unload(self):
-        """Unload WhisperX models and free GPU memory."""
-        try:
-            if self.model is not None:
-                try:
-                    self.model.to("cpu")
-                except Exception:
-                    pass
-                del self.model
-            if self.model_a is not None:
-                try:
-                    self.model_a.to("cpu")
-                except Exception:
-                    pass
-                del self.model_a
-            if self.metadata is not None:
-                del self.metadata
-        except Exception as e:
-            logger.warning(f"Lỗi khi unload WhisperX: {e}")
-        finally:
-            self.model = None
-            self.model_a = None
-            self.metadata = None
-            gc.collect()
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-                if hasattr(torch.cuda, "ipc_collect"):
-                    torch.cuda.ipc_collect()
-            logger.info("WhisperX model unloaded")
-    
     def _load_model(self):
-        """Load WhisperX model"""
+        """Load Faster-Whisper model với cấu hình tối ưu cho CPU"""
         try:
-            log_model_loading(f"WhisperX-{self.model_size}", "loading")
-            
-            # Load Whisper model
-            self.model = whisperx.load_model(
+            log_model_loading(f"Faster-Whisper-{self.model_size}", "loading")
+
+            self.model = faster_whisper.WhisperModel(
                 self.model_size,
-                device=self.device,
-                compute_type=self.compute_type,
-                language="en"  # Will auto-detect but can specify
+                device="cpu",
+                compute_type="int8",           # Tối ưu tốc độ + memory trên CPU
+                cpu_threads=0,                 # Auto detect
+                num_workers=2,
+                download_root=None
             )
-            
-            log_model_loading(f"WhisperX-{self.model_size}", "loaded")
-            
+
+            log_model_loading(f"Faster-Whisper-{self.model_size}", "loaded")
+            logger.info(f" Faster-Whisper '{self.model_size}' loaded successfully (CPU + int8)")
+
         except Exception as e:
-            log_model_loading(f"WhisperX-{self.model_size}", "failed")
-            log_exception(e, "WhisperXModel._load_model")
+            log_exception(e, "WhisperModel._load_model")
             raise
-    
+
     def transcribe(
         self,
         audio_path: Path,
         language: str = None,
-        batch_size: int = 16
+        word_timestamps: bool = True,
+        beam_size: int = 5,
+        vad_filter: bool = True,
     ) -> Dict[str, Any]:
-        """
-        Transcribe audio file
-        Returns: Dictionary with segments and word-level timestamps
-        """
+        """Transcribe audio với Faster-Whisper"""
         try:
-            logger.info(f"Transcribing audio: {audio_path.name}")
-            
-            # Load audio
-            audio = whisperx.load_audio(str(audio_path))
-            
-            # Transcribe
-            result = self.model.transcribe(
-                audio,
-                batch_size=batch_size,
-                language=language
+            start_time = time.time()
+            logger.info(f"Transcribing: {audio_path.name}")
+
+            segments, info = self.model.transcribe(
+                str(audio_path),
+                language=language,
+                word_timestamps=word_timestamps,
+                beam_size=beam_size,
+                vad_filter=vad_filter,
+                vad_parameters=dict(
+                    min_silence_duration_ms=500,
+                    max_speech_duration_s=30
+                ),
+                temperature=0.0,          # Greedy decoding cho tính nhất quán
             )
-            
-            # Detect language if not specified
-            detected_language = result.get("language", "en")
-            logger.info(f"Detected language: {detected_language}")
-            
-            # Load alignment model if needed
-            if self.model_a is None or self.metadata is None:
-                self.model_a, self.metadata = whisperx.load_align_model(
-                    language_code=detected_language,
-                    device=self.device
-                )
-            
-            # Align whisper output
-            result_aligned = whisperx.align(
-                result["segments"],
-                self.model_a,
-                self.metadata,
-                audio,
-                self.device,
-                return_char_alignments=False
-            )
-            
-            # Extract word-level timestamps
-            transcript_data = self._format_transcript(result_aligned)
-            
-            logger.success(f"Transcription complete: {len(transcript_data['segments'])} segments")
+
+            detected_lang = info.language
+            logger.info(f"Detected language: {detected_lang} (prob: {info.language_probability:.3f})")
+
+            transcript_data = self._format_transcript(segments, detected_lang)
+
+            duration = time.time() - start_time
+            logger.info(f"Transcription completed in {duration:.2f}s | "
+                       f"{len(transcript_data['segments'])} segments")
+
             return transcript_data
-            
+
         except Exception as e:
-            log_exception(e, "WhisperXModel.transcribe")
-            return {"segments": [], "words": [], "text": ""}
-    
-    def _format_transcript(self, aligned_result: Dict) -> Dict[str, Any]:
-        """Format aligned transcript into structured data"""
-        segments = []
+            log_exception(e, "WhisperModel.transcribe")
+            return self._get_empty_transcript()
+
+    def _format_transcript(self, segments, language: str) -> Dict[str, Any]:
+        """Format output giữ nguyên data contract với pipeline"""
+        formatted_segments = []
         all_words = []
-        full_text = []
-        
-        for segment in aligned_result.get("segments", []):
-            segment_data = {
-                "start": segment["start"],
-                "end": segment["end"],
-                "text": segment["text"].strip()
+
+        for segment in segments:
+            seg_data = {
+                "start": float(segment.start),
+                "end": float(segment.end),
+                "text": segment.text.strip(),
+                "words": []
             }
-            
-            # Word-level data
-            words_in_segment = []
-            for word_info in segment.get("words", []):
-                word_data = {
-                    "word": word_info["word"],
-                    "start": word_info.get("start", segment["start"]),
-                    "end": word_info.get("end", segment["end"]),
-                    "score": word_info.get("score", 1.0)
-                }
-                words_in_segment.append(word_data)
-                all_words.append(word_data)
-            
-            segment_data["words"] = words_in_segment
-            segments.append(segment_data)
-            full_text.append(segment_data["text"])
-        
+
+            if hasattr(segment, 'words') and segment.words:
+                for word in segment.words:
+                    word_data = {
+                        "word": word.word.strip(),
+                        "start": float(word.start),
+                        "end": float(word.end),
+                        "score": float(getattr(word, 'probability', 1.0))
+                    }
+                    seg_data["words"].append(word_data)
+                    all_words.append(word_data)
+
+            formatted_segments.append(seg_data)
+
+        full_text = " ".join(s["text"] for s in formatted_segments)
+
         return {
-            "segments": segments,
+            "segments": formatted_segments,
             "words": all_words,
-            "text": " ".join(full_text),
-            "language": aligned_result.get("language", "unknown")
+            "text": full_text,
+            "language": language
         }
-    
+
+    def _get_empty_transcript(self) -> Dict[str, Any]:
+        """Fallback khi có lỗi"""
+        return {
+            "segments": [],
+            "words": [],
+            "text": "",
+            "language": "unknown"
+        }
+
     def get_transcript_at_time(
-        self,
-        transcript_data: Dict,
-        start_time: float,
-        end_time: float
+        self, transcript_data: Dict, start_time: float, end_time: float
     ) -> str:
-        """Get transcript text for a specific time range"""
-        words = []
-        
-        for word_info in transcript_data.get("words", []):
-            word_start = word_info["start"]
-            word_end = word_info["end"]
-            
-            # Check if word overlaps with time range
-            if word_end >= start_time and word_start <= end_time:
-                words.append(word_info["word"])
-        
+        """Lấy text theo khoảng thời gian"""
+        words = [
+            w["word"] for w in transcript_data.get("words", [])
+            if w["end"] >= start_time and w["start"] <= end_time
+        ]
         return " ".join(words).strip()
-    
+
     def search_transcript(
-        self,
-        transcript_data: Dict,
-        query: str
+        self, transcript_data: Dict, query: str
     ) -> List[Dict[str, Any]]:
-        """
-        Search for query in transcript
-        Returns: List of matches with timestamps
-        """
+        """Tìm kiếm trong transcript"""
         matches = []
-        query_lower = query.lower()
-        
-        for segment in transcript_data.get("segments", []):
-            text_lower = segment["text"].lower()
-            
-            if query_lower in text_lower:
+        q = query.lower()
+
+        for seg in transcript_data.get("segments", []):
+            if q in seg["text"].lower():
                 matches.append({
-                    "start": segment["start"],
-                    "end": segment["end"],
-                    "text": segment["text"],
+                    "start": seg["start"],
+                    "end": seg["end"],
+                    "text": seg["text"],
                     "match_query": query
                 })
-        
         return matches
 
+    def unload(self):
+        """Unload model"""
+        if self.model is not None:
+            try:
+                del self.model
+            except Exception:
+                pass
+            self.model = None
+        logger.info(f"Faster-Whisper model '{self.model_size}' unloaded")
+
+
+# ── Utility Class ────────────────────────────────────────────────────────────
 
 class TranscriptProcessor:
-    """Process and enhance transcripts"""
-    
+    """Các hàm xử lý transcript bổ sung"""
+
     @staticmethod
-    def merge_short_segments(
-        segments: List[Dict],
-        min_duration: float = 2.0
-    ) -> List[Dict]:
-        """Merge segments that are too short"""
+    def merge_short_segments(segments: List[Dict], min_duration: float = 2.0) -> List[Dict]:
+        """Gộp segment quá ngắn"""
         if not segments:
             return []
-        
+
         merged = []
         current = segments[0].copy()
-        
-        for segment in segments[1:]:
-            duration = current["end"] - current["start"]
-            
-            if duration < min_duration:
-                # Merge with next segment
-                current["end"] = segment["end"]
-                current["text"] = current["text"] + " " + segment["text"]
-                if "words" in current and "words" in segment:
-                    current["words"].extend(segment["words"])
+
+        for seg in segments[1:]:
+            if current["end"] - current["start"] < min_duration:
+                current["end"] = seg["end"]
+                current["text"] += " " + seg["text"]
+                if "words" in current and "words" in seg:
+                    current["words"].extend(seg["words"])
             else:
                 merged.append(current)
-                current = segment.copy()
-        
+                current = seg.copy()
+
         merged.append(current)
         return merged
-    
+
     @staticmethod
-    def add_punctuation_pauses(segments: List[Dict]) -> List[Dict]:
-        """Add pause information based on punctuation"""
-        for segment in segments:
-            text = segment["text"]
-            
-            # Determine pause type
-            if text.endswith(".") or text.endswith("!") or text.endswith("?"):
-                segment["pause_after"] = "long"
-            elif text.endswith(",") or text.endswith(";"):
-                segment["pause_after"] = "short"
-            else:
-                segment["pause_after"] = "none"
-        
-        return segments
-    
-    @staticmethod
-    def extract_keywords(transcript_text: str, top_n: int = 20) -> List[str]:
-        """Extract keywords from transcript (simple version)"""
-        # Remove common words
-        stop_words = {
-            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-            'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-            'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
-            'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these',
-            'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'which',
-            'who', 'when', 'where', 'why', 'how'
-        }
-        
-        # Tokenize and filter
-        words = transcript_text.lower().split()
-        filtered_words = [
-            word.strip('.,!?;:') for word in words
-            if word.strip('.,!?;:') not in stop_words and len(word) > 3
-        ]
-        
-        # Count frequency
+    def extract_keywords(text: str, top_n: int = 15) -> List[str]:
+        """Trích xuất từ khóa đơn giản"""
+        if not text:
+            return []
+
+        stop_words = {'the','a','an','and','or','but','in','on','at','to','for','of','with',
+                     'by','from','as','is','was','are','were','be','have','has','this','that'}
+
+        words = [w.strip('.,!?;:') for w in text.lower().split() 
+                if w.strip('.,!?;:') not in stop_words and len(w) > 3]
+
         from collections import Counter
-        word_freq = Counter(filtered_words)
-        
-        # Get top keywords
-        keywords = [word for word, count in word_freq.most_common(top_n)]
-        return keywords
+        return [word for word, _ in Counter(words).most_common(top_n)]
 
 
-def create_asr_model() -> WhisperXModel:
-    """Factory function to create ASR model"""
-    return WhisperXModel()
+# Factory
+def create_asr_model() -> WhisperModel:
+    return WhisperModel()
