@@ -129,8 +129,8 @@ services:
     volumes:
       - chroma-data:/chroma/chroma # Named volume — embeddings are not lost on restart
     healthcheck:
-      # ChromaDB exposes /api/v1/heartbeat for health checks
-      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/heartbeat')" ]
+      # ChromaDB v2+ exposes /api/v2/heartbeat (v1 API is deprecated)
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v2/heartbeat')" ]
       interval: 15s
       timeout: 5s
       retries: 8

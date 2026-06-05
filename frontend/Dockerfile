@@ -24,7 +24,7 @@ WORKDIR /app
 # Docker skips the npm install step entirely
 # ---------------------------------------------------------------------------
 COPY package.json package-lock.json* ./
-RUN npm ci --prefer-offline
+RUN npm install --legacy-peer-deps --prefer-offline
 
 # Copy full source code into the container
 # (In dev mode, the bind-mount will override this directory)
