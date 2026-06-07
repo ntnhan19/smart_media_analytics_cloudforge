@@ -32,9 +32,9 @@ volumes:
   whisper-cache: # faster-whisper model weights cache (HuggingFace Hub)
   minio_data:
 
-# ---------------------------------------------------------------------------
-# Services
-# ---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
+    # Services
+    # ---------------------------------------------------------------------------
 services:
 
   # -------------------------------------------------------------------------
@@ -100,7 +100,7 @@ services:
       - .env
     environment:
       # VITE_ prefix is required for Vite to expose variables to client-side code
-      VITE_API_BASE_URL: http://localhost:8000
+      VITE_API_BASE_URL: ${API_BASE_URL}
     volumes:
       # Bind-mount source code so Vite HMR (Hot Module Replacement) works
       - ./frontend:/app
@@ -130,7 +130,7 @@ services:
       - chroma-data:/chroma/chroma # Named volume — embeddings are not lost on restart
     healthcheck:
       # ChromaDB v2+ exposes /api/v2/heartbeat (v1 API is deprecated)
-      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v2/heartbeat')" ]
+      test: [ "CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/localhost/8000' || exit 1" ]
       interval: 15s
       timeout: 5s
       retries: 8

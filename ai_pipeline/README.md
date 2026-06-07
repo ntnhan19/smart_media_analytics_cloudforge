@@ -2,7 +2,7 @@
 
 Comprehensive AI processing pipeline for video analysis, combining multimodal vision models, automatic speech recognition (ASR), scene detection, and semantic search indexing.
 
-**Optimized for local inference on GTX 1650 (4GB VRAM)** with strategic model quantization, sequential processing, and memory management.
+**Runs fully locally via Ollama** — no cloud API, no GPU required. All AI inference is CPU-friendly through Ollama's optimized runtimes.
 
 ---
 
@@ -34,11 +34,11 @@ Video Input
     ↓
 [Audio Extraction] → Extract audio track
     ↓
-[ASR/Transcription] → WhisperX for speech-to-text
+[ASR/Transcription] → faster-whisper for speech-to-text
     ↓
 [Keyframe Extraction] → Extract frames from scene boundaries
     ↓
-[Vision Analysis] → Qwen-VL + Florence-2 image understanding
+[Vision Analysis] → Qwen2.5-VL via Ollama (qwen2.5vl:3b)
     ↓
 [LLM Refinement] → Structure and merge analysis outputs
     ↓
@@ -59,7 +59,7 @@ ai_pipeline/
 │
 ├── audio/
 │   ├── __init__.py
-│   └── transcriber.py          # WhisperX ASR implementation
+│   └── transcriber.py          # faster-whisper ASR implementation
 │
 ├── vision/
 │   ├── __init__.py
@@ -95,88 +95,71 @@ ai_pipeline/
 
 ### 1. **Audio Processing** (`audio/transcriber.py`)
 
-**WhisperX** speech-to-text with word-level timestamps.
+**faster-whisper** speech-to-text using ctranslate2 backend — CPU-optimized, no torch required.
 
 ```python
-from ai_pipeline.audio.transcriber import WhisperXModel
+from ai_pipeline.audio.transcriber import WhisperModel, create_asr_model
 
-transcriber = WhisperXModel(model_size="base", device="cuda")
+transcriber = WhisperModel(model_size="base")
 
-result = transcriber.transcribe(
-    audio_path=Path("video.mp3"),
-    language="en",
-    batch_size=16
-)
+result = transcriber.transcribe(audio_path=Path("audio.wav"))
 
 # Result structure:
 # {
 #     "segments": [...],        # Segment-level timing & text
-#     "words": [...],           # Word-level timing & confidence
 #     "text": "Full transcript",
 #     "language": "en"
 # }
 ```
 
 **Key Features:**
-- ✅ Word-level timestamp alignment
+- ✅ ctranslate2 backend — 4x faster than openai-whisper on CPU
 - ✅ Automatic language detection
-- ✅ 4 model sizes: tiny, base, small, medium, large
-- ✅ Batch processing support
-- ✅ CUDA/CPU device support
+- ✅ 5 model sizes: tiny, base, small, medium, large
+- ✅ int8 quantization for CPU efficiency
+- ✅ No PyTorch dependency
 
 **Models:**
-- `tiny` — 39M params, fastest, lower accuracy
-- `base` — 74M params, recommended for most use cases
-- `small` — 244M params, better accuracy
-- `medium` — 769M params, high accuracy (requires more VRAM)
+- `tiny` — fastest, lower accuracy
+- `base` — recommended for development (default)
+- `small` — better accuracy
+- `medium` / `large` — high accuracy
 
 ---
 
 ### 2. **Vision Models** (`vision/vision_models.py`)
 
-**Qwen2.5-VL-2B-Instruct** and **Florence-2-Base** with 4-bit quantization.
+**Qwen2.5-VL-3B** via Ollama HTTP API — no GPU/VRAM required, runs on host machine.
 
 ```python
-from ai_pipeline.vision.vision_models import QwenVLModel, Florence2Model
+from ai_pipeline.vision.vision_models import OllamaVisionModel
 
-# Initialize Qwen-VL
-qwen = QwenVLModel(model_name="Qwen/Qwen2.5-VL-2B-Instruct", device="cuda")
+model = OllamaVisionModel(model_name="qwen2.5vl:3b")
 
-# Analyze image
-result = qwen.analyze_image(
-    image=Image.open("frame.jpg"),
-    prompt="Describe this landscape in detail",
-    max_new_tokens=512,
-    temperature=0.3
+# Analyze a keyframe
+result = model.analyze_image(
+    image_path=Path("frame.jpg"),
+    prompt="Describe this scene in detail"
 )
-
-# Initialize Florence-2
-florence = Florence2Model(model_name="microsoft/Florence-2-base", device="cuda")
-
-# Get detailed captions
-caption = florence.caption(image, prompt="<DETAILED_CAPTION>")
+print(result)  # String description from the model
 ```
 
-**VRAM Optimization:**
-- 4-bit NF4 quantization
-- Sequential inference (batch_size=1)
-- Image resize to 448px
-- `torch.inference_mode()` instead of `no_grad()`
-- `gc.collect() + torch.cuda.empty_cache()` after each inference
+**Why Ollama:**
+- No VRAM required — Ollama manages model memory on the host
+- Single HTTP call per frame — simple, robust, no torch dependency
+- Swap models without code changes (`qwen2.5vl:3b`, `llava`, etc.)
+- `keep_alive` enabled to avoid cold-start latency between frames
 
-**ModelManager** for sequential loading:
+**ModelManager** for multi-mode support:
 ```python
 from ai_pipeline.vision.vision_models import ModelManager
 
 manager = ModelManager()
-manager.load_models_for_mode("balanced")
+manager.load_models_for_mode("fast")   # loads: qwen_vl only
+manager.load_models_for_mode("high")   # loads: qwen_vl + refinement
 
-# Models loaded:
-manager.qwen_vl  # Available
-manager.florence # Available based on mode
-
-# Unload to free VRAM
-manager.unload_qwen_vl()  # For switching models
+# Unload all vision models before embedding step
+manager.unload_all()
 ```
 
 ---
@@ -360,35 +343,33 @@ else:
 
 ### Processing Modes
 
-| Mode | Qwen-VL | Florence-2 | LLM Refinement | Frames/Scene | Use Case |
-|------|---------|-----------|----------------|-------------|----------|
-| `fast` | ✓ | ✗ | ✗ | 1 | Quick preview |
-| `balanced` | ✓ | ✗ | ✓ | 3 | Default, good balance |
-| `high` | ✓ | ✓ | ✓ | 3 | High quality |
-| `ultra` | ✓ | ✓ (sequential) | ✓ | 5 | Maximum quality, slowest |
+| Mode | Qwen-VL (Ollama) | LLM Refinement | Frames/Scene | Use Case |
+|------|-----------------|----------------|-------------|----------|
+| `fast` | ✓ | ✗ | 1 | Quick preview, low latency |
+| `high` | ✓ | ✓ | 1 | Better quality with refinement |
+| `ultra` | ✓ | ✓ | 1 | Maximum quality, slowest |
 
 ### Environment Variables
 
 Create `.env` file (or copy from `.env.example`):
 
 ```dotenv
-# Vision Models
-QWEN_VL_MODEL=Qwen/Qwen2.5-VL-2B-Instruct
-VISION_MODEL_DEVICE=cuda
-FLORENCE_MODEL=microsoft/Florence-2-base
+# Ollama (vision + embeddings) — must be running on host
+OLLAMA_BASE_URL=http://host.docker.internal:11434   # Docker
+# OLLAMA_BASE_URL=http://localhost:11434            # Local dev
 
-# ASR
-WHISPER_MODEL=base
-WHISPER_DEVICE=cuda
+# Vision model (pulled via: ollama pull qwen2.5vl:3b)
+QWEN_VL_MODEL=qwen2.5vl:3b
 
-# Embeddings
-EMBEDDING_MODEL=BAAI/bge-m3
-EMBEDDING_DEVICE=cpu
+# Embedding model (pulled via: ollama pull bge-m3:latest)
+EMBEDDING_MODEL=bge-m3:latest
 
-# Processing
-PROCESSING_MODE=balanced
-FRAMES_PER_SCENE=3
-USE_REFINEMENT=true
+# ASR — faster-whisper model size
+WHISPER_MODEL_SIZE=base   # tiny | base | small | medium | large
+
+# ChromaDB
+CHROMA_HOST=chromadb
+CHROMA_PORT=8000
 ```
 
 ---
@@ -457,51 +438,21 @@ query_vector = embeddings.encode([query])[0]
 
 ## 🎯 Performance Tuning
 
-### For GTX 1650 (4GB VRAM)
+### Pipeline Bottlenecks (measured on CPU)
 
-1. **Use 4-bit Quantization**
-   ```python
-   # Automatically used in QwenVLModel, RefinementLLM
-   # ~1.5-2GB VRAM per model with quantization
-   ```
+| Stage | Time (per video) | Notes |
+|-------|-----------------|-------|
+| Proxy creation | ~30-60s | FFmpeg re-encode, depends on video size |
+| Scene detection | ~10-15s | PySceneDetect on proxy |
+| Frame analysis | ~60-120s | Ollama Qwen-VL inference — main bottleneck |
+| Embedding | ~20-30s | BGE-M3 via Ollama |
 
-2. **Sequential Model Loading**
-   ```python
-   manager.load_qwen_vl()
-   # Do analysis
-   manager.unload_qwen_vl()
-   manager.load_florence()  # Now have space for Florence
-   ```
+### Tips
 
-3. **Image Resizing**
-   ```python
-   # Automatically done in _resize_image()
-   # Reduces tokenization overhead
-   max_size = 448  # pixels
-   ```
-
-4. **Batch Processing**
-   ```python
-   # Process frames one at a time
-   batch_size = 1
-   ```
-
-5. **Enable Memory Optimization**
-   ```dotenv
-   ENABLE_MEMORY_OPTIMIZATION=true
-   DTYPE=float16
-   GPU_MEMORY_FRACTION=0.9
-   ```
-
-### VRAM Estimates
-
-| Component | Model | Quantization | VRAM |
-|-----------|-------|--------------|------|
-| Vision | Qwen-VL 2B | 4-bit | ~1.2GB |
-| Vision | Florence 2B | float16 | ~1.8GB |
-| LLM | Qwen2 1.5B | 4-bit | ~0.8GB |
-| Embeddings | BGE-M3 | CPU | None |
-| **Total (balanced)** | - | - | ~2.0GB |
+1. **Use `fast` mode** — 1 frame/scene, no refinement → fastest possible
+2. **Keep Ollama warm** — `keep_alive` is set to avoid cold-start delay between frames
+3. **Smaller whisper model** — set `WHISPER_MODEL_SIZE=tiny` for faster transcription
+4. **Proxy resolution** — pipeline creates 480p proxy before analysis to reduce I/O
 
 ---
 
@@ -539,15 +490,14 @@ pytest ai_pipeline/tests/ -v --durations=10
 
 ## 📚 API Reference
 
-### WhisperXModel
+### WhisperModel
 
 ```python
-class WhisperXModel:
-    def __init__(self, model_size: str = "base", device: str = "cuda")
+class WhisperModel:
+    def __init__(self, model_size: str = "base")  # uses ctranslate2, CPU int8
     def transcribe(
         audio_path: Path,
-        language: str = None,
-        batch_size: int = 16
+        language: str = None
     ) -> Dict[str, Any]
 ```
 
@@ -610,9 +560,9 @@ model = QwenVLModel()  # Downloads on first init
 ### Slow Inference
 
 **Solution:**
-1. Ensure `VISION_MODEL_DEVICE=cuda`
-2. Check GPU availability: `python -c "import torch; print(torch.cuda.is_available())"`
-3. Use `DTYPE=float16` for faster computation
+1. Ensure Ollama is running on the host: `ollama serve`
+2. Check model is pulled: `ollama list` (should show `qwen2.5vl:3b` and `bge-m3:latest`)
+3. Switch to `fast` processing mode to reduce frame count
 
 ### Audio Not Extracted
 
@@ -639,5 +589,5 @@ This project is licensed under the MIT License. See [LICENSE](../LICENSE) for de
 
 <p align="center">
   Built for 🎬 <strong>Smart Media Analytics</strong><br>
-  Optimized for local GPU inference with strategic quantization
+  CPU-friendly via Ollama — no GPU required
 </p>

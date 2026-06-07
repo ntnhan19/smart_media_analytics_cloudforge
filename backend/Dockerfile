@@ -6,8 +6,7 @@ LABEL description="FastAPI backend for EchoScene AI media management"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
-    libgl1 \
-    libglib2.0-0 \
+    libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -23,7 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /app/data/media /app/data/chromadb
+RUN mkdir -p /app/data/media
 
 EXPOSE 8000
 
