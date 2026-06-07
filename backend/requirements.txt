@@ -32,7 +32,7 @@ pymediainfo==6.1.0
 python-magic==0.4.27
 
 # ── Speech-to-Text (ASR) ───────────────────────────────────────────────────
-# openai-whisper được cài riêng trong Dockerfile
+faster-whisper==1.0.3       # faster-whisper: ctranslate2 backend, no torch dependency
 librosa==0.10.1
 soundfile==0.12.1
 

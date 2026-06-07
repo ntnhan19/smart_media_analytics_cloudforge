@@ -29,13 +29,12 @@ networks:
 volumes:
   postgres_data: # PostgreSQL data files
   chroma-data: # ChromaDB vector embeddings (persistent)
-  whisper-cache: # Whisper model weights cache (avoids re-downloading)
+  whisper-cache: # faster-whisper model weights cache (HuggingFace Hub)
   minio_data:
-    # MinIO object storage data
 
-    # ---------------------------------------------------------------------------
-    # Services
-    # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
 services:
 
   # -------------------------------------------------------------------------
@@ -66,8 +65,9 @@ services:
       - ./data/media:/app/data/media
       # ChromaDB local persist path (used when not relying on the chromadb service)
       - ./data/chromadb:/app/data/chromadb
-      # Whisper model cache — avoids re-downloading on every restart
-      - whisper-cache:/root/.cache/whisper
+      # faster-whisper model cache — avoids re-downloading on every restart
+      # faster-whisper stores models in ~/.cache/huggingface/hub
+      - whisper-cache:/root/.cache/huggingface
     depends_on:
       postgres:
         condition: service_healthy # Wait for postgres to be ready before starting
@@ -152,7 +152,7 @@ services:
       POSTGRES_USER: echoscene
       POSTGRES_PASSWORD: echoscene_dev_password
     ports:
-      - "5433:5432"       # PostgreSQL -> localhost:5433
+      - "5433:5432" # PostgreSQL -> localhost:5433
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # SQL init scripts run automatically on first DB creation
