@@ -37,7 +37,7 @@ librosa==0.10.1
 soundfile==0.12.1
 
 # ── Vector Search & Embeddings ────────────────────────────────────────────
-chromadb-client==0.4.23.dev0
+chromadb-client==1.5.9
 scikit-learn==1.5.1
 
 # ── Data Processing ───────────────────────────────────────────────────────
