@@ -416,7 +416,7 @@ class SceneDetector:
             scene_manager.detect_scenes(video)
             scene_list = scene_manager.get_scene_list()
 
-            return [(s[0].seconds, s[1].seconds) for s in scene_list]
+            return [(s[0].get_seconds(), s[1].get_seconds()) for s in scene_list]
 
         except Exception as e:
             log_exception(e, "_run_scene_detection")

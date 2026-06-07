@@ -6,7 +6,9 @@ Main pipeline orchestrating video processing và analysis
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import uuid
+import time
 from datetime import datetime
+
 from PIL import Image
 
 from ai_pipeline.config import config
@@ -81,6 +83,19 @@ class VideoAnalysisPipeline:
         """
         try:
             logger.section(f"Processing Video - Mode: {self.processing_mode}")
+            pipeline_start = time.time()
+
+            metrics = {
+                "video_info": 0,
+                "proxy_creation": 0,
+                "audio_processing": 0,
+                "scene_detection": 0,
+                "keyframe_extraction": 0,
+                "model_loading": 0,
+                "frame_analysis": 0,
+                "refinement": 0,
+                "result_storage": 0
+            }
             
             # Generate video ID
             self.video_id = video_id or self._generate_video_id()
@@ -95,39 +110,59 @@ class VideoAnalysisPipeline:
             
             # Step 1: Video info & validation 
             progress.step("Extracting video information")
+            start = time.time()
             video_info = self._extract_video_info(video_path)
+            metrics["video_info"] = time.time() - start
             
             # Step 2: Create proxy video
             progress.step("Creating proxy video")
+            start = time.time()
             proxy_path = self._create_proxy(video_path)
+            metrics["proxy_creation"] = time.time() - start
             
             # Step 3: Extract audio & transcribe
             progress.step("Extracting and transcribing audio")
+            start = time.time()
             transcript_data = self._process_audio(video_path)
+            metrics["audio_processing"] = time.time() - start
             
             # Step 4: Scene detection
             progress.step("Detecting scenes")
+            start = time.time()
             scenes = self._detect_scenes(proxy_path or video_path)
+            metrics["scene_detection"] = time.time() - start
             
             # Step 5: Extract keyframes
             progress.step("Extracting keyframes")
+            start = time.time()
+
             keyframes = self._extract_keyframes(
                 proxy_path or video_path,
                 scenes
             )
+
+            metrics["keyframe_extraction"] = time.time() - start
             
             # Step 6: Load models
             progress.step("Loading AI models")
+            start = time.time()
             self._load_models()
+            metrics["model_loading"] = time.time() - start
             
             # Step 7: Analyze frames
             progress.step(f"Analyzing {len(keyframes)} frames")
+            start = time.time()
             frame_analyses = self._analyze_frames(keyframes)
+            metrics["frame_analysis"] = time.time() - start
             
             # Step 8: Refine analysis (optional)
             if self.mode_config['use_refinement']:
                 progress.step("Refining analysis with LLM")
+                start = time.time()
+
                 frame_analyses = self._refine_analyses(frame_analyses)
+
+                metrics["refinement"] = time.time() - start
             
             # Giải phóng VRAM hoàn toàn trước khi chạy Embedding Model
             if self.model_manager:
@@ -137,6 +172,8 @@ class VideoAnalysisPipeline:
 
             # Step 9: Generate embeddings & store
             progress.step("Generating embeddings and storing")
+            start = time.time()
+
             self._store_results(
                 video_info,
                 scenes,
@@ -144,19 +181,33 @@ class VideoAnalysisPipeline:
                 frame_analyses,
                 transcript_data
             )
+
+            metrics["result_storage"] = time.time() - start
             
             # Update video status
             self.db.update_video_status(self.video_id, 'completed')
             
             progress.complete(f"Video processing complete: {self.video_id}")
             
+            metrics["total_pipeline"] = time.time() - pipeline_start
+            
+            logger.info("=" * 60)
+            logger.info("PIPELINE PERFORMANCE METRICS")
+            logger.info("=" * 60)
+
+            for stage, value in metrics.items():
+                logger.info(f"{stage:<25}: {value:.2f}s")
+
+            logger.info("=" * 60)
+                        
             # Gather stats
             stats = self._gather_stats(scenes, keyframes, frame_analyses)
             
             return {
                 'video_id': self.video_id,
                 'status': 'success',
-                'stats': stats
+                'stats': stats,
+                'metrics': metrics
             }
             
         except Exception as e:

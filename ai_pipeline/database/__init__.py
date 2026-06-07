@@ -44,6 +44,11 @@ from .db_client import (
     get_timestamp,
 )
 
+from .vectordb_client import (
+    VectorDBClient,
+    get_vector_db_client,
+)
+
 from .repositories import (
     VideoRepository,
     SceneRepository,
@@ -83,6 +88,9 @@ __all__ = [
     "TranscriptRepository",
     "SearchRepository",
     "RepositoryFactory",
+    # Vector DB
+    "VectorDBClient",
+    "get_vector_db_client",
     # Helpers
     "get_db_client",
     "generate_id",

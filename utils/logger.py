@@ -58,7 +58,7 @@ def success(msg: str) -> None:
 
 def warning(msg: str) -> None:
     """Log cảnh báo"""
-    logger.warning(f"[WARN] {msg}")
+    logging.Logger.warning(logger, f"[WARN] {msg}")
 
 
 # Gắn các helper vào logger để pipeline có thể gọi logger.section(), logger.success()

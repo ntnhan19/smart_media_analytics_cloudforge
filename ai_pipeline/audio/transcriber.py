@@ -8,8 +8,6 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import time
 
-import faster_whisper
-
 from ai_pipeline.config import config
 from utils.logger import logger, log_model_loading, log_exception
 
@@ -25,6 +23,7 @@ class WhisperModel:
     def _load_model(self):
         """Load Faster-Whisper model với cấu hình tối ưu cho CPU"""
         try:
+            import faster_whisper  # lazy import — không crash khi chưa cài
             log_model_loading(f"Faster-Whisper-{self.model_size}", "loading")
 
             self.model = faster_whisper.WhisperModel(

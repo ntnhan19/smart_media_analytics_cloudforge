@@ -107,7 +107,17 @@ def _run_pipeline_test():
             # Call process_video with correct signature
             # process_video(self, video_path: Path, video_id: str = None)
             process_result = pipeline.process_video(video_path=video_path)
-            
+            metrics = process_result.get("metrics", {})
+
+            if metrics:
+                print("\nSTAGE METRICS")
+                print("-" * 40)
+
+                for stage, value in metrics.items():
+                    print(f"{stage:<25} {value:.2f}s")
+
+                print("-" * 40)
+                        
             elapsed_time = time.time() - start_time
             result['time_sec'] = elapsed_time
             
