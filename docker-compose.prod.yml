@@ -1,0 +1,113 @@
+name: echoscene-prod
+
+networks:
+  sma-network:
+    driver: bridge
+    name: sma-network
+
+volumes:
+  postgres_data:
+  chroma-data:
+  whisper-cache:
+  minio_data:
+
+services:
+  # ── BACKEND ──
+  backend:
+    image: ntnhan1801/echoscene-backend:latest
+    container_name: echoscene-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - sma-network
+
+  # ── FRONTEND ──
+  frontend:
+    image: ntnhan1801/echoscene-frontend:latest
+    container_name: echoscene-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - sma-network
+
+  # ── CHROMADB ──
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: echoscene-chromadb
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: /chroma/chroma
+      ANONYMIZED_TELEMETRY: "FALSE"
+    volumes:
+      - chroma-data:/chroma/chroma
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/localhost/8000' || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sma-network
+
+  # ── POSTGRESQL ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: echoscene-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: echoscene
+      POSTGRES_USER: echoscene
+      POSTGRES_PASSWORD: echoscene_dev_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U echoscene -d echoscene" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sma-network
+
+  # ── MINIO ──
+  minio:
+    image: minio/minio:latest
+    container_name: echoscene-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: echoscene
+      MINIO_ROOT_PASSWORD: echoscene_dev_password
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - sma-network

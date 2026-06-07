@@ -1,8 +1,148 @@
-version: "3.9"
+# =============================================================================
+# EchoScene — Local Development Stack
+# =============================================================================
+# Start the full stack : docker compose up --build
+# Stop the stack       : docker compose down
+# View logs            : docker compose logs -f
+#
+# Services:
+#   backend   -> FastAPI app       -> http://localhost:8000
+#   frontend  -> React/Vite app    -> http://localhost:5173
+#   chromadb  -> Vector DB         -> http://localhost:8001
+#   postgres  -> Relational DB     -> localhost:5432
+#   minio     -> Object storage    -> http://localhost:9000 (console: 9001)
+# =============================================================================
 
 name: echoscene-local
 
+# ---------------------------------------------------------------------------
+# Shared network — all services communicate internally through this network
+# ---------------------------------------------------------------------------
+networks:
+  sma-network:
+    driver: bridge
+    name: sma-network
+
+# ---------------------------------------------------------------------------
+# Named volumes — persistent data, survives container restarts
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data: # PostgreSQL data files
+  chroma-data: # ChromaDB vector embeddings (persistent)
+  whisper-cache: # faster-whisper model weights cache (HuggingFace Hub)
+  minio_data:
+
+    # ---------------------------------------------------------------------------
+    # Services
+    # ---------------------------------------------------------------------------
 services:
+
+  # -------------------------------------------------------------------------
+  # BACKEND — FastAPI application
+  # Owner: M2 (Backend Engineer)
+  # Build: ./backend/Dockerfile
+  # -------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: echoscene-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000" # FastAPI -> http://localhost:8000
+    env_file:
+      - .env # Load environment variables from .env (copy from .env.example)
+    environment:
+      # These override or extend values from .env
+      PYTHONUNBUFFERED: "1"
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: "8000"
+      DATABASE_URL: postgresql+psycopg://echoscene:echoscene_dev_password@postgres:5432/echoscene
+    volumes:
+      # Bind-mount source code for hot-reload during development (no rebuild needed)
+      - ./backend:/app
+      # Media files — directory containing videos/images to ingest
+      - ./data/media:/app/data/media
+      # ChromaDB local persist path (used when not relying on the chromadb service)
+      - ./data/chromadb:/app/data/chromadb
+      # faster-whisper model cache — avoids re-downloading on every restart
+      # faster-whisper stores models in ~/.cache/huggingface/hub
+      - whisper-cache:/root/.cache/huggingface
+    depends_on:
+      postgres:
+        condition: service_healthy # Wait for postgres to be ready before starting
+      chromadb:
+        condition: service_healthy # Wait for chromadb to be ready before starting
+    healthcheck:
+      # Calls /health endpoint — returns {"status": "ok"} when service is ready
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/v1/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s # Allow app to boot before first health check
+    networks:
+      - sma-network
+
+  # -------------------------------------------------------------------------
+  # FRONTEND — React + Vite application
+  # Owner: M3 (Frontend Engineer)
+  # Build: ./frontend/Dockerfile
+  # -------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: echoscene-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173" # Vite dev server -> http://localhost:5173
+    env_file:
+      - .env
+    environment:
+      # VITE_ prefix is required for Vite to expose variables to client-side code
+      VITE_API_BASE_URL: ${API_BASE_URL}
+    volumes:
+      # Bind-mount source code so Vite HMR (Hot Module Replacement) works
+      - ./frontend:/app
+      # Prevent overwriting node_modules inside the container
+      - /app/node_modules
+    depends_on:
+      - backend # Frontend requires backend to be running
+    networks:
+      - sma-network
+
+  # -------------------------------------------------------------------------
+  # CHROMADB — Vector database for semantic search
+  # Owner: M1 (AI Pipeline) + M2 (Backend)
+  # Image: chromadb/chroma:latest
+  # -------------------------------------------------------------------------
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: echoscene-chromadb
+    restart: unless-stopped
+    ports:
+      - "8001:8000" # ChromaDB API -> http://localhost:8001
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: /chroma/chroma # Path where embeddings are stored inside the container
+      ANONYMIZED_TELEMETRY: "FALSE" # Disable telemetry
+    volumes:
+      - chroma-data:/chroma/chroma # Named volume — embeddings are not lost on restart
+    healthcheck:
+      # ChromaDB v2+ exposes /api/v2/heartbeat (v1 API is deprecated)
+      test: [ "CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/localhost/8000' || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 10s
+    networks:
+      - sma-network
+
+  # -------------------------------------------------------------------------
+  # POSTGRESQL — Relational database for asset metadata
+  # Owner: M2 (Backend Engineer)
+  # Image: postgres:16-alpine
+  # -------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     container_name: echoscene-postgres
@@ -12,38 +152,24 @@ services:
       POSTGRES_USER: echoscene
       POSTGRES_PASSWORD: echoscene_dev_password
     ports:
-      - "5432:5432"
+      - "5433:5432" # PostgreSQL -> localhost:5433
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # SQL init scripts run automatically on first DB creation
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U echoscene -d echoscene"]
+      test: [ "CMD-SHELL", "pg_isready -U echoscene -d echoscene" ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - echoscene_net
+      - sma-network
 
-  chromadb:
-    image: chromadb/chroma:latest
-    container_name: echoscene-chromadb
-    restart: unless-stopped
-    environment:
-      IS_PERSISTENT: "TRUE"
-      PERSIST_DIRECTORY: /chroma/chroma
-      ANONYMIZED_TELEMETRY: "FALSE"
-    ports:
-      - "8001:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/heartbeat')"]
-      interval: 15s
-      timeout: 5s
-      retries: 8
-    networks:
-      - echoscene_net
-
+  # -------------------------------------------------------------------------
+  # MINIO — Object storage for thumbnails and media files (S3-compatible)
+  # Owner: M2 (Backend) — easy to migrate to AWS S3 later
+  # Image: minio/minio:latest
+  # -------------------------------------------------------------------------
   minio:
     image: minio/minio:latest
     container_name: echoscene-minio
@@ -53,23 +179,14 @@ services:
       MINIO_ROOT_USER: echoscene
       MINIO_ROOT_PASSWORD: echoscene_dev_password
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:9000" # MinIO S3 API -> http://localhost:9000
+      - "9001:9001" # MinIO Web Console -> http://localhost:9001
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: [ "CMD", "mc", "ready", "local" ]
       interval: 15s
       timeout: 5s
       retries: 8
     networks:
-      - echoscene_net
-
-volumes:
-  postgres_data:
-  chroma_data:
-  minio_data:
-
-networks:
-  echoscene_net:
-    driver: bridge
+      - sma-network
