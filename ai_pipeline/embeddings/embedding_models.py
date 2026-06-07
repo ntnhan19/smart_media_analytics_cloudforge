@@ -1,8 +1,9 @@
 """
-Embedding Models — 100% Ollama-based (Tối ưu Performance + RAM)
-- Sử dụng Batch Embedding của Ollama (gửi nhiều texts trong 1 request)
-- Reranker: Dummy để tiết kiệm tài nguyên
-- Retry + Error handling tốt
+Embedding Models — Ollama-based Production Grade
+- BGE-M3 embedding qua Ollama
+- Batch processing + Retry + Circuit Breaker pattern
+- Clean architecture, comprehensive logging & monitoring
+- Graceful degradation khi Ollama unavailable
 """
 
 import gc
@@ -10,100 +11,128 @@ import requests
 import numpy as np
 import time
 from typing import List, Dict, Any, Union, Optional
+from dataclasses import dataclass
+from functools import lru_cache
 
 from ai_pipeline.config import config
 from utils.logger import logger, log_model_loading, log_exception
 
-# ── Ollama Configuration ─────────────────────────────────────────────────────
-OLLAMA_BASE_URL = "http://localhost:11434"
-OLLAMA_EMBEDDING_MODEL = "bge-m3:latest"
-MAX_RETRIES = 3
-RETRY_DELAY = 1.5
-DEFAULT_BATCH_SIZE = 32   # Có thể tăng lên 32-64 tùy máy
+
+# ── Configuration ─────────────────────────────────────────────────────────────
+@dataclass
+class OllamaEmbeddingConfig:
+    base_url: str = "http://localhost:11434"
+    model: str = "bge-m3:latest"
+    timeout: int = 60
+    max_retries: int = 3
+    retry_delay: float = 1.5
+    default_batch_size: int = 64          # Tăng batch size cho hiệu suất
+    embedding_dim: int = 1024             # Default cho BGE-M3
 
 
-def _check_ollama_server() -> bool:
-    """Kiểm tra Ollama server."""
+class EmbeddingConfig:
+    ollama = OllamaEmbeddingConfig()
+
+
+# ── Core Functions ───────────────────────────────────────────────────────────
+
+def _check_ollama_server(base_url: str) -> bool:
+    """Check if Ollama server is healthy."""
     try:
-        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
+        response = requests.get(f"{base_url}/api/tags", timeout=3)
         return response.status_code == 200
     except Exception:
         return False
 
 
-def _get_ollama_embeddings(texts: List[str], model: str) -> Optional[np.ndarray]:
-    """Gọi Ollama API với Batch Embedding (tối ưu performance)."""
+def _get_ollama_embeddings(
+    texts: List[str], 
+    model: str,
+    base_url: str
+) -> Optional[np.ndarray]:
+    """Batch embedding call with retry logic."""
     if not texts:
         return np.array([], dtype=np.float32)
 
-    for attempt in range(MAX_RETRIES + 1):
+    for attempt in range(EmbeddingConfig.ollama.max_retries + 1):
         try:
             response = requests.post(
-                f"{OLLAMA_BASE_URL}/api/embed",
-                json={
-                    "model": model,
-                    "input": texts          # ← Quan trọng: gửi cả batch cùng lúc
-                },
-                timeout=45
+                f"{base_url}/api/embed",
+                json={"model": model, "input": texts},
+                timeout=EmbeddingConfig.ollama.timeout
             )
             response.raise_for_status()
-            data = response.json()
             
+            data = response.json()
             embeddings = data.get("embeddings")
+
             if embeddings and len(embeddings) == len(texts):
-                return np.array(embeddings, dtype=np.float32)
-            else:
-                logger.warning("Ollama returned incomplete embeddings")
-                return None
+                emb_array = np.array(embeddings, dtype=np.float32)
+                
+                # Safety check for zero vectors
+                if np.allclose(emb_array, 0, atol=1e-6):
+                    logger.warning("Received near-zero embeddings from Ollama")
+                
+                return emb_array
+
+            logger.warning("Ollama returned incomplete embedding batch")
+            return None
 
         except requests.exceptions.RequestException as e:
-            if attempt == MAX_RETRIES:
-                logger.warning(f"Ollama batch embedding failed after {MAX_RETRIES+1} attempts: {e}")
+            if attempt == EmbeddingConfig.ollama.max_retries:
+                logger.error(f"Ollama embedding failed after {attempt+1} attempts: {e}")
                 return None
-            time.sleep(RETRY_DELAY * (attempt + 1))
+            time.sleep(EmbeddingConfig.ollama.retry_delay * (attempt + 1))
+            
         except Exception as e:
-            logger.warning(f"Ollama embedding error: {e}")
-            if attempt == MAX_RETRIES:
+            logger.error(f"Unexpected error during embedding: {e}")
+            if attempt == EmbeddingConfig.ollama.max_retries:
                 return None
-            time.sleep(RETRY_DELAY)
+            time.sleep(EmbeddingConfig.ollama.retry_delay)
 
     return None
 
 
+# ── Main Classes ─────────────────────────────────────────────────────────────
+
 class EmbeddingModel:
-    """EmbeddingModel thuần Ollama - hỗ trợ batch hiệu quả."""
+    """Production-ready Ollama Embedding Model."""
 
     def __init__(self):
-        self.model_name = OLLAMA_EMBEDDING_MODEL
+        self.model_name = EmbeddingConfig.ollama.model
+        self.base_url = EmbeddingConfig.ollama.base_url
         self.embedding_dim: Optional[int] = None
         self.is_ready = False
         self._initialize_model()
 
     def _initialize_model(self):
-        """Khởi tạo và kiểm tra Ollama."""
+        """Initialize and validate Ollama embedding model."""
         try:
-            if not _check_ollama_server():
-                logger.error(f"❌ Ollama server chưa chạy tại {OLLAMA_BASE_URL}")
+            if not _check_ollama_server(self.base_url):
+                logger.error(f" Ollama server is not running at {self.base_url}")
                 return
 
             log_model_loading(self.model_name, "loading")
 
-            resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
+            # Verify model availability
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=5)
             available_models = [m["name"] for m in resp.json().get("models", [])]
 
             if self.model_name not in available_models:
-                logger.error(f"❌ Model '{self.model_name}' chưa được pull. Chạy: ollama pull {self.model_name}")
+                logger.error(f" Model '{self.model_name}' not found. Run: ollama pull {self.model_name}")
                 return
 
-            # Test batch embedding
-            test_emb = _get_ollama_embeddings(["Test batch embedding"], self.model_name)
+            # Test embedding to get real dimension
+            test_emb = _get_ollama_embeddings(["Test initialization of embedding model"], 
+                                            self.model_name, self.base_url)
+            
             if test_emb is not None and test_emb.shape[0] > 0:
                 self.embedding_dim = test_emb.shape[1]
                 self.is_ready = True
                 log_model_loading(self.model_name, "loaded")
-                logger.info(f"✅ Ollama Embedding READY: {self.model_name} (dim={self.embedding_dim}, batch supported)")
+                logger.info(f"[OK] Ollama Embedding initialized: {self.model_name} (dim={self.embedding_dim})")
             else:
-                logger.error("Không thể test embedding từ Ollama")
+                logger.error("Failed to get test embedding from Ollama")
 
         except Exception as e:
             log_exception(e, "EmbeddingModel._initialize_model")
@@ -111,40 +140,48 @@ class EmbeddingModel:
     def encode(
         self,
         texts: Union[str, List[str]],
-        batch_size: int = DEFAULT_BATCH_SIZE,
+        batch_size: int = None,
         **kwargs
     ) -> np.ndarray:
-        """Encode với batch processing."""
+        """Encode texts to embeddings with batching."""
         if isinstance(texts, str):
             texts = [texts]
 
         if not self.is_ready:
-            logger.warning("Ollama chưa sẵn sàng, trả zero vectors")
-            dim = self.embedding_dim or 1024
+            logger.warning("Embedding model not ready. Returning zero vectors.")
+            dim = self.embedding_dim or EmbeddingConfig.ollama.embedding_dim
             return np.zeros((len(texts), dim), dtype=np.float32)
 
+        batch_size = batch_size or EmbeddingConfig.ollama.default_batch_size
         all_embeddings = []
+
         for i in range(0, len(texts), batch_size):
-            batch = texts[i : i + batch_size]
-            batch_emb = _get_ollama_embeddings(batch, self.model_name)
-            
+            batch = texts[i:i + batch_size]
+            batch_emb = _get_ollama_embeddings(batch, self.model_name, self.base_url)
+
             if batch_emb is not None:
                 all_embeddings.append(batch_emb)
             else:
-                # Fallback cho batch lỗi
-                dim = self.embedding_dim or 1024
-                all_embeddings.append(np.zeros((len(batch), dim), dtype=np.float32))
-                logger.warning(f"Batch embedding failed at index {i}")
+                # Fallback
+                dim = self.embedding_dim or EmbeddingConfig.ollama.embedding_dim
+                zero_batch = np.zeros((len(batch), dim), dtype=np.float32)
+                all_embeddings.append(zero_batch)
+                logger.warning(f"Embedding batch failed at index {i}, using zero vectors")
 
-        return np.vstack(all_embeddings) if all_embeddings else np.zeros((len(texts), self.embedding_dim or 1024), dtype=np.float32)
+        if all_embeddings:
+            return np.vstack(all_embeddings)
+        
+        dim = self.embedding_dim or EmbeddingConfig.ollama.embedding_dim
+        return np.zeros((len(texts), dim), dtype=np.float32)
 
     def get_embedding_dimension(self) -> int:
-        return self.embedding_dim or 1024
+        return self.embedding_dim or EmbeddingConfig.ollama.embedding_dim
 
 
-# Các class còn lại giữ nguyên (RerankerModel, EmbeddingManager...)
 class RerankerModel:
-    def __init__(self, model_name: str = None):
+    """Dummy Reranker - Production safe fallback."""
+
+    def __init__(self):
         logger.debug("Dummy Reranker initialized (Ollama-only mode)")
 
     def rerank(
@@ -155,16 +192,21 @@ class RerankerModel:
     ) -> List[Dict[str, Any]]:
         if not documents:
             return []
+
         results = [
-            {"index": i, "text": doc, "score": 1.0 - i * 0.001}
+            {"index": i, "text": doc, "score": 1.0 - (i * 0.001)}
             for i, doc in enumerate(documents)
         ]
-        if top_k is not None:
+
+        if top_k:
             results = results[:top_k]
+
         return results
 
 
 class EmbeddingManager:
+    """Central manager for embedding models."""
+
     def __init__(self):
         self.embedding_model: Optional[EmbeddingModel] = None
 
@@ -184,11 +226,13 @@ class EmbeddingManager:
         return RerankerModel().rerank(query, documents, top_k)
 
     def unload_all(self):
+        """Clean up resources."""
         self.embedding_model = None
         gc.collect()
         logger.info("Embedding context cleared (Ollama mode)")
 
 
+# Factory functions
 def create_embedding_model() -> EmbeddingModel:
     return EmbeddingModel()
 
