@@ -121,7 +121,10 @@ ai_pipeline/thumbnails/
 ai_pipeline/keyframes/
 ai_pipeline/output/
 ai_pipeline/logs/
-ai_pipeline/database/
+ai_pipeline/database/*
+!ai_pipeline/database/*.py
+!ai_pipeline/database/__init__.py
+!ai_pipeline/database/.gitkeep
 
 
 # =============================================================================
