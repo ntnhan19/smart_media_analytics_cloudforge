@@ -6,8 +6,7 @@ LABEL description="FastAPI backend for EchoScene AI media management"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
-    libgl1 \
-    libglib2.0-0 \
+    libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -16,23 +15,14 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir "pip==23.3.2" "setuptools==70.3.0" "wheel"
 
-RUN pip install --no-cache-dir \
-    "torch==2.2.0+cpu" \
-    "torchvision==0.17.0+cpu" \
-    "torchaudio==2.2.0+cpu" \
-    --index-url https://download.pytorch.org/whl/cpu
-
-RUN pip install --no-cache-dir --no-build-isolation "openai-whisper==20240930"
-
-# Loại trừ torch/whisper đã cài + transformers để tránh bị overwrite
-# Sau đó cài transformers đúng version riêng
-RUN grep -vE "^\s*(torch|torchvision|torchaudio|openai-whisper|whisperx|#|$)" requirements.txt \
-    > /tmp/req_filtered.txt \
-    && pip install --no-cache-dir -r /tmp/req_filtered.txt
+# Install all dependencies from requirements.txt
+# Note: torch is NOT needed — all AI models run via Ollama HTTP API,
+# and faster-whisper uses ctranslate2 (not torch).
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /app/data/media /app/data/chromadb
+RUN mkdir -p /app/data/media
 
 EXPOSE 8000
 

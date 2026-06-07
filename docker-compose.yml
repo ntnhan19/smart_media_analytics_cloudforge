@@ -29,9 +29,8 @@ networks:
 volumes:
   postgres_data: # PostgreSQL data files
   chroma-data: # ChromaDB vector embeddings (persistent)
-  whisper-cache: # Whisper model weights cache (avoids re-downloading)
+  whisper-cache: # faster-whisper model weights cache (HuggingFace Hub)
   minio_data:
-    # MinIO object storage data
 
     # ---------------------------------------------------------------------------
     # Services
@@ -66,8 +65,9 @@ services:
       - ./data/media:/app/data/media
       # ChromaDB local persist path (used when not relying on the chromadb service)
       - ./data/chromadb:/app/data/chromadb
-      # Whisper model cache — avoids re-downloading on every restart
-      - whisper-cache:/root/.cache/whisper
+      # faster-whisper model cache — avoids re-downloading on every restart
+      # faster-whisper stores models in ~/.cache/huggingface/hub
+      - whisper-cache:/root/.cache/huggingface
     depends_on:
       postgres:
         condition: service_healthy # Wait for postgres to be ready before starting
@@ -100,7 +100,7 @@ services:
       - .env
     environment:
       # VITE_ prefix is required for Vite to expose variables to client-side code
-      VITE_API_BASE_URL: http://localhost:8000
+      VITE_API_BASE_URL: ${API_BASE_URL}
     volumes:
       # Bind-mount source code so Vite HMR (Hot Module Replacement) works
       - ./frontend:/app
@@ -130,7 +130,7 @@ services:
       - chroma-data:/chroma/chroma # Named volume — embeddings are not lost on restart
     healthcheck:
       # ChromaDB v2+ exposes /api/v2/heartbeat (v1 API is deprecated)
-      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v2/heartbeat')" ]
+      test: [ "CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/localhost/8000' || exit 1" ]
       interval: 15s
       timeout: 5s
       retries: 8
@@ -152,7 +152,7 @@ services:
       POSTGRES_USER: echoscene
       POSTGRES_PASSWORD: echoscene_dev_password
     ports:
-      - "5433:5432"       # PostgreSQL -> localhost:5433
+      - "5433:5432" # PostgreSQL -> localhost:5433
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # SQL init scripts run automatically on first DB creation

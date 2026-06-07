@@ -33,9 +33,9 @@ When you're ready to scale, SMA's architecture maps cleanly onto AWS production 
 |---|---|
 | 🔍 **Natural Language Search** | Query your media library in plain English — "sunset over the ocean with ambient music" |
 | 🎞️ **Timestamp-Level Seek** | Search results link directly to the exact second inside a video where a scene or phrase occurs |
-| 🖼️ **Multimodal Indexing** | Images and videos are described by a local vision-language model (LLaVA / llama3.2-vision) |
-| 🎙️ **Speech Transcription** | Audio tracks are transcribed via OpenAI Whisper and stored for full-text semantic search |
-| 🎬 **Automatic Scene Detection** | PySceneDetect + OpenCV split videos into meaningful scenes before indexing |
+| 🖼️ **Multimodal Indexing** | Videos are described by Qwen2.5-VL running locally via Ollama — no cloud API required |
+| 🎙️ **Speech Transcription** | Audio tracks are transcribed via faster-whisper (ctranslate2 backend, CPU-optimized) |
+| 🎬 **Automatic Scene Detection** | PySceneDetect splits videos into meaningful scenes before indexing |
 | 🗂️ **Asset Management** | Browse, preview, tag, and organize all local media from a single React dashboard |
 | 📦 **Local-First, Privacy-Safe** | All processing runs on your machine via Docker — no data leaves your environment |
 | ☁️ **Cloud-Ready Architecture** | Drop-in AWS Bedrock, S3, Transcribe, and OpenSearch Serverless for production scale |
@@ -48,22 +48,27 @@ When you're ready to scale, SMA's architecture maps cleanly onto AWS production 
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | React.js (Vite), Tailwind CSS |
+| **Frontend** | React 19 (Vite), Tailwind CSS |
 | **Backend API** | Python 3.11, FastAPI, Uvicorn |
-| **Vision AI** | Ollama — `llama3.2-vision` (local LLM inference) |
-| **Speech-to-Text** | OpenAI Whisper (local, runs via Python) |
-| **Video Processing** | FFmpeg, OpenCV, PySceneDetect |
-| **Vector Database** | ChromaDB (embedded, local) |
+| **Vision AI** | Ollama — `qwen2.5vl:3b` (local multimodal inference) |
+| **Speech-to-Text** | `faster-whisper` — ctranslate2 backend, CPU-optimized |
+| **Embeddings** | Ollama — `bge-m3:latest` (1024-dim dense vectors) |
+| **Video Processing** | FFmpeg, OpenCV (headless), PySceneDetect 0.6.4 |
+| **Vector Database** | ChromaDB 1.5.9 (HTTP client mode) |
+| **Relational Database** | PostgreSQL 16 |
+| **Object Storage** | MinIO (S3-compatible, local) |
 | **Orchestration** | Docker Compose |
 
 ### ☁️ AWS Production Targets
 
 | Local Component | AWS Equivalent |
 |---|---|
-| Local file storage | **Amazon S3** |
-| Ollama (vision + embeddings) | **AWS Bedrock** — Claude 3.5 Sonnet + Titan Embeddings |
-| OpenAI Whisper | **Amazon Transcribe** |
+| MinIO | **Amazon S3** |
+| Ollama `qwen2.5vl:3b` | **AWS Bedrock** — Claude 3.5 Sonnet |
+| Ollama `bge-m3:latest` | **AWS Bedrock** — Titan Embeddings v2 |
+| faster-whisper | **Amazon Transcribe** |
 | ChromaDB | **Amazon OpenSearch Serverless** |
+| PostgreSQL | **Amazon RDS PostgreSQL** |
 
 ---
 
@@ -150,26 +155,29 @@ smart_media_analytics_cloudforge/
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (v24+)
-- [Ollama](https://ollama.ai/) installed on the host machine
-- [Node.js](https://nodejs.org/) (v18+) — for local frontend dev only
-- [Python](https://www.python.org/) 3.11+ — for local backend dev only
-- FFmpeg available on `$PATH`
+- [Ollama](https://ollama.com/) installed and running on the host machine
+- Git
+
+> **Local dev only (no Docker):** Node.js v18+, Python 3.11+, FFmpeg on `$PATH`
 
 ---
 
-### Step 1 — Pull the Vision Model via Ollama
+### Step 1 — Pull AI Models via Ollama
 
-Ollama must be running on the host before starting Docker services. The backend communicates with Ollama at `http://host.docker.internal:11434`.
+Ollama must be running on the host before starting Docker services. The backend communicates with it at `http://host.docker.internal:11434`.
 
 ```bash
-# Start the Ollama service
+# Start Ollama (if not already running as a system service)
 ollama serve
 
-# Pull the multimodal vision model (in a separate terminal)
-ollama pull llama3.2-vision
+# Pull the vision model (~2 GB)
+ollama pull qwen2.5vl:3b
+
+# Pull the embedding model (~1.2 GB)
+ollama pull bge-m3:latest
 ```
 
-> **Note:** `llama3.2-vision` is approximately 7–8 GB. Ensure you have sufficient disk space and that Ollama is accessible on port `11434`.
+> **Note:** Ensure Ollama is accessible on port `11434` before starting Docker services.
 
 ---
 
@@ -201,13 +209,25 @@ AWS_BEDROCK_EMBEDDING_MODEL_ID=amazon.titan-embed-text-v2:0
 
 ---
 
-### Step 3 — Start All Services with Docker Compose
+### Step 3 — Start All Services
+
+#### 🚀 Quick Start — Use pre-built images (recommended for team members)
 
 ```bash
-# Build and start backend + frontend containers
-docker compose up --build
+# Uses images published to Docker Hub — no local build needed
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
-# Or run in detached mode
+# View logs
+docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
+
+# Stop all services
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+```
+
+#### 🔧 Full Build — Build images locally (for contributors)
+
+```bash
+# Build and start all services from source
 docker compose up --build -d
 
 # View logs
@@ -220,7 +240,9 @@ docker compose logs -f frontend
 | Frontend | http://localhost:5173 |
 | Backend API | http://localhost:8000 |
 | API Docs (Swagger) | http://localhost:8000/docs |
-| ChromaDB (internal) | http://localhost:8001 |
+| ChromaDB | http://localhost:8001 |
+| MinIO Console | http://localhost:9001 |
+| PostgreSQL | localhost:5433 |
 
 ---
 

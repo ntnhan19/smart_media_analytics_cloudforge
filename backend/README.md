@@ -25,12 +25,12 @@
 
 The **EchoScene Backend** is a Python 3.11 FastAPI service that powers intelligent media asset management. It orchestrates:
 
-- **Vision Captioning** — Local Ollama `llama3.2-vision` model for image/video frame descriptions
-- **Speech Transcription** — OpenAI Whisper for audio-to-text indexing
-- **Scene Detection** — PySceneDetect + OpenCV for frame-accurate video segmentation
-- **Vector Embeddings** — Multimodal embeddings stored in ChromaDB
+- **Vision Captioning** — Local Ollama `qwen2.5vl:3b` for video frame descriptions
+- **Speech Transcription** — faster-whisper (ctranslate2) for audio-to-text indexing
+- **Scene Detection** — PySceneDetect + OpenCV (headless) for frame-accurate video segmentation
+- **Vector Embeddings** — BGE-M3 embeddings via Ollama stored in ChromaDB
 - **Semantic Search** — Natural language queries against the vector store
-- **Asset Management** — CRUD operations on media metadata
+- **Asset Management** — CRUD operations on media metadata via PostgreSQL
 
 All processing runs **locally** on your machine — no data leaves your environment.
 
@@ -111,7 +111,7 @@ backend/
 │   │   ├── ingest/        # Media ingestion & processing
 │   │   │   ├── __init__.py
 │   │   │   ├── scene_detector.py    # PySceneDetect + OpenCV
-│   │   │   ├── transcriber.py       # Whisper speech-to-text
+│   │   │   ├── transcriber.py       # faster-whisper speech-to-text
 │   │   │   ├── vision_tagger.py     # Ollama vision captioning
 │   │   │   └── ingestion_service.py # Orchestrates ingest pipeline
 │   │   │

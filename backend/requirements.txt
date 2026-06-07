@@ -23,8 +23,7 @@ ollama==0.3.0               # Python client for Ollama server (qwen2.5-vl:3b)
 requests==2.31.0            # HTTP requests for Ollama API endpoints
 
 # ── Video Processing & Computer Vision ──────────────────────────────────────
-opencv-python==4.10.0.84
-opencv-contrib-python==4.10.0.84
+opencv-contrib-python-headless==4.10.0.84
 Pillow==10.4.0
 scenedetect[opencv]==0.6.4
 ffmpeg-python==0.2.0
@@ -32,12 +31,12 @@ pymediainfo==6.1.0
 python-magic==0.4.27
 
 # ── Speech-to-Text (ASR) ───────────────────────────────────────────────────
-# openai-whisper được cài riêng trong Dockerfile
+faster-whisper==1.0.3       # faster-whisper: ctranslate2 backend, no torch dependency
 librosa==0.10.1
 soundfile==0.12.1
 
 # ── Vector Search & Embeddings ────────────────────────────────────────────
-chromadb-client==0.4.23.dev0
+chromadb-client==1.5.9
 scikit-learn==1.5.1
 
 # ── Data Processing ───────────────────────────────────────────────────────
