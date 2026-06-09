@@ -5,6 +5,7 @@ import AppShell from './components/layout/AppShell';
 import Dashboard from './pages/Dashboard';
 import Search from './pages/Search';
 import AssetDetail from './pages/AssetDetail';
+import UiKitDemo from './pages/UiKitDemo';
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="search" element={<Search />} />
             <Route path="assets/:id" element={<AssetDetail />} />
+            <Route path="uikit" element={<UiKitDemo />} />
           </Route>
         </Routes>
       </BrowserRouter>
