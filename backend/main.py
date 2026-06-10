@@ -1,17 +1,17 @@
 import logging
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from api.routes import health
+from api.routes import health, search
 
 class JSONFormatter(logging.Formatter):
     def format(self, record):
         log_record = {
-            "time": datetime.utcnow().isoformat() + "Z",
+            "time": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "name": record.name,
             "message": record.getMessage(),
@@ -63,7 +63,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 app.include_router(health.router)
+app.include_router(search.router)
 
 if __name__ == "__main__":
     import uvicorn
