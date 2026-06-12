@@ -1,6 +1,0 @@
-{
-    "python.defaultInterpreterPath": "d:\\smart_media_analytics_cloudforge\\backend\\venv\\Scripts\\python.exe",
-    "python.analysis.extraPaths": [
-        "d:\\smart_media_analytics_cloudforge\\backend"
-    ]
-}
