@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from api.routes import health, search
+from api.routes import health, search, ingest
 
 class JSONFormatter(logging.Formatter):
     def format(self, record):
@@ -66,6 +66,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(search.router)
+app.include_router(ingest.router)
 
 if __name__ == "__main__":
     import uvicorn
