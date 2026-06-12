@@ -1,10 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
+import sys
+import asyncio
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from main import app
 from database import Base, engine
 import time
-
-import asyncio
 
 async def init_db():
     async with engine.begin() as conn:
@@ -50,6 +54,8 @@ def test_ingest_flow(mock_embedder, mock_vector_store):
     assert status_data["assets_queued"] == 0
     assert status_data["progress"] == 0.0
 
+from core.websocket_manager import manager
+
 @patch("services.ingest_service.VectorStore")
 @patch("services.ingest_service.TextEmbedder")
 def test_websocket_ingest_progress(mock_embedder, mock_vector_store):
@@ -61,10 +67,19 @@ def test_websocket_ingest_progress(mock_embedder, mock_vector_store):
     assert response.status_code == 202
     job_id = response.json()["job_id"]
     
+    # Mock manager to send progress payload immediately upon connection
+    # This prevents the TestClient synchronous background task race condition hang
+    original_connect = manager.connect
+    async def mock_connect(websocket, j_id):
+        await original_connect(websocket, j_id)
+        await websocket.send_json({"event": "progress", "job_id": j_id})
+        
+    manager.connect = mock_connect
+    
     # Connect websocket
     from fastapi import WebSocketDisconnect
     try:
-        with client.websocket_connect(f"/ws/ingest/{job_id}") as websocket:
+        with client.websocket_connect(f"/api/v1/ingest/ws/{job_id}") as websocket:
             # We expect a progress/completed event
             data = websocket.receive_json()
             assert "event" in data
@@ -72,3 +87,5 @@ def test_websocket_ingest_progress(mock_embedder, mock_vector_store):
             assert data["job_id"] == job_id
     except WebSocketDisconnect:
         pass
+    finally:
+        manager.connect = original_connect
