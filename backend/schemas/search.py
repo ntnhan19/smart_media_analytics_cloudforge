@@ -31,3 +31,4 @@ class SearchResponse(BaseModel):
     query: str
     total_results: int
     results: List[SearchResult]
+    processing_time_ms: float = Field(..., description="Time taken to process the search request in milliseconds.")
