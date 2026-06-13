@@ -3,6 +3,7 @@ from schemas.search import SearchRequest, SearchResponse, SearchResult, SceneSni
 from core.embeddings.embedder import TextEmbedder
 from core.embeddings.vector_store import VectorStore
 import logging
+import time
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ async def search_media(
     embedder: TextEmbedder = Depends(get_embedder),
     vector_store: VectorStore = Depends(get_vector_store)
 ):
+    start_time = time.time()
     try:
         # Generate embedding
         query_embedding = await embedder.embed(request.query)
@@ -69,10 +71,12 @@ async def search_media(
             )
             results.append(result)
             
+        elapsed_ms = (time.time() - start_time) * 1000
         return SearchResponse(
             query=request.query,
             total_results=len(results),
-            results=results
+            results=results,
+            processing_time_ms=round(elapsed_ms, 2)
         )
         
     except ValueError as ve:
