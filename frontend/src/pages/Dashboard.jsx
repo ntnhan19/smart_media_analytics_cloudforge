@@ -33,7 +33,7 @@ export default function Dashboard() {
 
     let result = [...assets];
 
-    // Filter
+    // Filter by Media Type
     if (mediaFilter !== 'All') {
       result = result.filter(asset => asset.media_type.toLowerCase() === mediaFilter.toLowerCase());
     }
