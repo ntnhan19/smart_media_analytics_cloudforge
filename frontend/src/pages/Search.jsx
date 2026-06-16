@@ -84,7 +84,7 @@ export default function Search() {
   };
 
   const handleSearchSubmit = (q) => {
-    if (!q.trim() || q.length > 500) return;
+    if (q.length > 500) return;
     applySearch(q, scoreFilter, activeTags, activeMediaTypes, topK);
   };
 
@@ -135,7 +135,7 @@ export default function Search() {
     else errorMessage = 'Search service unavailable. Please try again later.';
   }
 
-  const isDisabled = isFetching;
+  const isDisabled = isFetching && hasValidSearch;
   let results = data?.results || [];
   
   // Apply score filter locally since backend doesn't support it directly in filters yet
@@ -163,7 +163,7 @@ export default function Search() {
           }}
           onSearch={handleSearchSubmit}
           placeholder="e.g. 'sunset over the ocean', 'person riding a bike'"
-          disabled={isDisabled || !searchQuery.trim() || searchQuery.length > 500}
+          disabled={isDisabled}
         />
         {validationError && <p className="text-red-500 text-sm mt-2 ml-2 font-medium">{validationError}</p>}
         
