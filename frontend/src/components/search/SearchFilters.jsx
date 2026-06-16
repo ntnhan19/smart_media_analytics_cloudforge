@@ -5,9 +5,10 @@ import CustomDropdown from '../ui/CustomDropdown';
 
 export default function SearchFilters({ 
   scoreFilter, onScoreChange,
-  durationFilter, onDurationChange,
-  dateFilter, onDateChange,
-  tags, activeTags, onToggleTag 
+  tags, activeTags, onToggleTag,
+  mediaTypes, activeMediaTypes, onToggleMediaType,
+  topK, onTopKChange,
+  disabled = false
 }) {
   return (
     <div className="flex flex-col gap-4 py-4 border-b border-gray-800">
@@ -22,6 +23,7 @@ export default function SearchFilters({
           value={scoreFilter}
           onChange={onScoreChange}
           icon={Target}
+          disabled={disabled}
           options={[
             { value: 'all', label: 'All Scores' },
             { value: 'very_high', label: 'Very High (>90%)' },
@@ -30,47 +32,65 @@ export default function SearchFilters({
           ]}
         />
 
-        {/* Duration Filter */}
+        {/* Top K Results Filter */}
         <CustomDropdown
-          value={durationFilter}
-          onChange={onDurationChange}
-          icon={Clock}
+          value={topK?.toString()}
+          onChange={onTopKChange}
+          icon={Filter}
+          disabled={disabled}
           options={[
-            { value: 'all', label: 'Any Duration' },
-            { value: 'short', label: 'Short (< 1m)' },
-            { value: 'medium', label: 'Medium (1m - 5m)' },
-            { value: 'long', label: 'Long (> 5m)' },
+            { value: '10', label: '10 Results' },
+            { value: '20', label: '20 Results' },
+            { value: '50', label: '50 Results' },
           ]}
         />
 
-        {/* Date Filter */}
-        <CustomDropdown
-          value={dateFilter}
-          onChange={onDateChange}
-          icon={Calendar}
-          options={[
-            { value: 'all', label: 'Any Date' },
-            { value: 'today', label: 'Today' },
-            { value: 'this_week', label: 'This Week' },
-            { value: 'this_month', label: 'This Month' },
-          ]}
-        />
+        {/* Media Types Filter */}
+        {mediaTypes && mediaTypes.length > 0 && (
+          <div className="flex items-center gap-2 border-l border-gray-700 pl-4 ml-2 shrink-0">
+            <Filter className={`w-4 h-4 ${disabled ? 'text-gray-700' : 'text-gray-500'}`} />
+            <div className="flex items-center gap-2">
+              {mediaTypes.map(type => {
+                const isActive = activeMediaTypes.includes(type);
+                return (
+                  <button
+                    key={type}
+                    disabled={disabled}
+                    onClick={() => onToggleMediaType(type)}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-colors shrink-0 capitalize ${
+                      disabled 
+                        ? (isActive ? 'bg-blue-900/50 text-blue-300/50 cursor-not-allowed' : 'bg-gray-800/20 text-gray-700 border border-gray-800 cursor-not-allowed')
+                        : (isActive
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-800/50 text-gray-400 border border-gray-700 hover:border-gray-500 hover:text-gray-200')
+                    }`}
+                  >
+                    {type}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Tags Filter */}
         {tags && tags.length > 0 && (
           <div className="flex items-center gap-2 border-l border-gray-700 pl-4 ml-2 shrink-0">
-            <Tag className="w-4 h-4 text-gray-500" />
+            <Tag className={`w-4 h-4 ${disabled ? 'text-gray-700' : 'text-gray-500'}`} />
             <div className="flex items-center gap-2">
               {tags.map(tag => {
                 const isActive = activeTags.includes(tag);
                 return (
                   <button
                     key={tag}
+                    disabled={disabled}
                     onClick={() => onToggleTag(tag)}
                     className={`px-3 py-1 rounded-md text-xs font-medium transition-colors shrink-0 ${
-                      isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-800/50 text-gray-400 border border-gray-700 hover:border-gray-500 hover:text-gray-200'
+                      disabled 
+                        ? (isActive ? 'bg-blue-900/50 text-blue-300/50 cursor-not-allowed' : 'bg-gray-800/20 text-gray-700 border border-gray-800 cursor-not-allowed')
+                        : (isActive
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-800/50 text-gray-400 border border-gray-700 hover:border-gray-500 hover:text-gray-200')
                     }`}
                   >
                     #{tag}
@@ -88,17 +108,25 @@ export default function SearchFilters({
 SearchFilters.propTypes = {
   scoreFilter: PropTypes.string.isRequired,
   onScoreChange: PropTypes.func.isRequired,
-  durationFilter: PropTypes.string.isRequired,
-  onDurationChange: PropTypes.func.isRequired,
-  dateFilter: PropTypes.string.isRequired,
-  onDateChange: PropTypes.func.isRequired,
   tags: PropTypes.arrayOf(PropTypes.string),
   activeTags: PropTypes.arrayOf(PropTypes.string),
   onToggleTag: PropTypes.func,
+  mediaTypes: PropTypes.arrayOf(PropTypes.string),
+  activeMediaTypes: PropTypes.arrayOf(PropTypes.string),
+  onToggleMediaType: PropTypes.func,
+  topK: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  onTopKChange: PropTypes.func,
+  disabled: PropTypes.bool,
 };
 
 SearchFilters.defaultProps = {
   tags: ['beach', 'mountain', 'city', 'nature', 'indoor', 'snow'],
   activeTags: [],
   onToggleTag: () => {},
+  mediaTypes: ['video', 'image', 'audio'],
+  activeMediaTypes: ['video'],
+  onToggleMediaType: () => {},
+  topK: 20,
+  onTopKChange: () => {},
+  disabled: false,
 };

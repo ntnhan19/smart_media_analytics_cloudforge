@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { searchMedia } from '../services/api';
+import { getSearchHistory, addSearchHistory, clearSearchHistory } from '../utils/history';
 import SearchBar from '../components/search/SearchBar';
 import SearchFilters from '../components/search/SearchFilters';
 import SearchHistory from '../components/search/SearchHistory';
@@ -7,189 +10,162 @@ import SearchResultList from '../components/search/SearchResultList';
 import SearchEmptyState from '../components/search/SearchEmptyState';
 import SearchErrorState from '../components/search/SearchErrorState';
 import SearchSkeleton from '../components/search/SearchSkeleton';
-import { mockSearchResults } from '../mocks/searchResults';
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialQuery = searchParams.get('q') || '';
-
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [scoreFilter, setScoreFilter] = useState('all');
-  const [durationFilter, setDurationFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
-  const [activeTags, setActiveTags] = useState([]);
-  const [topK, setTopK] = useState(20);
-  const [searchHistory, setSearchHistory] = useState(['sunset over the ocean', 'mountain hiking', 'neon city']);
   
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [results, setResults] = useState([]);
-  const [hasSearched, setHasSearched] = useState(false);
+  const urlQ = searchParams.get('q') || '';
+  const urlScore = searchParams.get('score') || 'all';
+  const urlTags = searchParams.get('tags') ? searchParams.get('tags').split(',') : [];
+  const urlMediaType = searchParams.get('media_type') ? searchParams.get('media_type').split(',') : ['video'];
+  const urlTopK = parseInt(searchParams.get('top_k')) || 20;
+
+  const [searchQuery, setSearchQuery] = useState(urlQ);
+  const [scoreFilter, setScoreFilter] = useState(urlScore);
+  const [activeTags, setActiveTags] = useState(urlTags);
+  const [activeMediaTypes, setActiveMediaTypes] = useState(urlMediaType);
+  const [topK, setTopK] = useState(urlTopK);
+  const [validationError, setValidationError] = useState('');
+
+  const [searchHistory, setSearchHistory] = useState(getSearchHistory());
 
   const availableTags = ['beach', 'mountain', 'city', 'nature', 'indoor', 'snow'];
+  const availableMediaTypes = ['video', 'image', 'audio'];
 
-  // Trigger search on mount if there's an initial query
-  useEffect(() => {
-    if (initialQuery) {
-      handleSearch(initialQuery);
+  const hasValidSearch = Boolean(urlQ.trim() && urlQ.length <= 500);
+
+  // Payload matches backend Pydantic schema strictly
+  const payload = useMemo(() => {
+    const filters = {};
+    if (urlTags.length > 0) filters.tags = urlTags;
+    if (urlMediaType.length > 0) filters.media_type = urlMediaType;
+    
+    return {
+      query: urlQ.trim(),
+      filters: filters,
+      top_k: urlTopK
+    };
+  }, [urlQ, urlTags, urlMediaType, urlTopK]);
+
+  const { data, isFetching, error, refetch } = useQuery({
+    queryKey: ['search', payload],
+    queryFn: ({ signal }) => searchMedia(payload, signal),
+    enabled: hasValidSearch,
+    retry: 0,
+    refetchOnWindowFocus: false,
+    onSuccess: (responseData) => {
+       if (payload.query) {
+         const newHist = addSearchHistory(payload.query);
+         if (newHist) setSearchHistory(newHist);
+       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
 
-  // Trigger search when filters change
-  useEffect(() => {
-    if (searchQuery.trim() || scoreFilter !== 'all' || durationFilter !== 'all' || dateFilter !== 'all' || activeTags.length > 0) {
-      handleSearch(searchQuery);
+  const applySearch = (newQ, newScore, newTags, newMedia, newTopK) => {
+    if (newQ.length > 500) {
+      setValidationError('Query cannot exceed 500 characters.');
+      return;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scoreFilter, durationFilter, dateFilter, activeTags]);
-
-  const handleSearch = (query) => {
-    // If everything is cleared, reset to initial state
-    if (!query.trim() && scoreFilter === 'all' && durationFilter === 'all' && dateFilter === 'all' && activeTags.length === 0) {
-      setResults([]);
-      setHasSearched(false);
+    setValidationError('');
+    
+    if (!newQ.trim()) {
       setSearchParams({});
       return;
     }
-    
-    // Update URL query param to reflect current search
-    if (query.trim() !== searchParams.get('q')) {
-      setSearchParams(query.trim() ? { q: query.trim() } : {});
-    }
 
-    setIsLoading(true);
-    setError(null);
-    setHasSearched(true);
-    
-    // Add to history if new
-    if (query.trim() && !searchHistory.includes(query.trim())) {
-      setSearchHistory(prev => [query.trim(), ...prev].slice(0, 5));
-    }
+    const params = {};
+    params.q = newQ.trim();
+    if (newScore !== 'all') params.score = newScore;
+    if (newTags.length > 0) params.tags = newTags.join(',');
+    if (newMedia.length > 0) params.media_type = newMedia.join(',');
+    if (newTopK !== 20) params.top_k = newTopK;
 
-    // Simulate API delay
-    setTimeout(() => {
-      try {
-        let filtered = [...mockSearchResults];
-        
-        // Simple mock filtering logic for demonstration
-        if (query.trim()) {
-           let textQuery = query.toLowerCase();
-           
-           // Extract hashtags from the typed query (e.g., "#beach #sunset")
-           const hashTagsMatch = textQuery.match(/#(\w+)/g);
-           const typedTags = hashTagsMatch ? hashTagsMatch.map(t => t.slice(1)) : [];
-           
-           // Remove hashtags from text query so it doesn't mess up text matching
-           if (typedTags.length > 0) {
-             textQuery = textQuery.replace(/#(\w+)/g, '').trim();
-           }
-
-           // Strictly filter by typed tags first (MUST contain all typed tags)
-           if (typedTags.length > 0) {
-             filtered = filtered.filter(item => 
-               item.tags && typedTags.every(typedTag => item.tags.includes(typedTag))
-             );
-           }
-
-           // Then filter by remaining text query
-           if (textQuery) {
-             filtered = filtered.filter(item => 
-               (item.scene?.caption && item.scene.caption.toLowerCase().includes(textQuery)) ||
-               (item.asset_name && item.asset_name.toLowerCase().includes(textQuery)) ||
-               (item.tags && item.tags.some(tag => tag.toLowerCase().includes(textQuery)))
-             );
-           }
-           
-           if (filtered.length === 0) {
-             filtered = [...mockSearchResults].sort(() => 0.5 - Math.random());
-           }
-        }
-
-        // Apply Confidence Score Filter
-        if (scoreFilter !== 'all') {
-          filtered = filtered.filter(item => {
-            if (scoreFilter === 'very_high') return item.score > 0.9;
-            if (scoreFilter === 'high') return item.score > 0.7;
-            if (scoreFilter === 'medium') return item.score > 0.5;
-            return true;
-          });
-        }
-
-        // Apply Duration Filter
-        if (durationFilter !== 'all') {
-          filtered = filtered.filter(item => {
-            const dur = item.video_duration || 0;
-            if (durationFilter === 'short') return dur < 60;
-            if (durationFilter === 'medium') return dur >= 60 && dur <= 300;
-            if (durationFilter === 'long') return dur > 300;
-            return true;
-          });
-        }
-
-        // Apply Date Filter
-        if (dateFilter !== 'all') {
-          const now = new Date();
-          filtered = filtered.filter(item => {
-            if (!item.ingested_at) return false;
-            const date = new Date(item.ingested_at);
-            const diffDays = (now - date) / (1000 * 60 * 60 * 24);
-            if (dateFilter === 'today') return diffDays <= 1;
-            if (dateFilter === 'this_week') return diffDays <= 7;
-            if (dateFilter === 'this_month') return diffDays <= 30;
-            return true;
-          });
-        }
-
-        // Apply Tags
-        if (activeTags.length > 0) {
-          filtered = filtered.filter(item => 
-            item.tags && item.tags.some(tag => activeTags.includes(tag))
-          );
-        }
-
-        // Apply Top K mock
-        filtered = filtered.slice(0, topK);
-
-        setResults(filtered);
-      } catch (err) {
-        setError('Failed to fetch results. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    }, 1000); // 1s delay
+    setSearchParams(params);
   };
 
-  const handleToggleTag = (tag) => {
-    setActiveTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
+  const handleSearchSubmit = (q) => {
+    if (q.length > 500) return;
+    applySearch(q, scoreFilter, activeTags, activeMediaTypes, topK);
   };
 
   const handleClearHistory = () => {
+    clearSearchHistory();
     setSearchHistory([]);
   };
 
   const handleSelectHistory = (term) => {
     setSearchQuery(term);
-    handleSearch(term);
+    applySearch(term, scoreFilter, activeTags, activeMediaTypes, topK);
   };
+
+  const handleToggleTag = (tag) => {
+    const newTags = activeTags.includes(tag) ? activeTags.filter(t => t !== tag) : [...activeTags, tag];
+    setActiveTags(newTags);
+    applySearch(searchQuery, scoreFilter, newTags, activeMediaTypes, topK);
+  };
+
+  const handleToggleMediaType = (type) => {
+    const newMedia = activeMediaTypes.includes(type) ? activeMediaTypes.filter(t => t !== type) : [...activeMediaTypes, type];
+    // Ensure at least one is selected, if they deselect all, fallback to ['video']
+    const finalMedia = newMedia.length === 0 ? ['video'] : newMedia;
+    setActiveMediaTypes(finalMedia);
+    applySearch(searchQuery, scoreFilter, activeTags, finalMedia, topK);
+  };
+
+  const onScoreChange = (v) => { setScoreFilter(v); applySearch(searchQuery, v, activeTags, activeMediaTypes, topK); };
+  
+  const onTopKChange = (v) => { 
+    const intV = parseInt(v);
+    setTopK(intV); 
+    applySearch(searchQuery, scoreFilter, activeTags, activeMediaTypes, intV); 
+  };
+
+  useEffect(() => {
+    setSearchQuery(urlQ);
+    setScoreFilter(urlScore);
+    setActiveTags(urlTags);
+    setActiveMediaTypes(urlMediaType);
+    setTopK(urlTopK);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlQ, urlScore, searchParams.get('tags'), searchParams.get('media_type'), urlTopK]);
+
+  let errorMessage = '';
+  if (error) {
+    if (error.response?.status === 400) errorMessage = 'Query không hợp lệ';
+    else errorMessage = 'Search service unavailable. Please try again later.';
+  }
+
+  const isDisabled = isFetching && hasValidSearch;
+  let results = data?.results || [];
+  
+  // Apply score filter locally since backend doesn't support it directly in filters yet
+  if (scoreFilter !== 'all') {
+    results = results.filter(item => {
+      if (scoreFilter === 'very_high') return item.score > 0.9;
+      if (scoreFilter === 'high') return item.score > 0.7;
+      if (scoreFilter === 'medium') return item.score > 0.5;
+      return true;
+    });
+  }
+
+  const processingTime = data?.processing_time_ms;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-
-      
-      {/* Search Input Area */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
         <SearchBar 
           variant="large"
           value={searchQuery}
-          onChange={setSearchQuery}
-          onSearch={handleSearch}
+          onChange={(v) => {
+            setSearchQuery(v);
+            if (v.length > 500) setValidationError('Query cannot exceed 500 characters.');
+            else setValidationError('');
+          }}
+          onSearch={handleSearchSubmit}
           placeholder="e.g. 'sunset over the ocean', 'person riding a bike'"
+          disabled={isDisabled}
         />
+        {validationError && <p className="text-red-500 text-sm mt-2 ml-2 font-medium">{validationError}</p>}
         
         <div className="mt-4">
           <SearchHistory 
@@ -200,32 +176,35 @@ export default function Search() {
         </div>
 
         <SearchFilters 
-          scoreFilter={scoreFilter} onScoreChange={setScoreFilter}
-          durationFilter={durationFilter} onDurationChange={setDurationFilter}
-          dateFilter={dateFilter} onDateChange={setDateFilter}
-          tags={availableTags}
-          activeTags={activeTags}
-          onToggleTag={handleToggleTag}
+          scoreFilter={scoreFilter} onScoreChange={onScoreChange}
+          tags={availableTags} activeTags={activeTags} onToggleTag={handleToggleTag}
+          mediaTypes={availableMediaTypes} activeMediaTypes={activeMediaTypes} onToggleMediaType={handleToggleMediaType}
+          topK={topK} onTopKChange={onTopKChange}
+          disabled={isDisabled}
         />
       </div>
 
-      {/* Results Area */}
       <div className="min-h-[400px]">
-        {isLoading && <SearchSkeleton />}
+        {isFetching && <SearchSkeleton />}
         
-        {!isLoading && error && (
-          <SearchErrorState error={error} onRetry={() => handleSearch(searchQuery)} />
+        {!isFetching && error && (
+          <SearchErrorState error={errorMessage} onRetry={() => refetch()} />
         )}
         
-        {!isLoading && !error && hasSearched && results.length === 0 && (
+        {!isFetching && !error && hasValidSearch && results.length === 0 && (
           <SearchEmptyState />
         )}
         
-        {!isLoading && !error && hasSearched && results.length > 0 && (
-          <SearchResultList results={results} />
+        {!isFetching && !error && hasValidSearch && results.length > 0 && (
+          <div className="space-y-4">
+            {processingTime !== undefined && (
+              <p className="text-sm text-gray-400 font-medium">Found {results.length} results in {processingTime}ms</p>
+            )}
+            <SearchResultList results={results} />
+          </div>
         )}
 
-        {!hasSearched && (
+        {!hasValidSearch && (
           <div className="pt-12">
             <SearchEmptyState message="Enter a search term or apply filters to start exploring your media library." />
           </div>

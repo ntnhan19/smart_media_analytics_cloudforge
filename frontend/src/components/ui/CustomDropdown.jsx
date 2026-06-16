@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { ChevronDown } from 'lucide-react';
 
-export default function CustomDropdown({ value, onChange, options, icon: Icon }) {
+export default function CustomDropdown({ value, onChange, options, icon: Icon, disabled = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -21,12 +21,16 @@ export default function CustomDropdown({ value, onChange, options, icon: Icon })
   return (
     <div className="relative shrink-0" ref={dropdownRef}>
       <div 
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-1.5 border border-gray-700 cursor-pointer hover:border-gray-500 transition-colors"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`flex items-center gap-2 rounded-lg px-3 py-1.5 border transition-colors ${
+          disabled 
+            ? 'bg-gray-800/50 border-gray-800 text-gray-600 cursor-not-allowed' 
+            : 'bg-gray-800 border-gray-700 cursor-pointer hover:border-gray-500 text-gray-200'
+        }`}
       >
-        {Icon && <Icon className="w-4 h-4 text-gray-400" />}
-        <span className="text-sm text-gray-200 select-none whitespace-nowrap">{selectedOption.label}</span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        {Icon && <Icon className={`w-4 h-4 ${disabled ? 'text-gray-600' : 'text-gray-400'}`} />}
+        <span className="text-sm select-none whitespace-nowrap">{selectedOption.label}</span>
+        <ChevronDown className={`w-4 h-4 transition-transform ${disabled ? 'text-gray-600' : 'text-gray-400'} ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
       {isOpen && (

@@ -8,7 +8,8 @@ export default function SearchBar({
   onSearch, 
   placeholder, 
   variant = 'large',
-  endAdornment = null 
+  endAdornment = null,
+  disabled = false
 }) {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && onSearch) {
@@ -52,7 +53,8 @@ export default function SearchBar({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        className={inputClasses}
+        disabled={disabled}
+        className={`${inputClasses} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         placeholder={placeholder || "Search media..."}
       />
       
@@ -61,7 +63,8 @@ export default function SearchBar({
           {value && (
             <button
               onClick={handleClear}
-              className="p-1.5 text-gray-500 hover:text-gray-300 hover:bg-gray-800 rounded-full transition-colors focus:outline-none"
+              disabled={disabled}
+              className={`p-1.5 rounded-full transition-colors focus:outline-none ${disabled ? 'text-gray-600 cursor-not-allowed' : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800'}`}
               title="Clear search"
             >
               <X className="w-5 h-5" />
@@ -69,7 +72,8 @@ export default function SearchBar({
           )}
           <button
             onClick={() => onSearch && onSearch(value)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500"
+            disabled={disabled || !value.trim()}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 ${disabled || !value.trim() ? 'bg-blue-600/50 text-white/50 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
           >
             Search
           </button>
@@ -81,7 +85,8 @@ export default function SearchBar({
           {value && (
             <button
               onClick={handleClear}
-              className="p-1 text-gray-500 hover:text-gray-300 rounded-full transition-colors focus:outline-none"
+              disabled={disabled}
+              className={`p-1 rounded-full transition-colors focus:outline-none ${disabled ? 'text-gray-600 cursor-not-allowed' : 'text-gray-500 hover:text-gray-300'}`}
               title="Clear search"
             >
               <X className="w-4 h-4" />

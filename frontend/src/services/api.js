@@ -10,9 +10,19 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
     console.error('API Error:', error);
     return Promise.reject(error);
   }
 );
 
 export default api;
+
+export const searchMedia = async (payload, signal) => {
+  const response = await api.post('/search', payload, {
+    signal,
+  });
+  return response.data;
+};
