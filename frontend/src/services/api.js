@@ -16,3 +16,10 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+export const searchMedia = async (payload, signal) => {
+  const response = await api.post('/search', payload, {
+    signal,
+  });
+  return response.data;
+};
