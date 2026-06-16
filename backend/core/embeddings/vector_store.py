@@ -80,3 +80,29 @@ class VectorStore:
         if len(conditions) == 1:
             return conditions[0]
         return {"$and": conditions}
+
+    def delete_by_asset(self, asset_id: str):
+        """
+        Deletes all embeddings associated with an asset.
+        """
+        self.collection.delete(where={"asset_id": asset_id})
+
+    def update_embedding(self, scene_id: str, new_embedding: List[float], metadata_updates: Dict[str, Any] = None):
+        """
+        Updates an existing embedding and its metadata.
+        """
+        # First retrieve existing metadata if we only want to partially update,
+        # but Chroma's update method overwrites provided fields.
+        # We assume scene_id is the doc ID.
+        if metadata_updates:
+            self.collection.update(
+                ids=[scene_id],
+                embeddings=[new_embedding],
+                metadatas=[metadata_updates]
+            )
+        else:
+            self.collection.update(
+                ids=[scene_id],
+                embeddings=[new_embedding]
+            )
+
