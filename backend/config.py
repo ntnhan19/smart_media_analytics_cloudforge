@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     WHISPER_MODEL_SIZE: str
     DATABASE_URL: str
     APP_VERSION: str
+    REDIS_URL: str = "redis://localhost:6379/0"
+    EMBEDDING_DIM: int = 1024
+    VECTOR_DB_TYPE: str = "pgvector"
 
     model_config = SettingsConfigDict(
             env_file=[

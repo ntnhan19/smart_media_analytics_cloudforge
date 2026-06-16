@@ -47,6 +47,46 @@ async def start_ingest_job(
         logger.error(f"Failed to start ingest job: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@router.post("/retry/{job_id}", response_model=IngestResponse, status_code=202)
+async def retry_ingest_job(
+    job_id: str,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        job_uuid = uuid.UUID(job_id)
+        result = await db.execute(select(IngestJob).where(IngestJob.job_id == job_uuid))
+        job = result.scalar_one_or_none()
+        
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        # Reset job state
+        job.status = "queued"
+        job.assets_processed = 0
+        job.error_message = None
+        await db.commit()
+        
+        # Start background task with dummy path and default options for retry logic
+        from schemas.ingest import IngestOptions
+        # In a real app we'd fetch previous options/paths from a DB or S3
+        background_tasks.add_task(
+            run_ingest_pipeline,
+            job_id_str=job_id,
+            source_path="", # Re-uses existing assets if supported, or handled via DB
+            options=IngestOptions(scene_detection=True, transcription=True, vision_caption=True),
+            is_retry=True
+        )
+        
+        return IngestResponse(
+            job_id=job_id,
+            status="queued",
+            assets_queued=job.assets_queued,
+            message="Ingestion pipeline restarted."
+        )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid job ID format")
+
 @router.get("/status/{job_id}", response_model=IngestStatusResponse)
 async def get_ingest_status(
     job_id: str,
@@ -74,11 +114,39 @@ async def get_ingest_status(
         raise HTTPException(status_code=400, detail="Invalid job ID format")
 
 @router.websocket("/ws/{job_id}")
-async def websocket_endpoint(websocket: WebSocket, job_id: str):
+async def websocket_endpoint(
+    websocket: WebSocket, 
+    job_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    # Establish Connection and Start Redis Subscription
     await manager.connect(websocket, job_id)
+    
     try:
+        # Fetch current status for immediate recovery
+        job_uuid = uuid.UUID(job_id)
+        result = await db.execute(select(IngestJob).where(IngestJob.job_id == job_uuid))
+        job = result.scalar_one_or_none()
+        
+        if job:
+            progress = (job.assets_processed / job.assets_queued * 100) if job.assets_queued > 0 else 0.0
+            import json
+            # Send initial state over this specific websocket
+            await websocket.send_text(json.dumps({
+                "event": job.status,
+                "job_id": job_id,
+                "status": job.status,
+                "progress": progress,
+                "assets_queued": job.assets_queued,
+                "assets_processed": job.assets_processed,
+                "error_message": job.error_message
+            }))
+
         while True:
             # We just keep the connection alive, client may send ping/pong
             data = await websocket.receive_text()
     except WebSocketDisconnect:
+        manager.disconnect(websocket, job_id)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
         manager.disconnect(websocket, job_id)
