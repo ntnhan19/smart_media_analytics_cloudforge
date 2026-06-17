@@ -88,14 +88,32 @@ async def _process_single_file(file_path: str, db: AsyncSession, vector_store, e
     filename = os.path.basename(file_path)
     logger.info(f"Processing file: {filename}")
     
-    # Simulate S3 Upload
+    # Upload to MinIO/S3
     await manager.publish_progress(job_id_str, {
         "event": "message",
         "job_id": job_id_str,
         "current_step": "uploading_to_s3",
     })
-    await asyncio.sleep(0.5) # Simulate time taken
     video_s3_key = f"uploads/{job_id_str}/{filename}"
+    
+    # Upload the actual file if storage client is configured
+    from .storage_service import storage_service
+    if storage_service.client and os.path.exists(file_path):
+        logger.info(f"Uploading file to MinIO: {file_path} -> {video_s3_key}")
+        loop = asyncio.get_event_loop()
+        success = await loop.run_in_executor(
+            None, 
+            storage_service.client.upload_file, 
+            file_path, 
+            video_s3_key
+        )
+        if success:
+            logger.info(f"Successfully uploaded {filename} to MinIO.")
+        else:
+            logger.error(f"Failed to upload {filename} to MinIO.")
+    else:
+        # Fallback simulate
+        await asyncio.sleep(0.5)
     
     # 1. Create Asset in DB
     asset_uuid = uuid.uuid4()

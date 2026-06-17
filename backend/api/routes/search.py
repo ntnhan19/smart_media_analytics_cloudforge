@@ -4,6 +4,7 @@ from core.embeddings.embedder import TextEmbedder
 from core.embeddings.factory import get_vector_store as get_factory_vector_store
 import logging
 import time
+from services.storage_service import storage_service
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
 logger = logging.getLogger(__name__)
@@ -75,7 +76,8 @@ async def search_media(
             else:
                 tags_list = []
                 
-            thumbnail_url = metadata.get("thumbnail_url") or metadata.get("keyframe_s3_key")
+            keyframe_key = metadata.get("thumbnail_url") or metadata.get("keyframe_s3_key")
+            thumbnail_url = storage_service.get_stream_url(keyframe_key) if keyframe_key else None
             
             result = SearchResult(
                 asset_id=metadata.get("asset_id", ""),

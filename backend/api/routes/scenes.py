@@ -10,6 +10,7 @@ from models.scene import Scene
 from schemas.asset import SceneResponse, SceneUpdateRequest
 from core.embeddings.factory import get_vector_store
 from core.embeddings.embedder import TextEmbedder
+from services.storage_service import storage_service
 
 router = APIRouter(prefix="/api/v1", tags=["scenes"])
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ async def list_scenes(
                 timestamp_end_sec=scene.timestamp_end_sec,
                 caption=scene.caption,
                 transcript_snippet=scene.transcript_snippet,
-                thumbnail_url=scene.keyframe_s3_key # Simplified mapping for MVP
+                thumbnail_url=storage_service.get_stream_url(scene.keyframe_s3_key) if scene.keyframe_s3_key else None
             ))
         return response
     except ValueError:
@@ -94,7 +95,7 @@ async def update_scene(
             timestamp_end_sec=scene.timestamp_end_sec,
             caption=scene.caption,
             transcript_snippet=scene.transcript_snippet,
-            thumbnail_url=scene.keyframe_s3_key
+            thumbnail_url=storage_service.get_stream_url(scene.keyframe_s3_key) if scene.keyframe_s3_key else None
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid scene ID format")
