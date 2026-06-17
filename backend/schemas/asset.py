@@ -10,6 +10,9 @@ class AssetResponse(BaseModel):
     duration: Optional[float] = None
     status: str
     created_at: datetime
+    tags: Optional[list] = None
+    resolution: Optional[str] = None
+    media_type: Optional[str] = None
 
     class Config:
         from_attributes = True
