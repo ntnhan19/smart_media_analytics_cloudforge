@@ -76,3 +76,26 @@ class PGVectorStore:
                 })
             return results
 
+    async def delete_by_asset(self, asset_id: str):
+        """
+        For PGVector, deleting the Asset in SQLAlchemy cascades to Scenes.
+        However, if we want to explicitly delete scenes via adapter, we can do it here.
+        """
+        async with SessionLocal() as db:
+            from sqlalchemy import delete
+            await db.execute(delete(Scene).where(Scene.asset_id == uuid.UUID(asset_id)))
+            await db.commit()
+
+    async def update_embedding(self, scene_id: str, new_embedding: List[float], metadata_updates: Dict[str, Any] = None):
+        """
+        Updates an existing embedding.
+        """
+        async with SessionLocal() as db:
+            scene_uuid = uuid.UUID(scene_id)
+            scene = await db.get(Scene, scene_uuid)
+            if scene:
+                scene.embedding = new_embedding
+                # SQLAlchemy model updates will be handled by the route directly for caption/transcript
+                await db.commit()
+
+

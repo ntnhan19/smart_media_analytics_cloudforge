@@ -1,0 +1,104 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+import uuid
+import logging
+from typing import List
+
+from database import get_db
+from models.scene import Scene
+from schemas.asset import SceneResponse, SceneUpdateRequest
+from core.embeddings.factory import get_vector_store
+from core.embeddings.embedder import TextEmbedder
+from services.storage_service import storage_service
+
+router = APIRouter(prefix="/api/v1", tags=["scenes"])
+logger = logging.getLogger(__name__)
+
+embedder = TextEmbedder()
+
+@router.get("/assets/{asset_id}/scenes", response_model=List[SceneResponse])
+async def list_scenes(
+    asset_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        asset_uuid = uuid.UUID(asset_id)
+        result = await db.execute(
+            select(Scene)
+            .where(Scene.asset_id == asset_uuid)
+            .order_by(Scene.timestamp_start_sec)
+        )
+        scenes = result.scalars().all()
+        
+        response = []
+        for scene in scenes:
+            response.append(SceneResponse(
+                scene_id=str(scene.id),
+                asset_id=str(scene.asset_id),
+                scene_index=scene.scene_index,
+                timestamp_start_sec=scene.timestamp_start_sec,
+                timestamp_end_sec=scene.timestamp_end_sec,
+                caption=scene.caption,
+                transcript_snippet=scene.transcript_snippet,
+                thumbnail_url=storage_service.get_stream_url(scene.keyframe_s3_key) if scene.keyframe_s3_key else None
+            ))
+        return response
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid asset ID format")
+
+@router.patch("/scenes/{scene_id}", response_model=SceneResponse)
+async def update_scene(
+    scene_id: str,
+    request: SceneUpdateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        scene_uuid = uuid.UUID(scene_id)
+        scene = await db.get(Scene, scene_uuid)
+        if not scene:
+            raise HTTPException(status_code=404, detail="Scene not found")
+
+        # Update text fields if provided
+        updated = False
+        if request.caption is not None:
+            scene.caption = request.caption
+            updated = True
+        if request.transcript is not None:
+            scene.transcript_snippet = request.transcript
+            updated = True
+
+        if updated:
+            # Re-embed text
+            text_to_embed = scene.caption or ""
+            if scene.transcript_snippet:
+                text_to_embed += " " + scene.transcript_snippet
+                
+            new_embedding = await embedder.embed(text_to_embed)
+            
+            # Update Vector DB
+            vector_store = get_vector_store()
+            if hasattr(vector_store, "update_embedding"):
+                if __import__("inspect").iscoroutinefunction(vector_store.update_embedding):
+                    await vector_store.update_embedding(scene_id, new_embedding, metadata_updates={"caption": scene.caption, "transcript_snippet": scene.transcript_snippet})
+                else:
+                    vector_store.update_embedding(scene_id, new_embedding, metadata_updates={"caption": scene.caption, "transcript_snippet": scene.transcript_snippet})
+                    
+            await db.commit()
+            await db.refresh(scene)
+
+        return SceneResponse(
+            scene_id=str(scene.id),
+            asset_id=str(scene.asset_id),
+            scene_index=scene.scene_index,
+            timestamp_start_sec=scene.timestamp_start_sec,
+            timestamp_end_sec=scene.timestamp_end_sec,
+            caption=scene.caption,
+            transcript_snippet=scene.transcript_snippet,
+            thumbnail_url=storage_service.get_stream_url(scene.keyframe_s3_key) if scene.keyframe_s3_key else None
+        )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid scene ID format")
+    except Exception as e:
+        logger.error(f"Error updating scene: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during update")
