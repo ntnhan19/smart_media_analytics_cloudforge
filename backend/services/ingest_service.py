@@ -98,15 +98,14 @@ async def _process_single_file(file_path: str, db: AsyncSession, vector_store, e
     video_s3_key = f"uploads/{job_id_str}/{filename}"
     
     # 1. Create Asset in DB
-    asset_id = str(uuid.uuid4())
+    asset_uuid = uuid.uuid4()
+    asset_id = str(asset_uuid)
     new_asset = Asset(
-        id=asset_id,
+        id=asset_uuid,
         file_name=filename,
         file_path=video_s3_key, # Using S3 key
-        media_type="video" if filename.lower().endswith((".mp4", ".mov", ".avi")) else "audio",
-        mime_type="video/mp4",
-        size_bytes=os.path.getsize(file_path) if os.path.exists(file_path) else 0,
-        status="processing"
+        media_type="video" if filename.lower().endswith((".mp4", ".mov", ".avi", ".mov")) else "audio",
+        file_size_bytes=os.path.getsize(file_path) if os.path.exists(file_path) else 0
     )
     db.add(new_asset)
     await db.commit()
