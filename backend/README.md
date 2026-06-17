@@ -28,8 +28,8 @@ The **EchoScene Backend** is a Python 3.11 FastAPI service that powers intellige
 - **Vision Captioning** — Local Ollama `qwen2.5vl:3b` for video frame descriptions
 - **Speech Transcription** — faster-whisper (ctranslate2) for audio-to-text indexing
 - **Scene Detection** — PySceneDetect + OpenCV (headless) for frame-accurate video segmentation
-- **Vector Embeddings** — BGE-M3 embeddings via Ollama stored in ChromaDB
-- **Semantic Search** — Natural language queries against the vector store
+- **Vector Embeddings** — BGE-M3 embeddings via Ollama stored in pgvector (PostgreSQL) or ChromaDB
+- **Semantic Search** — Natural language queries against the vector store (supports both adapters)
 - **Asset Management** — CRUD operations on media metadata via PostgreSQL
 
 All processing runs **locally** on your machine — no data leaves your environment.
@@ -224,12 +224,15 @@ Before starting the backend, ensure Ollama is running and the vision model is do
 # Terminal 1: Start Ollama service
 ollama serve
 
-# Terminal 2: Pull the vision model (one-time, ~7-8 GB)
-ollama pull llama3.2-vision
+# Terminal 2: Pull the vision model (one-time, ~2 GB)
+ollama pull qwen2.5vl:3b
 
-# Verify the model is available
+# Pull the embedding model (one-time, ~1.2 GB)
+ollama pull bge-m3:latest
+
+# Verify the models are available
 ollama list
-# Output should show: llama3.2-vision
+# Output should show: qwen2.5vl:3b and bge-m3:latest
 ```
 
 > **Important**: Ollama must be running on port `11434` before starting the backend container.
@@ -320,7 +323,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up
 # ✓ Backend:    http://localhost:8000
 # ✓ Frontend:   http://localhost:5173
 # ✓ ChromaDB:   http://localhost:8001
-# ✓ PostgreSQL: localhost:5432
+# ✓ PostgreSQL: localhost:5432 (Internal) / 5433 (Host)
+# ✓ Adminer:    http://localhost:8080
 # ✓ MinIO:      http://localhost:9000 (console: 9001)
 ```
 
@@ -329,6 +333,15 @@ To stop:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml down
 ```
+
+### 🔍 Web Visualizers (Adminer & MinIO Console)
+
+Hệ thống cung cấp hai giao diện quản lý trực quan qua trình duyệt cho lập trình viên:
+* **Database Web GUI (Adminer):** Truy cập [http://localhost:8080](http://localhost:8080) để trực quan hóa PostgreSQL DB.
+  * **System:** `PostgreSQL` | **Server:** `postgres` | **Username:** `echoscene` | **Password:** `echoscene_dev_password` | **Database:** `echoscene`
+* **Object Storage Web GUI (MinIO Console):** Truy cập [http://localhost:9001](http://localhost:9001) to manage files (Username: `echoscene` | Password: `echoscene_dev_password`). Chọn bucket **`media`** để xem:
+  * **`uploads/`**: Chứa video gốc tải lên.
+  * **`keyframes/`**: Chứa ảnh thumbnail của phân cảnh do AI trích xuất.
 
 ---
 
@@ -399,7 +412,7 @@ Copy `.env.example` to `.env` and configure the following:
 # AI Pipeline — Ollama (Local LLM server)
 # =============================================================================
 OLLAMA_BASE_URL=http://host.docker.internal:11434
-OLLAMA_MODEL=llama3.2-vision
+OLLAMA_MODEL=qwen2.5vl:3b
 
 # =============================================================================
 # Vision Captioning Configuration
@@ -480,7 +493,7 @@ LOG_LEVEL=INFO                                # DEBUG | INFO | WARNING | ERROR |
 | Variable                    | Description                  | Default                             | Required |
 | --------------------------- | ---------------------------- | ----------------------------------- | -------- |
 | `OLLAMA_BASE_URL`           | Ollama API endpoint          | `http://host.docker.internal:11434` | ✅ Yes   |
-| `OLLAMA_MODEL`              | Vision model name            | `llama3.2-vision`                   | ✅ Yes   |
+| `OLLAMA_MODEL`              | Vision model name            | `qwen2.5vl:3b`                      | ✅ Yes   |
 | `CHROMA_HOST`               | ChromaDB hostname            | `chromadb`                          | ✅ Yes   |
 | `CHROMA_PORT`               | ChromaDB port                | `8000`                              | ✅ Yes   |
 | `DATABASE_URL`              | PostgreSQL connection string | —                                   | ✅ Yes   |
@@ -684,7 +697,7 @@ import asyncio
 
 tagger = VisionTagger(
     ollama_base_url='http://localhost:11434',
-    model_name='llama3.2-vision'
+    model_name='qwen2.5vl:3b'
 )
 
 caption = asyncio.run(tagger.caption_image('sample.jpg'))
@@ -727,7 +740,7 @@ curl -s http://localhost:8001/api/v1/heartbeat | jq .
 ollama serve
 
 # Terminal 2: Pull the model
-ollama pull llama3.2-vision
+ollama pull qwen2.5vl:3b
 
 # Terminal 3: Start the backend
 docker compose up -d backend
@@ -796,7 +809,7 @@ ollama list
 ```bash
 df -h
 docker system prune -a
-ollama rm llama3.2-vision   # Only if you want to free space
+ollama rm qwen2.5vl:3b   # Only if you want to free space
 ```
 
 ---
@@ -893,5 +906,5 @@ For issues, questions, or contributions:
 
 ---
 
-**Last Updated**: May 2026  
-**Maintainer**: EchoScene Backend Team
+**Last Updated**: June 2026  
+**Maintainer**: CloudForge Backend Team

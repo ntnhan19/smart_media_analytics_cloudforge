@@ -54,7 +54,7 @@ When you're ready to scale, SMA's architecture maps cleanly onto AWS production 
 | **Speech-to-Text** | `faster-whisper` — ctranslate2 backend, CPU-optimized |
 | **Embeddings** | Ollama — `bge-m3:latest` (1024-dim dense vectors) |
 | **Video Processing** | FFmpeg, OpenCV (headless), PySceneDetect 0.6.4 |
-| **Vector Database** | ChromaDB 1.5.9 (HTTP client mode) |
+| **Vector Database** | ChromaDB 1.5.9 hoặc pgvector (PostgreSQL) |
 | **Relational Database** | PostgreSQL 16 |
 | **Object Storage** | MinIO (S3-compatible, local) |
 | **Orchestration** | Docker Compose |
@@ -243,6 +243,45 @@ docker compose logs -f frontend
 | ChromaDB | http://localhost:8001 |
 | MinIO Console | http://localhost:9001 |
 | PostgreSQL | localhost:5433 |
+| Adminer (DB Web GUI) | http://localhost:8080 |
+
+#### 🗄️ Database & Vector DB Configuration
+
+Hệ thống hỗ trợ song song hai loại Vector Database được thiết lập qua biến môi trường `VECTOR_DB_TYPE` ở file `.env`:
+- **ChromaDB:** Mặc định cho luồng phân tích AI local (`VECTOR_DB_TYPE=chromadb`).
+- **pgvector (PostgreSQL):** Tối ưu hóa cho môi trường Production/Cloud để giảm thiểu chi phí và quản trị hạ tầng (`VECTOR_DB_TYPE=pgvector`). Khi bật, các vector nhúng của phân cảnh sẽ được lưu trực tiếp tại bảng `scenes` trong Postgres.
+
+#### 🔍 Xem PostgreSQL Trực Quan Qua Web (Adminer)
+
+Để xem dữ liệu trực quan trong database mà không cần cài đặt phần mềm bên thứ ba (như DBeaver/pgAdmin), bạn có thể sử dụng container **Adminer** nền web:
+
+1. Khởi động container:
+   ```bash
+   docker compose up -d adminer
+   ```
+2. Truy cập trình duyệt: [http://localhost:8080](http://localhost:8080)
+3. Điền thông tin kết nối:
+   * **System:** `PostgreSQL`
+   * **Server:** `postgres`
+   * **Username:** `echoscene`
+   * **Password:** `echoscene_dev_password`
+   * **Database:** `echoscene`
+
+#### 🪣 Xem Đối Tượng Lưu Trữ Trực Quan Qua Web (MinIO Console)
+
+Để kiểm tra các video gốc đã upload và các ảnh keyframe/thumbnail đã được tạo bởi AI Pipeline trên giao diện web trực quan:
+
+1. Khởi động container:
+   ```bash
+   docker compose up -d minio
+   ```
+2. Truy cập trình duyệt: [http://localhost:9001](http://localhost:9001)
+3. Điền thông tin đăng nhập:
+   * **Username:** `echoscene`
+   * **Password:** `echoscene_dev_password`
+4. Truy cập **Object Browser** -> Chọn bucket **`media`** để xem các thư mục:
+   * **`uploads/`**: Chứa các file video gốc của bạn đã tải lên hệ thống.
+   * **`keyframes/`**: Chứa các ảnh thumbnail của từng phân cảnh (do AI Pipeline xuất ra).
 
 ---
 
