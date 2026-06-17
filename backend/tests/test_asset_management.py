@@ -10,18 +10,6 @@ from main import app
 client = TestClient(app)
 
 @pytest.fixture
-def mock_db():
-    with patch("api.routes.assets.get_db") as mock_get_db_assets, \
-         patch("api.routes.scenes.get_db") as mock_get_db_scenes, \
-         patch("api.routes.media.get_db") as mock_get_db_media:
-        
-        mock_session = AsyncMock()
-        mock_get_db_assets.return_value = mock_session
-        mock_get_db_scenes.return_value = mock_session
-        mock_get_db_media.return_value = mock_session
-        yield mock_session
-
-@pytest.fixture
 def mock_vector_store():
     with patch("api.routes.assets.get_vector_store") as m1, \
          patch("api.routes.scenes.get_vector_store") as m2:
@@ -42,12 +30,6 @@ def mock_storage():
         m2.get_stream_url.return_value = "http://localhost:8000/mock/stream"
         yield m1
 
-def test_get_assets(mock_db):
-    response = client.get("/api/v1/assets?limit=10&offset=0")
-    # For now, it will hit the DB which is mocked, but TestClient 
-    # uses dependency overrides better. Let's use app.dependency_overrides
-    pass
-
 # We should use app.dependency_overrides to properly mock db
 @pytest.fixture
 def override_db():
@@ -67,6 +49,9 @@ def test_get_assets_with_override(override_db):
     mock_asset.duration_sec = 60.0
     mock_asset.status = "ready"
     mock_asset.ingested_at = "2026-01-01T00:00:00Z"
+    mock_asset.tags = ["beach", "bridge"]
+    mock_asset.resolution = "1080p"
+    mock_asset.media_type = "video"
     
     mock_result.scalars.return_value.all.return_value = [mock_asset]
     override_db.execute.return_value = mock_result
