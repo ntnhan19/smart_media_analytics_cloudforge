@@ -34,7 +34,10 @@ async def list_assets(
             file_size=asset.file_size_bytes,
             duration=asset.duration_sec,
             status=asset.status if hasattr(asset, 'status') else "ready",
-            created_at=asset.ingested_at
+            created_at=asset.ingested_at,
+            tags=asset.tags if hasattr(asset, 'tags') else None,
+            resolution=asset.resolution if hasattr(asset, 'resolution') else None,
+            media_type=asset.media_type if hasattr(asset, 'media_type') else None
         ))
     return response
 
@@ -55,7 +58,10 @@ async def get_asset(
             file_size=asset.file_size_bytes,
             duration=asset.duration_sec,
             status=asset.status if hasattr(asset, 'status') else "ready",
-            created_at=asset.ingested_at
+            created_at=asset.ingested_at,
+            tags=asset.tags if hasattr(asset, 'tags') else None,
+            resolution=asset.resolution if hasattr(asset, 'resolution') else None,
+            media_type=asset.media_type if hasattr(asset, 'media_type') else None
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid asset ID format")
