@@ -150,6 +150,12 @@ storage/uploads/*
 storage/processed/*
 !storage/processed/.gitkeep
 
+# Frontend test uploads
+public/uploads/*
+!public/uploads/.gitkeep
+frontend/public/uploads/*
+!frontend/public/uploads/.gitkeep
+
 # Mock data (large sample files only — keep metadata JSON)
 mock_data/media/*
 !mock_data/media/.gitkeep

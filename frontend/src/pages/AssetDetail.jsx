@@ -284,79 +284,81 @@ export default function AssetDetail() {
           </div>
 
           {/* Right Column */}
-          <div className="w-[380px] flex flex-col bg-[rgba(126,26,249,0.72)] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] rounded-[6px] flex-shrink-0 p-[8px] gap-[8px]">
-            
-            {/* Top Search */}
-            <div className="flex-shrink-0">
-              <InVideoSearch 
-                assetId={assetMock.id} 
-                onSeekVideo={handleSeek}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                isSearching={isSearching}
-              />
-            </div>
+          {assetMock.mediaType !== 'image' && (
+            <div className="w-[380px] flex flex-col bg-[rgba(126,26,249,0.72)] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] rounded-[6px] flex-shrink-0 p-[8px] gap-[8px]">
+              
+              {/* Top Search */}
+              <div className="flex-shrink-0">
+                <InVideoSearch 
+                  assetId={assetMock.id} 
+                  onSeekVideo={handleSeek}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  isSearching={isSearching}
+                />
+              </div>
 
-            {/* Showing Count and Sort Option */}
-            <div className="flex items-center justify-between text-[11px] text-white/70 px-[6px] py-[2px] border-b border-white/10 shrink-0 pb-[4px]">
-              <span>
-                {activeTab === 'TRANSCRIPT' 
-                  ? `Showing ${filteredTranscript.length} of ${transcriptMock.length} lines`
-                  : `Showing ${sortedScenes.length} of ${sceneMock.length} scenes`
-                }
-              </span>
-              <div className="flex items-center gap-[4px]">
-                <span>Sort by:</span>
-                <select 
-                  value={sortBy} 
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-transparent border-none text-[#7B5CF5] font-bold focus:outline-none cursor-pointer text-[11px]"
-                >
-                  <option value="time" className="bg-[#0E0B1F]">Time</option>
-                  <option value="relevance" className="bg-[#0E0B1F]">Relevance</option>
-                </select>
+              {/* Showing Count and Sort Option */}
+              <div className="flex items-center justify-between text-[11px] text-white/70 px-[6px] py-[2px] border-b border-white/10 shrink-0 pb-[4px]">
+                <span>
+                  {activeTab === 'TRANSCRIPT' 
+                    ? `Showing ${filteredTranscript.length} of ${transcriptMock.length} lines`
+                    : `Showing ${sortedScenes.length} of ${sceneMock.length} scenes`
+                  }
+                </span>
+                <div className="flex items-center gap-[4px]">
+                  <span>Sort by:</span>
+                  <select 
+                    value={sortBy} 
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="bg-transparent border-none text-[#7B5CF5] font-bold focus:outline-none cursor-pointer text-[11px]"
+                  >
+                    <option value="time" className="bg-[#0E0B1F]">Time</option>
+                    <option value="relevance" className="bg-[#0E0B1F]">Relevance</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Timeline/Scenes or Transcript List */}
+              <div className="flex-1 overflow-hidden">
+                {activeTab === 'TRANSCRIPT' ? (
+                  <TranscriptList 
+                    transcript={filteredTranscript} 
+                    currentTime={currentTime} 
+                    onSeek={handleSeek}
+                    searchQuery={debouncedQuery}
+                  />
+                ) : (
+                  <SceneList 
+                    scenes={sortedScenes} 
+                    currentTime={currentTime} 
+                    onSeek={handleSeek}
+                    searchQuery={debouncedQuery}
+                  />
+                )}
+              </div>
+              
+              {/* Detect Button or Waveform Player */}
+              <div className="flex-shrink-0">
+                {activeTab === 'TRANSCRIPT' ? (
+                  <WaveformPlayer />
+                ) : (
+                  <div className="w-full py-[8px] flex items-center justify-center border border-dashed border-[#7B5CF5]/30 rounded-[6px] bg-[#16132A]/20">
+                    <button 
+                      onClick={handleDetectScenes}
+                      disabled={isDetecting}
+                      className="text-[11px] font-inter font-medium text-gray-400 hover:text-white transition-colors flex items-center gap-1.5"
+                    >
+                      {isDetecting ? (
+                        <span className="w-3 h-3 border-2 border-[#7B5CF5] border-t-transparent rounded-full animate-spin" />
+                      ) : null}
+                      <span>Showing {sortedScenes.length} of 23 scenes · <span className="text-[#c4b5fd] hover:text-white font-bold hover:underline">Detect more</span></span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Timeline/Scenes or Transcript List */}
-            <div className="flex-1 overflow-hidden">
-              {activeTab === 'TRANSCRIPT' ? (
-                <TranscriptList 
-                  transcript={filteredTranscript} 
-                  currentTime={currentTime} 
-                  onSeek={handleSeek}
-                  searchQuery={debouncedQuery}
-                />
-              ) : (
-                <SceneList 
-                  scenes={sortedScenes} 
-                  currentTime={currentTime} 
-                  onSeek={handleSeek}
-                  searchQuery={debouncedQuery}
-                />
-              )}
-            </div>
-            
-            {/* Detect Button or Waveform Player */}
-            <div className="flex-shrink-0">
-              {activeTab === 'TRANSCRIPT' ? (
-                <WaveformPlayer />
-              ) : (
-                <div className="w-full py-[8px] flex items-center justify-center border border-dashed border-[#7B5CF5]/30 rounded-[6px] bg-[#16132A]/20">
-                  <button 
-                    onClick={handleDetectScenes}
-                    disabled={isDetecting}
-                    className="text-[11px] font-inter font-medium text-gray-400 hover:text-white transition-colors flex items-center gap-1.5"
-                  >
-                    {isDetecting ? (
-                      <span className="w-3 h-3 border-2 border-[#7B5CF5] border-t-transparent rounded-full animate-spin" />
-                    ) : null}
-                    <span>Showing {sortedScenes.length} of 23 scenes · <span className="text-[#c4b5fd] hover:text-white font-bold hover:underline">Detect more</span></span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          )}
 
         </div>
       </div>

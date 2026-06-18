@@ -131,12 +131,24 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
         e.preventDefault();
         togglePlay();
       } else if (e.code === 'ArrowRight') {
-        const newTime = Math.min(currentTime + 10, actualDuration);
+        let jumpAmount = 10;
+        if (actualDuration <= 30) {
+          jumpAmount = 2;
+        } else if (actualDuration <= 300) {
+          jumpAmount = 5;
+        }
+        const newTime = Math.min(currentTime + jumpAmount, actualDuration);
         setCurrentTime(newTime);
         if (videoRef.current) videoRef.current.currentTime = newTime;
         if (onTimeUpdate) onTimeUpdate(newTime);
       } else if (e.code === 'ArrowLeft') {
-        const newTime = Math.max(currentTime - 10, 0);
+        let jumpAmount = 10;
+        if (actualDuration <= 30) {
+          jumpAmount = 2;
+        } else if (actualDuration <= 300) {
+          jumpAmount = 5;
+        }
+        const newTime = Math.max(currentTime - jumpAmount, 0);
         setCurrentTime(newTime);
         if (videoRef.current) videoRef.current.currentTime = newTime;
         if (onTimeUpdate) onTimeUpdate(newTime);
