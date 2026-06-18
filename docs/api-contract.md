@@ -1,8 +1,8 @@
 # SMA (Smart Media Analytics) — API Data Contract
 
-**Version:** `v0.0.1-data-contract`
+**Version:** `v0.0.2-data-contract`
 **Status:** Authoritative — Do not modify without team review
-**Last Updated:** 2026-05-21
+**Last Updated:** 2026-06-18
 
 ---
 
@@ -37,9 +37,11 @@ This document is the **single source of truth** for all request/response schemas
 3. [POST /api/v1/search](#3-post-apiv1search)
 4. [GET /api/v1/assets](#4-get-apiv1assets)
 5. [GET /api/v1/assets/{asset_id}](#5-get-apiv1assetsasset_id)
-6. [WebSocket: ws/ingest/{job_id}](#6-websocket-wsingestjob_id)
-7. [Shared Enums & Types](#7-shared-enums--types)
-8. [Error Response Schema](#8-error-response-schema)
+6. [POST /api/v1/assets/{asset_id}/reingest](#6-post-apiv1assetsasset_idreingest)
+7. [POST /api/v1/assets/{asset_id}/regenerate-insights](#7-post-apiv1assetsasset_idregenerate-insights)
+8. [WebSocket: ws/ingest/{job_id}](#8-websocket-wsingestjob_id)
+9. [Shared Enums & Types](#9-shared-enums--types)
+10. [Error Response Schema](#10-error-response-schema)
 
 ---
 
@@ -146,7 +148,8 @@ Performs semantic vector search over ingested media assets.
   "query": "person walking on a beach at sunset",
   "filters": {
     "media_type": ["video", "image"],
-    "tags": []
+    "tags": [],
+    "asset_id": "vid-0042"
   },
   "top_k": 5
 }
@@ -157,6 +160,7 @@ Performs semantic vector search over ingested media assets.
 | `query` | `string` | ✅ | Natural language search query |
 | `filters.media_type` | `string[]` | ❌ | Filter by type: `video` \| `image` \| `audio`. Empty = all |
 | `filters.tags` | `string[]` | ❌ | Filter by tags. Empty = no tag filter |
+| `filters.asset_id` | `string` | ❌ | Filter by specific asset ID (In-Video Search support) |
 | `top_k` | `integer` | ❌ | Max results to return. Default: `10`, Max: `50` |
 
 ### Response Body — `200 OK`
@@ -309,6 +313,23 @@ Returns the full detail of a single asset including all scenes.
   "file_size_bytes": 248310784,
   "file_path": "/app/data/media/vacation_reel_2024.mp4",
   "ingested_at": "2024-08-21T09:15:42Z",
+  "summary": "A beautiful cinematic travel vlog showcasing the natural beauty of Sweden.",
+  "moods": [
+    { "label": "CALM", "score": 0.95 },
+    { "label": "RELAXING", "score": 0.85 }
+  ],
+  "objects": [
+    {
+      "name": "BRIDGE",
+      "occurrences": [
+        { "timestamp_start_sec": 0.0, "timestamp_end_sec": 1.6, "confidence": 0.95 },
+        { "timestamp_start_sec": 3.2, "timestamp_end_sec": 4.8, "confidence": 0.88 }
+      ]
+    }
+  ],
+  "best_for": [
+    { "name": "TRAVEL FILM", "category": "theme", "source": "auto" }
+  ],
   "scenes": [
     {
       "scene_index": 0,
@@ -318,19 +339,13 @@ Returns the full detail of a single asset including all scenes.
       "transcript_snippet": "We started early to catch the sunrise.",
       "thumbnail_url": "/thumbnails/vid-0042-scene0.jpg",
       "embedding_id": "emb-vid0042-s0"
-    },
-    {
-      "scene_index": 3,
-      "timestamp_start_sec": 142.5,
-      "timestamp_end_sec": 161.0,
-      "caption": "A person walks along a sandy beach at golden hour.",
-      "transcript_snippet": "This was the most peaceful evening.",
-      "thumbnail_url": "/thumbnails/vid-0042-scene3.jpg",
-      "embedding_id": "emb-vid0042-s3"
     }
   ],
   "full_transcript": "We started early to catch the sunrise. The mountains were covered in mist...",
-  "tags": ["travel", "beach", "mountain", "drone"]
+  "tags": [
+    { "name": "travel", "category": "theme", "source": "auto" },
+    { "name": "sweden", "category": "location", "source": "auto" }
+  ]
 }
 ```
 
@@ -346,9 +361,43 @@ Returns the full detail of a single asset including all scenes.
 | `file_size_bytes` | `integer` | File size in bytes |
 | `file_path` | `string` | Absolute server path |
 | `ingested_at` | `string` | ISO 8601 UTC timestamp |
+| `summary` | `string \| null` | AI-generated summary of the entire asset |
+| `moods` | `MoodDetail[]` | Array of detected moods |
+| `objects` | `DetectedObjectDetail[]` | Aggregated detected objects with occurrences |
+| `best_for` | `TagDetail[]` | Recommendations/best-for tags |
 | `scenes` | `SceneDetail[]` | All scenes for this asset |
 | `full_transcript` | `string \| null` | Complete transcript (null for images) |
-| `tags` | `string[]` | Auto-generated semantic tags |
+| `tags` | `TagDetail[]` | Auto-generated categorised semantic tags |
+
+#### MoodDetail Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `label` | `string` | Name of the mood (e.g., `"CALM"`, `"RELAXING"`) |
+| `score` | `float` | AI confidence score, 0.0–1.0 |
+
+#### DetectedObjectDetail Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `string` | UPPERCASE name of the object (e.g., `"BRIDGE"`, `"CAR"`) |
+| `occurrences` | `OccurrenceDetail[]` | Array of timestamps and confidences where the object appears |
+
+#### OccurrenceDetail Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `timestamp_start_sec` | `float` | Start time in seconds |
+| `timestamp_end_sec` | `float` | End time in seconds |
+| `confidence` | `float` | AI confidence score, 0.0–1.0 |
+
+#### TagDetail Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `string` | Name of the tag |
+| `category` | `enum` | Group classification: `"location"` \| `"content_type"` \| `"theme"` |
+| `source` | `enum` | Source of the tag: `"auto"` (AI-generated) \| `"user_confirmed"` |
 
 #### SceneDetail Object
 
@@ -364,7 +413,55 @@ Returns the full detail of a single asset including all scenes.
 
 ---
 
-## 6. WebSocket: ws/ingest/{job_id}
+## 6. POST /api/v1/assets/{asset_id}/reingest
+
+Triggers video re-analysis and scene detection. Utilises **Atomic Swap** (replaces old data only on 100% success) and returns a Job ID for tracking.
+
+**Owner:** M2 (backend) + M3 (frontend)
+
+### Request Body
+
+```json
+{
+  "options": {
+    "scene_detection": true,
+    "transcription": true,
+    "vision_caption": true
+  }
+}
+```
+
+### Response Body — `202 Accepted`
+
+```json
+{
+  "job_id": "job-reingest-20240821-002",
+  "status": "queued",
+  "message": "Re-ingestion pipeline started."
+}
+```
+
+---
+
+## 7. POST /api/v1/assets/{asset_id}/regenerate-insights
+
+Triggers LLM/Vision analysis on existing keyframes to regenerate metadata (summary, moods, objects, tags) without running scene detection or vector embeddings. Runs asynchronously.
+
+**Owner:** M2 (backend) + M3 (frontend)
+
+### Response Body — `202 Accepted`
+
+```json
+{
+  "job_id": "job-regen-20240821-003",
+  "status": "queued",
+  "message": "Regenerate insights job started."
+}
+```
+
+---
+
+## 8. WebSocket: ws/ingest/{job_id}
 
 Real-time push updates for ingestion progress. Replaces polling for the frontend.
 
@@ -449,7 +546,7 @@ Client                          Server
 
 ---
 
-## 7. Shared Enums & Types
+## 9. Shared Enums & Types
 
 ```
 MediaType     : "video" | "image" | "audio"
@@ -462,7 +559,7 @@ WebSocketEvent: "connected" | "progress" | "completed" | "failed"
 
 ---
 
-## 8. Error Response Schema
+## 10. Error Response Schema
 
 All error responses follow this unified shape:
 
@@ -492,3 +589,4 @@ All error responses follow this unified shape:
 | Version | Date | Author | Notes |
 |---------|------|--------|-------|
 | `v0.0.1-data-contract` | 2024-08-21 | Team | Initial contract — all 5 endpoints + WebSocket |
+| `v0.0.2-data-contract` | 2026-06-18 | Team | Added Re-Ingest, Regenerate Insights, and In-Video Search filters |
