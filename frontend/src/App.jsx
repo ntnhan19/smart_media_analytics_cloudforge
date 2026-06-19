@@ -19,11 +19,11 @@ function App() {
           <Route path="/" element={<AppShell />}>
             <Route index element={<Dashboard />} />
             <Route path="search" element={<Search />} />
-            <Route path="assets/:id" element={<AssetDetail />} />
             <Route path="upload" element={<Upload />} />
             <Route path="settings" element={<Settings />} />
             <Route path="uikit" element={<UiKitDemo />} />
           </Route>
+          <Route path="/assets/:id" element={<AssetDetail />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
