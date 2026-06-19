@@ -1,0 +1,43 @@
+{
+  "asset_id": "demo_video",
+  "status": "success",
+  "proxy_s3_key": "proxies/demo_video_proxy.mp4",
+  "scenes": [
+    {
+      "scene_index": 0,
+      "start_sec": 0.0,
+      "end_sec": 11.6,
+      "keyframe_s3_key": "thumbnails/demo_video_scene_0000.jpg"
+    },
+    {
+      "scene_index": 1,
+      "start_sec": 11.6,
+      "end_sec": 15.333,
+      "keyframe_s3_key": "thumbnails/demo_video_scene_0001.jpg"
+    },
+    {
+      "scene_index": 2,
+      "start_sec": 15.333,
+      "end_sec": 18.3,
+      "keyframe_s3_key": "thumbnails/demo_video_scene_0002.jpg"
+    },
+    {
+      "scene_index": 3,
+      "start_sec": 18.3,
+      "end_sec": 28.367,
+      "keyframe_s3_key": "thumbnails/demo_video_scene_0003.jpg"
+    },
+    {
+      "scene_index": 4,
+      "start_sec": 28.367,
+      "end_sec": 34.5,
+      "keyframe_s3_key": "thumbnails/demo_video_scene_0004.jpg"
+    },
+    {
+      "scene_index": 5,
+      "start_sec": 34.5,
+      "end_sec": 38.533,
+      "keyframe_s3_key": "thumbnails/demo_video_scene_0005.jpg"
+    }
+  ]
+}
