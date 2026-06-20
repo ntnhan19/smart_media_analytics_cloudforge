@@ -125,7 +125,7 @@ function JobQueueCard({ job, onRemove }) {
 }
 
 export default function IngestQueue() {
-  const { activeJobs, removeJob } = useJobs();
+  const { activeJobs, removeJob, clearCompletedJobs } = useJobs();
 
   if (!activeJobs || activeJobs.length === 0) return null;
 
@@ -133,7 +133,10 @@ export default function IngestQueue() {
     <div className="w-full flex flex-col items-center bg-[#0B0914] p-4 rounded-lg border border-[#2D2844]">
       <div className="w-full flex justify-between items-center mb-[16px]">
         <h2 className="font-inter font-bold text-[14px] text-white">INgest Queue</h2>
-        <span className="font-inter font-normal text-[12px] text-gray-400 cursor-pointer hover:text-white transition-colors">
+        <span 
+          onClick={clearCompletedJobs}
+          className="font-inter font-normal text-[12px] text-gray-400 cursor-pointer hover:text-white transition-colors"
+        >
           Clear Completed
         </span>
       </div>

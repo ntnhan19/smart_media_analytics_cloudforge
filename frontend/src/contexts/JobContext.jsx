@@ -21,9 +21,10 @@ export const JobProvider = ({ children }) => {
 
   const addJob = useCallback((job) => {
     setActiveJobs(prev => {
-      // Check if job already exists
+      // Kiểm tra xem job đã tồn tại chưa
       const exists = prev.find(j => j.job_id === job.job_id);
       if (exists) return prev;
+
       return [...prev, {
         job_id: job.job_id,
         asset_id: job.asset_id || null,
@@ -53,24 +54,16 @@ export const JobProvider = ({ children }) => {
     setActiveJobs(prev => prev.filter(j => j.job_id !== jobId));
   }, []);
 
-  // Cleanup completed jobs after 3 seconds
-  useEffect(() => {
-    const completedJobs = activeJobs.filter(job => job.status === 'completed');
-    if (completedJobs.length === 0) return;
+  const clearCompletedJobs = useCallback(() => {
+    setActiveJobs(prev => prev.filter(j => j.status !== 'completed'));
+  }, []);
 
-    const timeoutIds = completedJobs.map(job => {
-      return setTimeout(() => {
-        removeJob(job.job_id);
-      }, 3000);
-    });
-
-    return () => {
-      timeoutIds.forEach(clearTimeout);
-    };
-  }, [activeJobs, removeJob]);
+  const clearAllFinishedJobs = useCallback(() => {
+    setActiveJobs(prev => prev.filter(j => j.status !== 'completed' && j.status !== 'failed'));
+  }, []);
 
   return (
-    <JobContext.Provider value={{ activeJobs, addJob, updateJob, removeJob }}>
+    <JobContext.Provider value={{ activeJobs, addJob, updateJob, removeJob, clearCompletedJobs, clearAllFinishedJobs }}>
       {children}
     </JobContext.Provider>
   );
