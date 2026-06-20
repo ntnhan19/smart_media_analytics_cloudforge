@@ -105,8 +105,9 @@ async def test_pipeline_e2e_smoke(sample_video, integration_enabled):
                         break
         finally:
             await pubsub.unsubscribe(f"job_{job_id}")
-            await pubsub.close()
-            await client.close()
+            await pubsub.aclose()
+            await client.aclose()
+            await client.connection_pool.disconnect()
 
     listener_task = asyncio.create_task(listen_for_progress())
     await asyncio.sleep(0.2)
@@ -121,27 +122,51 @@ async def test_pipeline_e2e_smoke(sample_video, integration_enabled):
 
     async with SessionLocal() as db:
         job = await db.get(IngestJob, job_id)
-        assert job.status == "completed"
-        assert job.progress == 100.0
+        if not job:
+            raise AssertionError(f"FAIL: Job not found in database for job_id={job_id}")
+        if job.status != "completed":
+            raise AssertionError(f"FAIL: Job status is {job.status!r}, expected 'completed'. Error: {job.error_message!r}")
+        if job.progress != 100.0:
+            raise AssertionError(f"FAIL: Job progress is {job.progress!r}, expected 100.0")
 
-        asset_result = await db.execute(select(Asset).where(Asset.file_name == sample_video.name))
+        asset_result = await db.execute(select(Asset).where(Asset.file_path == f"uploads/{job_id}/{sample_video.name}"))
         asset = asset_result.scalars().first()
-        assert asset is not None
-        assert asset.duration_sec and asset.duration_sec > 0
-        assert asset.resolution
-        assert asset.file_size_bytes > 0
-        assert isinstance(asset.tags, list)
+        if asset is None:
+            raise AssertionError(f"FAIL: Asset not found in database for file_path='uploads/{job_id}/{sample_video.name}'")
+        if not asset.duration_sec or asset.duration_sec <= 0:
+            raise AssertionError(f"FAIL: Asset duration_sec is invalid: {asset.duration_sec!r}")
+        if not asset.resolution:
+            raise AssertionError(f"FAIL: Asset resolution is empty or None")
+        if not asset.file_size_bytes or asset.file_size_bytes <= 0:
+            raise AssertionError(f"FAIL: Asset file_size_bytes is invalid: {asset.file_size_bytes!r}")
+        if not isinstance(asset.tags, list):
+            raise AssertionError(f"FAIL: Asset tags is not a list: {asset.tags!r}")
 
         scene_result = await db.execute(select(Scene).where(Scene.asset_id == asset.id))
         scenes = scene_result.scalars().all()
-        assert scenes
-        assert scenes[0].caption
-        assert scenes[0].keyframe_s3_key == f"keyframes/{asset.id}/0.jpg"
-        assert scenes[0].embedding is not None
-        assert len(scenes[0].embedding) == 1024
+        if not scenes:
+            raise AssertionError(f"FAIL: No scenes found in database for asset.id={asset.id}")
+            
+        scene = scenes[0]
+        if not scene.caption:
+            raise AssertionError(f"FAIL: Scene caption is empty or None: {scene.caption!r}")
+            
+        expected_s3_key = f"keyframes/{asset.id}/0.jpg"
+        if scene.keyframe_s3_key != expected_s3_key:
+            raise AssertionError(f"FAIL: Keyframe S3 key mismatch: expected {expected_s3_key!r}, got {scene.keyframe_s3_key!r}")
+            
+        if scene.embedding is None:
+            raise AssertionError(f"FAIL: Scene embedding is None! Caption: {scene.caption!r}")
+            
+        if len(scene.embedding) != 1024:
+            raise AssertionError(f"FAIL: Scene embedding dimension mismatch: expected 1024, got {len(scene.embedding)}")
 
-        assert storage_service.client.file_exists(scenes[0].keyframe_s3_key)
+        if not storage_service.client.file_exists(scene.keyframe_s3_key):
+            raise AssertionError(f"FAIL: Keyframe file does not exist in MinIO at key {scene.keyframe_s3_key!r}")
 
-    assert progress_events
-    assert any('"current_step": "embedding"' in event for event in progress_events)
-    assert any('"status": "completed"' in event for event in progress_events)
+    if not progress_events:
+        raise AssertionError("FAIL: No Redis progress events were captured")
+    if not any('"current_step": "embedding"' in event for event in progress_events):
+        raise AssertionError(f"FAIL: Expected 'embedding' step in progress events, got: {progress_events}")
+    if not any('"status": "completed"' in event for event in progress_events):
+        raise AssertionError(f"FAIL: Expected 'completed' status in progress events, got: {progress_events}")
