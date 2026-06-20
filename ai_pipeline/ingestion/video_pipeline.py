@@ -1,589 +1,430 @@
 """
 Video Analysis Pipeline
-Main pipeline orchestrating video processing và analysis
+
+Cloud-ready pipeline core. It analyzes local video files and returns a
+backend-compatible contract; database persistence belongs to the backend
+ingest service.
 """
 
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-import uuid
+import os
+import re
 import time
+import uuid
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
-from PIL import Image
-
+from ai_pipeline.audio.transcriber import TranscriptProcessor, create_asr_model
 from ai_pipeline.config import config
-from utils.logger import logger, ProgressTracker
-from ai_pipeline.scene_detection.scene_detector import VideoProcessor, SceneDetector, KeyframeExtractor
-from ai_pipeline.vision.vision_models import ModelManager
-from ai_pipeline.database.db_client import get_db_client
-from ai_pipeline.database.vectordb_client import get_vector_db_client
-from ai_pipeline.audio.transcriber import create_asr_model
+from ai_pipeline.ingestion.contracts import (
+    DetectedObjectContract,
+    ObjectOccurrenceContract,
+    SceneAnalysisContract,
+    TagContract,
+    VideoAnalysisContract,
+)
+from ai_pipeline.providers import create_text_embedder, create_vision_provider
 from ai_pipeline.models.refinement_llm import create_refinement_llm
-from ai_pipeline.embeddings.embedding_models import EmbeddingManager
-from pathlib import Path as PathlibPath
+from ai_pipeline.scene_detection.scene_detector import (
+    KeyframeExtractor,
+    SceneDetector,
+    VideoInfo,
+    VideoProcessor,
+)
+from utils.logger import ProgressTracker, logger
+
+ProgressCallback = Callable[[str, float], None]
 
 
 class SimpleFileManager:
-    """Simple file manager for organizing output files"""
-    
-    def __init__(self, video_id: str, output_dir: Path):
-        self.video_id = video_id
+    """Organize intermediate files for one video analysis run."""
+
+    def __init__(self, asset_id: str, output_dir: Path):
+        self.asset_id = asset_id
         self.output_dir = Path(output_dir)
-        self.video_dir = self.output_dir / video_id
+        self.video_dir = self.output_dir / asset_id
         self.video_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.proxy_path = self.video_dir / "proxy.mp4"
         self.audio_path = self.video_dir / "audio.wav"
         self.keyframes_dir = self.video_dir / "keyframes"
         self.keyframes_dir.mkdir(parents=True, exist_ok=True)
 
+
 class VideoAnalysisPipeline:
-    """Main pipeline for video analysis"""
-    
-    def __init__(self, processing_mode: str = "fast"):
+    """Main pipeline for video analysis without direct DB ownership."""
+
+    def __init__(
+        self,
+        processing_mode: str = "fast",
+        vision_provider=None,
+        text_embedder=None,
+        storage_client=None,
+        progress_callback: Optional[ProgressCallback] = None,
+    ):
         self.processing_mode = processing_mode
         self.mode_config = config.get_processing_mode_config(processing_mode)
-        
-        # Initialize components
         self.video_processor = VideoProcessor()
         self.scene_detector = SceneDetector()
         self.keyframe_extractor = KeyframeExtractor()
         
-        # Database
-        self.db = get_db_client()
-        self.vector_db = get_vector_db_client()
+        # ── Abstraction Provider Selection (Task 7) ──────────────────────────
+        # Tự động switch linh hoạt cấu hình theo biến môi trường hệ thống
+        self.vision_provider = vision_provider or create_vision_provider()
+        self.text_embedder = text_embedder or create_text_embedder()
         
-        if self.vector_db is None:
-            logger.warning("Vector database not available. Embeddings will not be stored.")
-        
-        # Models (lazy loading)
-        self.model_manager = None
+        self.storage_client = storage_client
+        self.progress_callback = progress_callback
         self.asr_model = None
-        self.refinement_llm = None
-        self.embedding_manager = None
         
-        self.video_id = None
-        self.file_manager = None
-    
+        # ✨ Khởi tạo cấu hình Refinement LLM an toàn
+        self.refinement_llm = self._init_refinement_llm()
+
+    def _init_refinement_llm(self):
+        """Khởi tạo mô hình lọc dữ liệu an toàn dựa trên nhà cung cấp"""
+        ai_provider = os.getenv("AI_PROVIDER", "local").lower()
+        if ai_provider == "aws":
+            logger.info("☁️ Cloud Mode: Khởi chạy Khung Stub AWS Bedrock cho Refinement LLM")
+            # Bạn có thể bổ sung class BedrockRefinementLLM(stub) tại đây khi lên AWS Cloud
+            return create_refinement_llm() 
+        else:
+            try:
+                return create_refinement_llm()
+            except Exception as e:
+                logger.warning(f"⚠️ Không thể kết nối Ollama server lúc khởi tạo: {e}. Luồng chạy sẽ kích hoạt fallback.")
+                return None
+
     def process_video(
         self,
         video_path: Path,
-        video_id: str = None
+        asset_id: Optional[str] = None,
+        source_storage_key: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """
-        Main entry point - process entire video
-        
-        Returns:
-            {
-                'video_id': str,
-                'status': 'success' | 'failed',
-                'stats': {...},
-                'error': str (if failed)
-            }
-        """
+        """Compatibility wrapper returning a dict result."""
         try:
-            logger.section(f"Processing Video - Mode: {self.processing_mode}")
-            pipeline_start = time.time()
-
-            metrics = {
-                "video_info": 0,
-                "proxy_creation": 0,
-                "audio_processing": 0,
-                "scene_detection": 0,
-                "keyframe_extraction": 0,
-                "model_loading": 0,
-                "frame_analysis": 0,
-                "refinement": 0,
-                "result_storage": 0
-            }
-            
-            # Generate video ID
-            self.video_id = video_id or self._generate_video_id()
-            logger.info(f"Video ID: {self.video_id}")
-            
-            # Setup file manager
-            self.file_manager = SimpleFileManager(self.video_id, config.OUTPUT_DIR)
-            
-            # Initialize progress tracker
-            total_steps = 8 if self.mode_config['use_refinement'] else 7
-            progress = ProgressTracker(total_steps, "Video Processing")
-            
-            # Step 1: Video info & validation 
-            progress.step("Extracting video information")
-            start = time.time()
-            video_info = self._extract_video_info(video_path)
-            metrics["video_info"] = time.time() - start
-            
-            # Step 2: Create proxy video
-            progress.step("Creating proxy video")
-            start = time.time()
-            proxy_path = self._create_proxy(video_path)
-            metrics["proxy_creation"] = time.time() - start
-            
-            # Step 3: Extract audio & transcribe
-            progress.step("Extracting and transcribing audio")
-            start = time.time()
-            transcript_data = self._process_audio(video_path)
-            metrics["audio_processing"] = time.time() - start
-            
-            # Step 4: Scene detection
-            progress.step("Detecting scenes")
-            start = time.time()
-            scenes = self._detect_scenes(proxy_path or video_path)
-            metrics["scene_detection"] = time.time() - start
-            
-            # Step 5: Extract keyframes
-            progress.step("Extracting keyframes")
-            start = time.time()
-
-            keyframes = self._extract_keyframes(
-                proxy_path or video_path,
-                scenes
+            analysis = self.analyze_video(
+                video_path=video_path,
+                asset_id=asset_id,
+                source_storage_key=source_storage_key,
             )
-
-            metrics["keyframe_extraction"] = time.time() - start
-            
-            # Step 6: Load models
-            progress.step("Loading AI models")
-            start = time.time()
-            self._load_models()
-            metrics["model_loading"] = time.time() - start
-            
-            # Step 7: Analyze frames
-            progress.step(f"Analyzing {len(keyframes)} frames")
-            start = time.time()
-            frame_analyses = self._analyze_frames(keyframes)
-            metrics["frame_analysis"] = time.time() - start
-            
-            # Step 8: Refine analysis (optional)
-            if self.mode_config['use_refinement']:
-                progress.step("Refining analysis with LLM")
-                start = time.time()
-
-                frame_analyses = self._refine_analyses(frame_analyses)
-
-                metrics["refinement"] = time.time() - start
-            
-            # Giải phóng VRAM hoàn toàn trước khi chạy Embedding Model
-            if self.model_manager:
-                logger.info("Unloading Vision models to free VRAM for Embeddings...")
-                self.model_manager.unload_all()
-                self.model_manager = None
-
-            # Step 9: Generate embeddings & store
-            progress.step("Generating embeddings and storing")
-            start = time.time()
-
-            self._store_results(
-                video_info,
-                scenes,
-                keyframes,
-                frame_analyses,
-                transcript_data
-            )
-
-            metrics["result_storage"] = time.time() - start
-            
-            # Update video status
-            self.db.update_video_status(self.video_id, 'completed')
-            
-            progress.complete(f"Video processing complete: {self.video_id}")
-            
-            metrics["total_pipeline"] = time.time() - pipeline_start
-            
-            logger.info("=" * 60)
-            logger.info("PIPELINE PERFORMANCE METRICS")
-            logger.info("=" * 60)
-
-            for stage, value in metrics.items():
-                logger.info(f"{stage:<25}: {value:.2f}s")
-
-            logger.info("=" * 60)
-                        
-            # Gather stats
-            stats = self._gather_stats(scenes, keyframes, frame_analyses)
-            
             return {
-                'video_id': self.video_id,
-                'status': 'success',
-                'stats': stats,
-                'metrics': metrics
+                "asset_id": analysis.asset_id,
+                "status": "success",
+                "analysis": analysis.to_dict(include_embeddings=True),
+                "stats": {
+                    "num_scenes": len(analysis.scenes),
+                    "processing_mode": self.processing_mode,
+                    "full_transcript_length": len(analysis.full_transcript or ""),
+                },
             }
-            
-        except Exception as e:
-            logger.error(f"Pipeline failed: {str(e)}", exc_info=True)
-            if self.video_id:
-                self.db.update_video_status(self.video_id, 'failed')
-            
+        except Exception as exc:
+            logger.error(f"Pipeline failed: {exc}", exc_info=True)
             return {
-                'video_id': self.video_id,
-                'status': 'failed',
-                'error': str(e)
+                "asset_id": asset_id,
+                "status": "failed",
+                "error": str(exc),
             }
-        
         finally:
-            # Cleanup
             self._cleanup()
-    
-    def _generate_video_id(self) -> str:
-        """Generate unique video ID"""
-        return f"vid_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
-    
-    def _extract_video_info(self, video_path: Path) -> Dict[str, Any]:
-        """Extract and store video metadata"""
-        from ai_pipeline.core.video_processor import VideoInfo
-        
-        video_info = VideoInfo(video_path)
-        info_dict = video_info.to_dict()
-        
-        # Store in database
-        video_data = {
-            'video_id': self.video_id,
-            'filename': video_path.name,
-            'original_path': str(video_path),
-            'processing_mode': self.processing_mode,
-            **info_dict
-        }
-        
-        self.db.insert_video(video_data)
-        
-        return info_dict
-    
-    def _create_proxy(self, video_path: Path) -> Optional[Path]:
-        """Create proxy video"""
-        try:
-            proxy_path = self.file_manager.proxy_path
-            success = self.video_processor.create_proxy(video_path, proxy_path)
-            
-            if success:
-                return proxy_path
-            return None
-            
-        except Exception as e:
-            logger.warning(f"Proxy creation failed: {e}")
-            return None
-    
-    def _process_audio(self, video_path: Path) -> Optional[Dict]:
-        """Extract audio and transcribe"""
-        try:
-            # Extract audio
-            logger.info("Step 1: Extracting audio from video...")
-            audio_path = self.file_manager.audio_path
-            success = self.video_processor.extract_audio(video_path, audio_path)
-            
-            if not success or not audio_path.exists():
-                logger.warning("No audio track found")
-                return None
-            
-            logger.info(f"Step 2: Audio extracted. Path: {audio_path}")
-            
-            # Transcribe with WhisperX
-            logger.info("Step 3: Initializing WhisperX model...")
-            if self.asr_model is None:
-                self.asr_model = create_asr_model()
-            
-            logger.info(f"Step 4: Starting transcription...")
-            transcript_data = self.asr_model.transcribe(audio_path)
-            logger.info(f"Step 5: Transcription completed. Segments: {len(transcript_data.get('segments', []))}")
-            
-            # Store transcript in database
-            logger.info("Step 6: Storing transcript in database...")
-            for idx, segment in enumerate(transcript_data.get('segments', [])):
-                self.db.insert_transcript_segment({
-                    'video_id': self.video_id,
-                    'segment_id': idx,
-                    'start_time': segment['start'],
-                    'end_time': segment['end'],
-                    'text': segment['text'],
-                    'words': segment.get('words', []),
-                    'language': transcript_data.get('language', 'unknown')
-                })
-            
-            logger.info("Step 7: Audio processing complete")
-            return transcript_data
-            
-        except Exception as e:
-            logger.error(f"Audio processing failed: {e}", exc_info=True)
-            import traceback
-            logger.error(f"Full traceback:\n{traceback.format_exc()}")
-            return None
-    
-    def _detect_scenes(self, video_path: Path) -> List[tuple]:
-        """
-        Detect scene boundaries.
-        Returns (start_sec, end_sec) tuples for downstream KeyframeExtractor.
-        SceneData objects (with keyframe_path) are also stored in the DB.
-        """
-        # detect_scenes() returns List[SceneData] — richer data contract
-        scene_data_list = self.scene_detector.detect_scenes(video_path)
 
-        # Store scenes + keyframe paths in database
-        for sd in scene_data_list:
-            self.db.insert_scene({
-                'video_id':      self.video_id,
-                'scene_id':      sd.scene_index,
-                'start_time':    sd.start_time_sec,
-                'end_time':      sd.end_time_sec,
-                'keyframe_path': sd.keyframe_path,
-            })
-
-        # Return tuple list for KeyframeExtractor (backward-compat)
-        scenes = [(sd.start_time_sec, sd.end_time_sec) for sd in scene_data_list]
-        
-        return scenes
-    
-    def _extract_keyframes(
+    def analyze_video(
         self,
         video_path: Path,
-        scenes: List[tuple]
-    ) -> List[Dict]:
-        """Extract keyframes from scenes"""
-        frames_per_scene = self.mode_config['frames_per_scene']
-        
+        asset_id: Optional[str] = None,
+        source_storage_key: Optional[str] = None,
+    ) -> VideoAnalysisContract:
+        """Analyze a local video file and return the backend data contract."""
+        video_path = Path(video_path)
+        if not video_path.exists():
+            raise FileNotFoundError(f"Video not found: {video_path}")
+
+        asset_id = asset_id or self._generate_asset_id()
+        file_manager = SimpleFileManager(asset_id, config.OUTPUT_DIR)
+        self._publish("metadata", 5.0)
+
+        logger.section(f"Processing Video - Mode: {self.processing_mode}")
+        pipeline_start = time.time()
+
+        total_steps = 7
+        progress = ProgressTracker(total_steps, "Video Processing")
+
+        progress.step("Extracting video information")
+        video_info = VideoInfo(video_path)
+        self._publish("metadata", 10.0)
+
+        progress.step("Creating proxy video")
+        proxy_path = self._create_proxy(video_path, file_manager.proxy_path)
+        working_video = proxy_path or video_path
+        self._publish("proxy", 20.0)
+
+        progress.step("Extracting and transcribing audio")
+        transcript_data = self._process_audio(video_path, file_manager.audio_path)
+        self._publish("transcription", 35.0)
+
+        progress.step("Detecting scenes")
+        scene_data = self.scene_detector.detect_scenes(working_video)
+        scenes_as_tuples = [(s.start_time_sec, s.end_time_sec) for s in scene_data]
+        self._publish("scene_detection", 45.0)
+
+        progress.step("Extracting keyframes")
         keyframes = self.keyframe_extractor.extract_keyframes_from_scenes(
-            video_path,
-            scenes,
-            self.file_manager.keyframes_dir,
-            frames_per_scene=frames_per_scene
+            working_video,
+            scenes_as_tuples,
+            file_manager.keyframes_dir,
+            frames_per_scene=self.mode_config["frames_per_scene"],
         )
-        
-        return keyframes
-    
-    def _load_models(self):
-        """Load AI models based on mode"""
-        logger.info("Loading AI models...")
-        
-        # Free memory from previous models before loading new ones
-        if self.asr_model is not None:
-            try:
-                logger.info("Unloading ASR model to free memory...")
-                self.asr_model.unload()
-            except Exception as e:
-                logger.warning(f"Error unloading ASR model: {e}")
-            self.asr_model = None
-        
-        # Vision models
-        self.model_manager = ModelManager()
-        self.model_manager.load_models_for_mode(self.processing_mode)
-        
-        # Refinement LLM
-        if self.mode_config['use_refinement']:
-            self.refinement_llm = create_refinement_llm()
-        
-        # Embedding model (after unloading previous models)
-        self.embedding_manager = EmbeddingManager()
-        self.embedding_manager.load_all()
-    
-    def _analyze_frames(self, keyframes: List[Dict]) -> List[Dict]:
-        """Phân tích khung hình với concurrency - Tối ưu cho GTX 1650"""
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        import threading
-        
-        analyses = [None] * len(keyframes)   # Giữ thứ tự sẵn
-        total_frames = len(keyframes)
-        logger.info(f"Phan tich {total_frames} keyframes | MAX_WORKERS=1")
+        keyframes_by_scene = {int(kf["scene_id"]): kf for kf in keyframes}
+        self._publish("keyframe_extraction", 55.0)
 
-        MAX_WORKERS = 1
-        semaphore = threading.Semaphore(MAX_WORKERS)
+        progress.step("Captioning keyframes")
+        scene_contracts = self._caption_scenes(
+            asset_id=asset_id,
+            scene_data=scene_data,
+            keyframes_by_scene=keyframes_by_scene,
+            transcript_data=transcript_data,
+        )
+        self._publish("vision_caption", 72.0)
 
-        def _safe_analyze(idx, kf):
-            with semaphore:
+        progress.step("Uploading keyframes")
+        self._upload_keyframes(asset_id, scene_contracts)
+        self._publish("keyframe_upload", 80.0)
+
+        progress.step("Generating embeddings")
+        self._embed_scenes(scene_contracts)
+        self._publish("embedding", 92.0)
+
+        asset_tags = self._aggregate_tags(scene_contracts, transcript_data.get("text", ""))
+        analysis = VideoAnalysisContract(
+            asset_id=asset_id,
+            file_name=video_path.name,
+            file_path=source_storage_key or str(video_path),
+            media_type="video",
+            duration_sec=float(video_info.duration),
+            resolution=f"{video_info.width}x{video_info.height}",
+            file_size_bytes=int(video_path.stat().st_size),
+            full_transcript=transcript_data.get("text", ""),
+            tags=asset_tags,
+            scenes=scene_contracts,
+        )
+
+        progress.complete(f"Video processing complete: {asset_id}")
+        logger.info(f"Pipeline completed in {time.time() - pipeline_start:.2f}s")
+        self._publish("completed_analysis", 100.0)
+        return analysis
+
+    def _generate_asset_id(self) -> str:
+        return f"vid_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+
+    def _create_proxy(self, video_path: Path, proxy_path: Path) -> Optional[Path]:
+        try:
+            return proxy_path if self.video_processor.create_proxy(video_path, proxy_path) else None
+        except Exception as exc:
+            logger.warning(f"Proxy creation failed: {exc}")
+            return None
+
+    def _process_audio(self, video_path: Path, audio_path: Path) -> Dict[str, Any]:
+        try:
+            if not self.video_processor.extract_audio(video_path, audio_path):
+                return {"segments": [], "words": [], "text": "", "language": "unknown"}
+            self.asr_model = self.asr_model or create_asr_model()
+            return self.asr_model.transcribe(audio_path)
+        except Exception as exc:
+            logger.warning(f"Audio processing failed: {exc}", exc_info=True)
+            return {"segments": [], "words": [], "text": "", "language": "unknown"}
+
+    def _caption_scenes(
+        self,
+        asset_id: str,
+        scene_data,
+        keyframes_by_scene: Dict[int, Dict[str, Any]],
+        transcript_data: Dict[str, Any],
+    ) -> List[SceneAnalysisContract]:
+        scenes: List[SceneAnalysisContract] = []
+        for scene in scene_data:
+            keyframe = keyframes_by_scene.get(scene.scene_index)
+            keyframe_path = keyframe["frame_path"] if keyframe else scene.keyframe_path
+            
+            # 1. Trích xuất mô tả thô từ mô hình thị giác máy tính (Llava)
+            raw_caption = ""
+            if keyframe_path:
                 try:
-                    analysis = self._analyze_single_frame(kf)
-                    analyses[idx] = analysis
-                    if (idx + 1) % 3 == 0 or (idx + 1) == total_frames:
-                        logger.info(f"Da phan tich {idx + 1}/{total_frames} frames")
-                except Exception as e:
-                    logger.error(f"Lỗi frame {idx}: {e}")
-                    analyses[idx] = {
-                        'keyframe': kf,
-                        'vision_outputs': {'error': str(e)}
-                    }
-
-        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            futures = [executor.submit(_safe_analyze, i, kf) for i, kf in enumerate(keyframes)]
-            for future in as_completed(futures):
-                future.result()  # Để bắt exception nếu có
-
-        return analyses
-    
-    def _analyze_single_frame(self, keyframe: Dict) -> Dict:
-        """Analyze single keyframe"""
-        frame_path = Path(keyframe['frame_path'])
-        image = Image.open(frame_path).convert('RGB')
-        
-        vision_outputs = {}
-        
-        # Qwen-VL analysis (giữ lại - quan trọng nhất)
-        if self.mode_config['use_qwen_vl'] and self.model_manager.qwen_vl:
-            qwen_result = self.model_manager.qwen_vl.analyze_image(image)
-            vision_outputs['qwen_vl'] = qwen_result
-        
-        # ================== TẮT FLORENCE TẠM THỜI ==================
-        # if self.mode_config['use_florence'] and self.model_manager.florence:
-        #     objects = self.model_manager.florence.detect_objects(image)
-        #     captions = self.model_manager.florence.dense_caption(image)
-        #     vision_outputs['florence_objects'] = objects
-        #     vision_outputs['florence_captions'] = captions
-        # ============================================================
-        
-        return {
-            'keyframe': keyframe,
-            'vision_outputs': vision_outputs
-        }
-    
-    def _refine_analyses(self, analyses: List[Dict]) -> List[Dict]:
-        """Refine analyses with LLM"""
-        if not self.refinement_llm:
-            return analyses
-        
-        refined_analyses = []
-        
-        for analysis in analyses:
-            refined = self.refinement_llm.refine_analysis(
-                vision_outputs=analysis['vision_outputs'],
-                timestamp=analysis['keyframe']['timestamp'],
-                scene_id=analysis['keyframe']['scene_id']
+                    raw_caption = self.vision_provider.caption_keyframe(Path(keyframe_path))
+                except Exception as ve:
+                    logger.warning(f"Vision Captioning failed for scene {scene.scene_index}: {ve}")
+            raw_caption = raw_caption or "Video scene with visual content."
+            
+            # 2. Định vị đoạn phụ đề tương ứng của phân cảnh từ Whisper
+            transcript_snippet = self._transcript_for_scene(
+                transcript_data,
+                scene.start_time_sec,
+                scene.end_time_sec,
             )
             
-            analysis['refined_analysis'] = refined
-            refined_analyses.append(analysis)
-        
-        return refined_analyses
-    
-    def _store_results(
-        self,
-        video_info: Dict,
-        scenes: List[tuple],
-        keyframes: List[Dict],
-        analyses: List[Dict],
-        transcript_data: Optional[Dict]
-    ):
-        """Store all results in databases"""
-        
-        # Prepare data for embedding
-        texts_to_embed = []
-        metadatas = []
-        frame_ids = []
-        
-        for analysis in analyses:
-            kf = analysis['keyframe']
-            frame_id = f"{self.video_id}_frame_{kf['scene_id']}_{kf['frame_idx']}"
+            # Mặc định cấu hình fallback phòng trường hợp server Ollama tắt đột ngột
+            final_caption = raw_caption
+            tags = []
+
+            # 3. ✨ THỰC THI REFINEMENT: Gọi Qwen2 biên tập lại dữ liệu
+            if self.refinement_llm:
+                try:
+                    logger.info(f"-> Thực thi Ollama Refinement cho phân cảnh index: {scene.scene_index}")
+                    refined_json = self.refinement_llm.refine_analysis(
+                        vision_outputs={"qwen_vl": raw_caption},
+                        timestamp=float(scene.start_time_sec),
+                        scene_id=int(scene.scene_index),
+                        transcript_snippet=transcript_snippet
+                    )
+                    final_caption = refined_json.get("summary") or raw_caption
+                    scene_tags = refined_json.get("tags", {}).get("scene_tags", [])
+                    tags = [TagContract(name=t, category="theme", source="auto") for t in scene_tags]
+                except Exception as re_err:
+                    logger.warning(f"Refinement failed, fallback activated: {re_err}")
+
+            if not tags:
+                tags = self._tags_for_scene(final_caption, transcript_snippet)
+                
+            detected_objects = self._objects_for_scene(
+                tags,
+                scene.start_time_sec,
+                scene.end_time_sec,
+            )
             
-            # Get searchable text
-            if 'refined_analysis' in analysis:
-                searchable_text = analysis['refined_analysis'].get('searchable_text', '')
-                if not searchable_text:
-                    searchable_text = analysis['refined_analysis'].get('summary', '')
-            else:
-                # Fallback to raw vision output
-                searchable_text = analysis['vision_outputs'].get('qwen_vl', '')
-            
-            # Prepare metadata
-            metadata = {
-                'video_id': self.video_id,
-                'frame_id': frame_id,
-                'timestamp': kf['timestamp'],
-                'scene_id': kf['scene_id'],
-                'frame_path': kf['frame_path']
-            }
-            
-            texts_to_embed.append(searchable_text)
-            metadatas.append(metadata)
-            frame_ids.append(frame_id)
-            
-            # Store frame in SQLite
-            frame_data = {
-                'video_id': self.video_id,
-                'scene_id': kf['scene_id'],
-                'frame_id': frame_id,
-                'timestamp': kf['timestamp'],
-                'frame_path': kf['frame_path'],
-                'searchable_text': searchable_text,
-                'refined_analysis': analysis.get('refined_analysis', {}),
-                'metadata': analysis.get('vision_outputs', {})
-            }
-            
-            self.db.insert_frame(frame_data)
-        
-        # Generate embeddings
-        if texts_to_embed:
-            logger.info("Generating embeddings...")
-            embeddings = self.embedding_manager.encode(texts_to_embed)
-            
-            # Store in ChromaDB if available
-            if self.vector_db is not None:
-                success = self.vector_db.add_embeddings(
-                    embeddings=embeddings,
-                    documents=texts_to_embed,
-                    metadatas=metadatas,
-                    ids=frame_ids
+            scenes.append(
+                SceneAnalysisContract(
+                    scene_index=scene.scene_index,
+                    timestamp_start_sec=float(scene.start_time_sec),
+                    timestamp_end_sec=float(scene.end_time_sec),
+                    caption=final_caption,
+                    transcript_snippet=transcript_snippet,
+                    keyframe_path=keyframe_path or "",
+                    keyframe_s3_key=f"keyframes/{asset_id}/{scene.scene_index}.jpg",
+                    tags=tags,
+                    detected_objects=detected_objects,
                 )
-                if success:
-                    logger.info(f"Stored {len(embeddings)} embeddings in ChromaDB")
-                else:
-                    logger.warning("Failed to store embeddings in ChromaDB")
-            else:
-                logger.warning("Vector database not available, embeddings not stored in ChromaDB")
-                logger.info("Embeddings have been computed but not persisted to vector store")
-    
-    def _gather_stats(
+            )
+        return scenes
+
+    def _upload_keyframes(self, asset_id: str, scenes: List[SceneAnalysisContract]) -> None:
+        if not self.storage_client:
+            return
+        for scene in scenes:
+            if not scene.keyframe_path:
+                continue
+            remote_key = f"keyframes/{asset_id}/{scene.scene_index}.jpg"
+            ok = self.storage_client.upload_file(scene.keyframe_path, remote_key)
+            if not ok:
+                raise RuntimeError(f"Failed to upload keyframe: {remote_key}")
+            scene.keyframe_s3_key = remote_key
+
+    def _embed_scenes(self, scenes: List[SceneAnalysisContract]) -> None:
+        texts = [scene.embedding_text or scene.caption for scene in scenes]
+        embeddings = self.text_embedder.embed_texts(texts)
+        for scene, embedding in zip(scenes, embeddings):
+            if len(embedding) != self.text_embedder.embedding_dim:
+                raise ValueError(
+                    f"Expected {self.text_embedder.embedding_dim}-dim embedding, got {len(embedding)}"
+                )
+            scene.embedding = embedding
+
+    def _transcript_for_scene(
         self,
-        scenes: List[tuple],
-        keyframes: List[Dict],
-        analyses: List[Dict]
-    ) -> Dict[str, Any]:
-        """Gather processing statistics"""
-        return {
-            'num_scenes': len(scenes),
-            'num_keyframes': len(keyframes),
-            'num_analyses': len(analyses),
-            'processing_mode': self.processing_mode,
-            'models_used': list(self.model_manager.loaded_models) if self.model_manager else []
-        }
-    
-    def _cleanup(self):
-        """Cleanup resources"""
-        if self.model_manager:
-            try:
-                self.model_manager.unload_all()
-            except Exception as e:
-                logger.warning(f"Error during model_manager cleanup: {e}")
-            finally:
-                self.model_manager = None
+        transcript_data: Dict[str, Any],
+        start_sec: float,
+        end_sec: float,
+    ) -> str:
+        segments = []
+        for segment in transcript_data.get("segments", []):
+            if float(segment.get("end", 0.0)) >= start_sec and float(segment.get("start", 0.0)) <= end_sec:
+                text = segment.get("text", "").strip()
+                if text:
+                    segments.append(text)
+        if segments:
+            return " ".join(segments)
 
-        if self.embedding_manager:
-            try:
-                self.embedding_manager.unload_all()
-            except Exception as e:
-                logger.warning(f"Error during embedding_manager cleanup: {e}")
-            finally:
-                self.embedding_manager = None
+        words = [
+            word.get("word", "").strip()
+            for word in transcript_data.get("words", [])
+            if float(word.get("end", 0.0)) >= start_sec
+            and float(word.get("start", 0.0)) <= end_sec
+        ]
+        return " ".join(word for word in words if word)
 
+    def _tags_for_scene(self, caption: str, transcript_snippet: str) -> List[TagContract]:
+        text = f"{caption} {transcript_snippet}"
+        keywords = TranscriptProcessor.extract_keywords(text, top_n=8)
+        tags = [TagContract(name=kw, category="theme", source="auto") for kw in keywords[:6]]
+        if "video" not in [tag.name for tag in tags]:
+            tags.append(TagContract(name="video", category="content_type", source="auto"))
+        return tags
+
+    def _aggregate_tags(
+        self,
+        scenes: List[SceneAnalysisContract],
+        full_transcript: str,
+    ) -> List[TagContract]:
+        seen = set()
+        tags: List[TagContract] = []
+        for scene in scenes:
+            for tag in scene.tags:
+                key = (tag.name, tag.category)
+                if key not in seen:
+                    seen.add(key)
+                    tags.append(tag)
+        for keyword in TranscriptProcessor.extract_keywords(full_transcript, top_n=6):
+            key = (keyword, "theme")
+            if key not in seen:
+                tags.append(TagContract(name=keyword, category="theme", source="auto"))
+                seen.add(key)
+        return tags[:20]
+
+    def _objects_for_scene(
+        self,
+        tags: List[TagContract],
+        start_sec: float,
+        end_sec: float,
+    ) -> List[DetectedObjectContract]:
+        objects: List[DetectedObjectContract] = []
+        for tag in tags[:5]:
+            normalized = re.sub(r"[^A-Za-z0-9_ -]", "", tag.name).strip()
+            if len(normalized) < 3 or tag.category == "content_type":
+                continue
+            objects.append(
+                DetectedObjectContract(
+                    name=normalized,
+                    occurrences=[
+                        ObjectOccurrenceContract(
+                            timestamp_start_sec=float(start_sec),
+                            timestamp_end_sec=float(end_sec),
+                            confidence=0.5,
+                        )
+                    ],
+                )
+            )
+        return objects
+
+    def _publish(self, current_step: str, progress: float) -> None:
+        if self.progress_callback:
+            self.progress_callback(current_step, progress)
+
+    def _cleanup(self) -> None:
         if self.asr_model:
             try:
                 self.asr_model.unload()
-            except Exception as e:
-                logger.warning(f"Error during asr_model cleanup: {e}")
-            finally:
-                self.asr_model = None
-
-        if self.refinement_llm:
+            except Exception as exc:
+                logger.warning(f"Error during ASR cleanup: {exc}")
+            self.asr_model = None
+        
+        if hasattr(self, 'refinement_llm') and self.refinement_llm:
             try:
                 self.refinement_llm.unload()
-            except Exception as e:
-                logger.warning(f"Error during refinement_llm cleanup: {e}")
-            finally:
-                self.refinement_llm = None
+            except Exception:
+                pass
 
 
 def process_video(
     video_path: Path,
     processing_mode: str = "fast",
-    video_id: str = None
+    video_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """
-    Convenience function to process a video
-    """
     pipeline = VideoAnalysisPipeline(processing_mode=processing_mode)
-    return pipeline.process_video(video_path, video_id)
+    return pipeline.process_video(video_path, asset_id=video_id)
