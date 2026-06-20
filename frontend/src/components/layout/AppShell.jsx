@@ -11,9 +11,6 @@ export default function AppShell() {
     return 'dashboard';
   };
 
-  // Mock a jobId for UI testing (Giai đoạn 1)
-  const mockJobId = "job-123";
-  
   // Mock state: User has uploaded a video
   const hasUploadedVideo = true;
   const isDashboard = location.pathname === '/';
@@ -23,7 +20,6 @@ export default function AppShell() {
       <Sidebar 
         activeMenu={getActiveMenu()} 
         showLibraryCount={true} 
-        jobId={mockJobId}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden relative">

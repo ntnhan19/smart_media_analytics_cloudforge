@@ -6,8 +6,7 @@ import AIProcessingPanel from './AIProcessingPanel';
 export default function Sidebar({
   activeMenu,
   showLibraryCount = false,
-  libraryStats = { all: 0, videos: 0, images: 0, favourites: 0 },
-  jobId
+  libraryStats = { all: 0, videos: 0, images: 0, favourites: 0 }
 }) {
   const navItems = [
     { name: 'DASHBOARD', path: '/', id: 'dashboard', icon: LayoutDashboard },
@@ -101,7 +100,7 @@ export default function Sidebar({
 
       {/* AI Processing Panel embedded in Sidebar */}
       <div className="flex justify-center w-full shrink-0">
-        <AIProcessingPanel jobId={jobId} />
+        <AIProcessingPanel />
       </div>
 
       <div className="mt-auto pt-4 pb-[16px] flex justify-center shrink-0">
@@ -122,7 +121,6 @@ Sidebar.propTypes = {
     videos: PropTypes.number,
     images: PropTypes.number,
     favourites: PropTypes.number,
-  }),
-  jobId: PropTypes.string,
+  })
 };
 
