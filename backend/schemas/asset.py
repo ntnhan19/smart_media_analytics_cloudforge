@@ -13,6 +13,10 @@ class AssetResponse(BaseModel):
     tags: Optional[list] = None
     resolution: Optional[str] = None
     media_type: Optional[str] = None
+    summary: Optional[str] = None
+    moods: Optional[list] = None
+    objects: Optional[list] = None
+    best_for: Optional[list] = None
 
     class Config:
         from_attributes = True

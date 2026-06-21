@@ -246,3 +246,163 @@ async def run_ingest_pipeline(
                 "failed",
                 error_message=str(exc),
             )
+
+from ai_pipeline.models.refinement_llm import create_refinement_llm
+
+async def run_regenerate_insights_job(job_id_str: str, asset_id_str: str) -> None:
+    logger.info(f"Starting regenerate insights job {job_id_str} for asset: {asset_id_str}")
+    await publish_job_progress(job_id_str, "processing", 10.0, "fetching_data")
+
+    try:
+        async with SessionLocal() as db:
+            asset_uuid = uuid.UUID(asset_id_str)
+            asset = await db.get(Asset, asset_uuid)
+            if not asset:
+                raise ValueError("Asset not found")
+
+            # Fetch scenes
+            scenes_result = await db.execute(select(Scene).where(Scene.asset_id == asset_uuid).order_by(Scene.scene_index))
+            scenes = scenes_result.scalars().all()
+
+            if not scenes:
+                raise ValueError("No scenes found for asset")
+
+            await publish_job_progress(job_id_str, "processing", 30.0, "aggregating_text")
+
+            # Aggregate text
+            aggregated_texts = []
+            if asset.full_transcript:
+                aggregated_texts.append(f"Full Transcript: {asset.full_transcript}")
+            for scene in scenes:
+                scene_text = f"Scene {scene.scene_index}: [{scene.timestamp_start_sec}s - {scene.timestamp_end_sec}s] "
+                if scene.caption:
+                    scene_text += f"Caption: {scene.caption}. "
+                if scene.transcript_snippet:
+                    scene_text += f"Dialogue: {scene.transcript_snippet}."
+                aggregated_texts.append(scene_text)
+            
+            full_text = "\n".join(aggregated_texts)
+
+            await publish_job_progress(job_id_str, "processing", 50.0, "generating_insights")
+
+            # Run LLM
+            loop = asyncio.get_running_loop()
+            llm = await loop.run_in_executor(None, create_refinement_llm)
+            if not llm:
+                raise RuntimeError("Failed to initialize Refinement LLM")
+
+            insights = await loop.run_in_executor(None, llm.generate_asset_insights, full_text)
+            
+            await publish_job_progress(job_id_str, "processing", 90.0, "saving_results")
+
+            # Update DB
+            asset.summary = insights.get("summary")
+            asset.moods = insights.get("moods", [])
+            asset.objects = insights.get("objects", [])
+            asset.best_for = insights.get("best_for", [])
+
+            await db.commit()
+
+            await publish_job_progress(job_id_str, "completed", 100.0, "completed")
+
+    except Exception as e:
+        logger.exception(f"Regenerate insights failed for job {job_id_str}")
+        await publish_job_progress(job_id_str, "failed", 0.0, "failed", error_message=str(e))
+
+from sqlalchemy import delete
+from core.embeddings.factory import get_vector_store
+
+async def run_reingest_pipeline(
+    job_id_str: str,
+    asset_id_str: str,
+    options: IngestOptions,
+) -> None:
+    logger.info(f"Starting reingest pipeline for asset {asset_id_str} (Job: {job_id_str})")
+    await publish_job_progress(job_id_str, "processing", 5.0, "initializing")
+
+    local_video_path = None
+    try:
+        async with SessionLocal() as db:
+            asset_uuid = uuid.UUID(asset_id_str)
+            asset = await db.get(Asset, asset_uuid)
+            if not asset:
+                raise ValueError("Asset not found")
+
+            # Download source file from S3 to local
+            if not asset.file_path:
+                raise ValueError("Asset has no file_path associated for reingestion")
+
+            from ai_pipeline.config import config as ai_config
+            local_video_path = Path(ai_config.OUTPUT_DIR) / "reingest" / job_id_str / os.path.basename(asset.file_path)
+            local_video_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            await publish_job_progress(job_id_str, "processing", 10.0, "downloading_source")
+            
+            if storage_service.client:
+                loop = asyncio.get_running_loop()
+                ok = await loop.run_in_executor(
+                    None,
+                    storage_service.client.download_file,
+                    asset.file_path,
+                    str(local_video_path)
+                )
+                if not ok:
+                    raise RuntimeError(f"Failed to download source video {asset.file_path}")
+            else:
+                raise RuntimeError("Storage client not available")
+
+            await publish_job_progress(job_id_str, "processing", 20.0, "running_pipeline")
+
+            def progress_callback(current_step: str, progress: float) -> None:
+                # 20.0 -> 90.0
+                mapped_progress = 20.0 + (progress * 0.7)
+                asyncio.run_coroutine_threadsafe(
+                    publish_job_progress(job_id_str, "processing", mapped_progress, current_step, update_db=False),
+                    loop,
+                )
+
+            def run_pipeline() -> VideoAnalysisContract:
+                mode = getattr(options, "processing_mode", "fast") if options else "fast"
+                pipeline = VideoAnalysisPipeline(
+                    processing_mode=mode,
+                    storage_client=storage_service.client,
+                    progress_callback=progress_callback,
+                )
+                return pipeline.analyze_video(
+                    video_path=local_video_path,
+                    asset_id=str(asset.id),
+                    source_storage_key=asset.file_path,
+                )
+
+            analysis = await loop.run_in_executor(None, run_pipeline)
+
+            await publish_job_progress(job_id_str, "processing", 92.0, "atomic_swap")
+
+            # ATOMIC SWAP
+            # 1. Delete old vectors
+            vector_store = get_vector_store()
+            if hasattr(vector_store, "delete_by_asset"):
+                if __import__("inspect").iscoroutinefunction(vector_store.delete_by_asset):
+                    await vector_store.delete_by_asset(asset_id_str)
+                else:
+                    vector_store.delete_by_asset(asset_id_str)
+
+            # 2. Delete old scenes from DB. Cascade handles this if we just delete scenes
+            await db.execute(delete(Scene).where(Scene.asset_id == asset_uuid))
+
+            # 3. Insert new scenes and update asset
+            await _persist_analysis(db, asset, analysis)
+
+            await publish_job_progress(job_id_str, "completed", 100.0, "completed")
+
+    except Exception as e:
+        logger.exception(f"Reingest failed for job {job_id_str}")
+        await publish_job_progress(job_id_str, "failed", 0.0, "failed", error_message=str(e))
+    finally:
+        # Cleanup downloaded local file
+        if local_video_path and local_video_path.exists():
+            try:
+                local_video_path.unlink()
+                # Optionally remove parent dir if empty
+            except Exception as e:
+                logger.warning(f"Failed to cleanup temp reingest file {local_video_path}: {e}")
