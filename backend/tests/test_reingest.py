@@ -87,11 +87,15 @@ async def test_reingest_atomic_swap_failure(db_session: AsyncSession, seed_data:
     await db_session.commit()
 
     # 2. Mock storage service and pipeline to trigger an Exception BEFORE swap
-    mocker.patch("services.ingest_service.publish_job_progress", return_value=None)
+    mocker.patch("services.ingest_service.manager.publish_progress", return_value=None)
     mocker.patch("services.ingest_service.storage_service.client.download_file", return_value=True)
     mocker.patch("services.ingest_service.Path.mkdir", return_value=None)
     
+    mock_sessionlocal = mocker.patch("services.ingest_service.SessionLocal")
+    mock_sessionlocal.return_value.__aenter__.return_value = db_session
+    
     # Mock video pipeline to throw an error
+    mocker.patch("services.ingest_service.VideoAnalysisPipeline.__init__", return_value=None)
     mocker.patch(
         "services.ingest_service.VideoAnalysisPipeline.analyze_video",
         side_effect=RuntimeError("Simulated pipeline failure")
@@ -128,7 +132,11 @@ async def test_regenerate_insights(db_session: AsyncSession, seed_data: dict, mo
     await db_session.commit()
 
     # 2. Mock RefinementLLM and publish_job_progress
-    mocker.patch("services.ingest_service.publish_job_progress", return_value=None)
+    mocker.patch("services.ingest_service.manager.publish_progress", return_value=None)
+    
+    mock_sessionlocal = mocker.patch("services.ingest_service.SessionLocal")
+    mock_sessionlocal.return_value.__aenter__.return_value = db_session
+    
     class MockLLM:
         def generate_asset_insights(self, text):
             return {
