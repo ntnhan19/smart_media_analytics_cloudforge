@@ -1,6 +1,6 @@
 {
   "title": "SMA API Data Contract",
-  "version": "v0.0.1-data-contract",
+  "version": "v0.0.2-data-contract",
   "description": "Authoritative request/response schemas for all Smart Media Analytics API endpoints. Shared interface contract for M1 (AI pipeline), M2 (backend), and M3 (frontend).",
   "base_url": {
     "local": "http://localhost:8000",
@@ -121,6 +121,43 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Auto-generated semantic tags from AI pipeline."
+        }
+      }
+    },
+    "TagDetail": {
+      "type": "object",
+      "required": ["name", "category", "source"],
+      "properties": {
+        "name": { "type": "string", "description": "The tag term." },
+        "category": { "type": "string", "enum": ["location", "content_type", "theme"], "description": "Tag group." },
+        "source": { "type": "string", "enum": ["auto", "user_confirmed"], "description": "Source of tag." }
+      }
+    },
+    "MoodDetail": {
+      "type": "object",
+      "required": ["label", "score"],
+      "properties": {
+        "label": { "type": "string", "description": "Name of mood." },
+        "score": { "type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Confidence score." }
+      }
+    },
+    "OccurrenceDetail": {
+      "type": "object",
+      "required": ["timestamp_start_sec", "timestamp_end_sec", "confidence"],
+      "properties": {
+        "timestamp_start_sec": { "type": "number", "description": "Start time in seconds." },
+        "timestamp_end_sec": { "type": "number", "description": "End time in seconds." },
+        "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Confidence score." }
+      }
+    },
+    "DetectedObjectDetail": {
+      "type": "object",
+      "required": ["name", "occurrences"],
+      "properties": {
+        "name": { "type": "string", "description": "UPPERCASE name of detected object." },
+        "occurrences": {
+          "type": "array",
+          "items": { "ref": "OccurrenceDetail" }
         }
       }
     },
@@ -351,6 +388,11 @@
                   "items": { "type": "string" },
                   "description": "Filter by tags. Empty array = no filter.",
                   "default": []
+                },
+                "asset_id": {
+                  "type": "string",
+                  "description": "Filter by specific asset ID (In-Video Search support).",
+                  "default": null
                 }
               }
             },
@@ -366,7 +408,8 @@
             "query": "person walking on a beach at sunset",
             "filters": {
               "media_type": ["video", "image"],
-              "tags": []
+              "tags": [],
+              "asset_id": "vid-0042"
             },
             "top_k": 5
           }
@@ -530,7 +573,7 @@
           "content_type": "application/json",
           "body": {
             "type": "object",
-            "required": ["asset_id", "file_name", "media_type", "file_size_bytes", "file_path", "ingested_at", "scenes", "tags"],
+            "required": ["asset_id", "file_name", "media_type", "file_size_bytes", "file_path", "ingested_at", "scenes", "tags", "summary", "moods", "objects", "best_for"],
             "properties": {
               "asset_id": { "type": "string" },
               "file_name": { "type": "string" },
@@ -553,7 +596,20 @@
               "full_transcript": { "type": ["string", "null"] },
               "tags": {
                 "type": "array",
-                "items": { "type": "string" }
+                "items": { "ref": "TagDetail" }
+              },
+              "summary": { "type": ["string", "null"], "description": "AI-generated asset summary." },
+              "moods": {
+                "type": "array",
+                "items": { "ref": "MoodDetail" }
+              },
+              "objects": {
+                "type": "array",
+                "items": { "ref": "DetectedObjectDetail" }
+              },
+              "best_for": {
+                "type": "array",
+                "items": { "ref": "TagDetail" }
               }
             },
             "example": {
@@ -565,6 +621,23 @@
               "file_size_bytes": 248310784,
               "file_path": "/app/data/media/vacation_reel_2024.mp4",
               "ingested_at": "2024-08-21T09:15:42Z",
+              "summary": "A beautiful cinematic travel vlog showcasing the natural beauty of Sweden.",
+              "moods": [
+                { "label": "CALM", "score": 0.95 },
+                { "label": "RELAXING", "score": 0.85 }
+              ],
+              "objects": [
+                {
+                  "name": "BRIDGE",
+                  "occurrences": [
+                    { "timestamp_start_sec": 0.0, "timestamp_end_sec": 1.6, "confidence": 0.95 },
+                    { "timestamp_start_sec": 3.2, "timestamp_end_sec": 4.8, "confidence": 0.88 }
+                  ]
+                }
+              ],
+              "best_for": [
+                { "name": "TRAVEL FILM", "category": "theme", "source": "auto" }
+              ],
               "scenes": [
                 {
                   "scene_index": 0,
@@ -574,19 +647,97 @@
                   "transcript_snippet": "We started early to catch the sunrise.",
                   "thumbnail_url": "/thumbnails/vid-0042-scene0.jpg",
                   "embedding_id": "emb-vid0042-s0"
-                },
-                {
-                  "scene_index": 3,
-                  "timestamp_start_sec": 142.5,
-                  "timestamp_end_sec": 161.0,
-                  "caption": "A person walks along a sandy beach at golden hour.",
-                  "transcript_snippet": "This was the most peaceful evening.",
-                  "thumbnail_url": "/thumbnails/vid-0042-scene3.jpg",
-                  "embedding_id": "emb-vid0042-s3"
                 }
               ],
               "full_transcript": "We started early to catch the sunrise. The mountains were covered in mist...",
-              "tags": ["travel", "beach", "mountain", "drone"]
+              "tags": [
+                { "name": "travel", "category": "theme", "source": "auto" },
+                { "name": "sweden", "category": "location", "source": "auto" }
+              ]
+            }
+          }
+        },
+        "404": { "ref": "ErrorResponse" }
+      }
+    },
+    "POST /api/v1/assets/{asset_id}/reingest": {
+      "summary": "Trigger video re-analysis and scene detection.",
+      "owner": "M2 (backend), M3 (frontend)",
+      "http_method": "POST",
+      "path": "/api/v1/assets/{asset_id}/reingest",
+      "path_parameters": {
+        "asset_id": {
+          "type": "string",
+          "description": "Unique asset identifier.",
+          "example": "vid-0042"
+        }
+      },
+      "request": {
+        "content_type": "application/json",
+        "body": {
+          "type": "object",
+          "properties": {
+            "options": {
+              "type": "object",
+              "properties": {
+                "scene_detection": { "type": "boolean", "default": true },
+                "transcription": { "type": "boolean", "default": true },
+                "vision_caption": { "type": "boolean", "default": true }
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "202": {
+          "description": "Re-ingestion job accepted and queued.",
+          "content_type": "application/json",
+          "body": {
+            "type": "object",
+            "required": ["job_id", "status", "message"],
+            "properties": {
+              "job_id": { "type": "string" },
+              "status": { "type": "string", "enum": ["queued", "processing", "done", "failed"] },
+              "message": { "type": "string" }
+            },
+            "example": {
+              "job_id": "job-reingest-20240821-002",
+              "status": "queued",
+              "message": "Re-ingestion pipeline started."
+            }
+          }
+        },
+        "404": { "ref": "ErrorResponse" }
+      }
+    },
+    "POST /api/v1/assets/{asset_id}/regenerate-insights": {
+      "summary": "Trigger LLM/Vision analysis on existing keyframes to regenerate metadata.",
+      "owner": "M2 (backend), M3 (frontend)",
+      "http_method": "POST",
+      "path": "/api/v1/assets/{asset_id}/regenerate-insights",
+      "path_parameters": {
+        "asset_id": {
+          "type": "string",
+          "description": "Unique asset identifier.",
+          "example": "vid-0042"
+        }
+      },
+      "response": {
+        "202": {
+          "description": "Regeneration job accepted and queued.",
+          "content_type": "application/json",
+          "body": {
+            "type": "object",
+            "required": ["job_id", "status", "message"],
+            "properties": {
+              "job_id": { "type": "string" },
+              "status": { "type": "string", "enum": ["queued", "processing", "done", "failed"] },
+              "message": { "type": "string" }
+            },
+            "example": {
+              "job_id": "job-regen-20240821-003",
+              "status": "queued",
+              "message": "Regenerate insights job started."
             }
           }
         },

@@ -131,6 +131,11 @@ class BaseRefinementLLM(ABC):
         pass
 
     @abstractmethod
+    def generate_asset_insights(self, aggregated_text: str) -> Dict[str, Any]:
+        """Tổng hợp Insights cấp độ Asset từ text caption và transcript."""
+        pass
+
+    @abstractmethod
     def unload(self):
         pass
 
@@ -312,6 +317,14 @@ class BedrockRefinementLLM(BaseRefinementLLM):
             "summary": f"Phân cảnh {scene_id} tại {timestamp:.1f} giây",
             "tags": {"scene_tags": ["video"]},
             "searchable_text": f"phân cảnh video {scene_id}",
+        }
+
+    def generate_asset_insights(self, aggregated_text: str) -> Dict[str, Any]:
+        return {
+            "summary": "[AWS Stub] Video tổng hợp từ các phân cảnh.",
+            "moods": ["aws-stub-mood"],
+            "objects": ["aws-object-1"],
+            "best_for": ["aws-stub-tag"]
         }
 
     def unload(self):

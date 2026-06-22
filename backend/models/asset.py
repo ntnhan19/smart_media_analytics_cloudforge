@@ -1,49 +1,28 @@
-"""
-models/asset.py
-Asset Model - Đồng bộ với AI Pipeline + Backend
-"""
-
+# -*- coding: utf-8 -*-
 import uuid
-from datetime import datetime
-
-from sqlalchemy import (
-    BigInteger,
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    Index,
-    String,
-    Text,
-    func,
-)
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Column, String, Float, BigInteger, DateTime, Text, Index
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
-
-try:
-    from database import Base
-except ImportError:  # Allows importing as backend.models.asset from repo root.
-    from backend.database import Base
-
-
+from sqlalchemy.sql import func
+from database import Base  
 class Asset(Base):
     __tablename__ = "assets"
 
-    # Primary Key
+    # ─── Primary Key ──────────────────────────────────────────────────────────
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    # File Information
+    # ─── File Information ─────────────────────────────────────────────────────
     file_name = Column(String, nullable=False, index=True)
     file_path = Column(String, nullable=False, unique=True, index=True)
     media_type = Column(String(50), default="video")  # video, audio, image...
 
-    # Technical Metadata
-    duration_sec = Column(Float, nullable=True)
-    resolution = Column(String(20), nullable=True)  # ví dụ: "1920x1080"
+    # ─── Technical Metadata ────────────────────────────────────────────────────
+    duration_sec = Column(Float, nullable=True, index=True)
+    resolution = Column(String(20), nullable=True)     # Ví dụ: "1920x1080"
     file_size_bytes = Column(BigInteger, nullable=True)
 
-    # Ingestion Metadata
-    ingested_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    # ─── Ingestion Metadata ────────────────────────────────────────────────────
+    ingested_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -51,33 +30,31 @@ class Asset(Base):
         nullable=False,
     )
 
-    # Content Metadata
-    full_transcript = Column(Text, nullable=True)
-    title = Column(String(255), nullable=True)           # Cho editor đặt tên sau
+    # ─── Content Metadata & Semantic ──────────────────────────────────────────
+    title = Column(String(255), nullable=True)          # Cho editor đặt tên sau
     description = Column(Text, nullable=True)
+    summary = Column(Text, nullable=True)               # Tóm tắt tổng thể video
+    full_transcript = Column(Text, nullable=True)       # Toàn bộ text bóc từ audio
 
-    # Tags & Semantic
-    tags = Column(JSONB, nullable=True, default=list)    # List of TagContract
+    # Các trường JSONB tối ưu lưu trữ mảng/đối tượng phức tạp trên PostgreSQL
+    tags = Column(JSONB, nullable=True, default=list)   # List of TagContract
+    moods = Column(JSONB, nullable=True, default=list)  # Cảm xúc phân cảnh
+    objects = Column(JSONB, nullable=True, default=list)# Các vật thể xuất hiện chính
+    best_for = Column(JSONB, nullable=True, default=list) # Gợi ý mục đích dựng (TikTok, Intro...)
 
-    # Storage
-    thumbnail_s3_key = Column(String, nullable=True)     # Thumbnail đại diện của video
-    video_s3_key = Column(String, nullable=True)         # Đường dẫn video gốc trên MinIO/S3
+    # ─── Storage Keys (MinIO / S3) ────────────────────────────────────────────
+    thumbnail_s3_key = Column(String, nullable=True)    # Thumbnail đại diện của video
+    video_s3_key = Column(String, nullable=True)        # Đường dẫn video gốc trên S3
 
-    # Relationship
+    # ─── Relationship ─────────────────────────────────────────────────────────
     scenes = relationship(
         "Scene",
         back_populates="asset",
         cascade="all, delete-orphan",
-        lazy="selectin",          # Tối ưu khi join scene
+        lazy="selectin",                                # Tối ưu hóa nạp n+1 scene lập tức
     )
 
-    # Indexes cho performance
-    __table_args__ = (
-        Index("ix_assets_file_name", "file_name"),
-        Index("ix_assets_ingested_at", "ingested_at"),
-        Index("ix_assets_duration", "duration_sec"),
-    )
-
+    # ─── Representation & Properties ──────────────────────────────────────────
     def __repr__(self):
         return f"<Asset {self.file_name} ({self.duration_sec}s)>"
 
