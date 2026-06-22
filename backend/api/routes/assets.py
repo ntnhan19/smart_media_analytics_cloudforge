@@ -110,7 +110,7 @@ async def reingest_asset(
 
         job_id_str = str(uuid.uuid4())
         background_tasks.add_task(run_reingest_pipeline, job_id_str, asset_id, options)
-        return IngestResponse(job_id=job_id_str, status="queued")
+        return IngestResponse(job_id=job_id_str, status="queued", assets_queued=1, message="Re-ingestion pipeline started.")
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid asset ID format")
 
@@ -128,6 +128,6 @@ async def regenerate_insights(
 
         job_id_str = str(uuid.uuid4())
         background_tasks.add_task(run_regenerate_insights_job, job_id_str, asset_id)
-        return IngestResponse(job_id=job_id_str, status="queued")
+        return IngestResponse(job_id=job_id_str, status="queued", assets_queued=1, message="Regenerate insights job started.")
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid asset ID format")
