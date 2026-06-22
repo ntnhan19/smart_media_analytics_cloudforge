@@ -16,6 +16,7 @@ import { JobProvider } from './contexts/JobContext';
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+<<<<<<< HEAD
       <JobProvider>
         <BrowserRouter>
           <Routes>
@@ -30,6 +31,20 @@ function App() {
           </Routes>
         </BrowserRouter>
       </JobProvider>
+=======
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<AppShell />}>
+            <Route index element={<Dashboard />} />
+            <Route path="search" element={<Search />} />
+            <Route path="upload" element={<Upload />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="uikit" element={<UiKitDemo />} />
+          </Route>
+          <Route path="/assets/:id" element={<AssetDetail />} />
+        </Routes>
+      </BrowserRouter>
+>>>>>>> develop
     </QueryClientProvider>
   );
 }

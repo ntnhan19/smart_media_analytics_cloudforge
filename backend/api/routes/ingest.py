@@ -100,7 +100,9 @@ async def get_ingest_status(
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
             
-        progress = (job.assets_processed / job.assets_queued * 100) if job.assets_queued > 0 else 0.0
+        progress = job.progress if job.progress is not None else (
+            job.assets_processed / job.assets_queued * 100 if job.assets_queued > 0 else 0.0
+        )
         
         return IngestStatusResponse(
             job_id=job_id,
@@ -129,7 +131,9 @@ async def websocket_endpoint(
         job = result.scalar_one_or_none()
         
         if job:
-            progress = (job.assets_processed / job.assets_queued * 100) if job.assets_queued > 0 else 0.0
+            progress = job.progress if job.progress is not None else (
+                job.assets_processed / job.assets_queued * 100 if job.assets_queued > 0 else 0.0
+            )
             import json
             # Send initial state over this specific websocket
             await websocket.send_text(json.dumps({

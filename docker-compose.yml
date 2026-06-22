@@ -50,6 +50,8 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000" # FastAPI -> http://localhost:8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - .env # Load environment variables from .env (copy from .env.example)
     environment:
@@ -62,6 +64,9 @@ services:
     volumes:
       # Bind-mount source code for hot-reload during development (no rebuild needed)
       - ./backend:/app
+      # AI pipeline modules used by the backend ingest worker
+      - ./ai_pipeline:/app/ai_pipeline
+      - ./utils:/app/utils
       # Media files — directory containing videos/images to ingest
       - ./data/media:/app/data/media
       # ChromaDB local persist path (used when not relying on the chromadb service)

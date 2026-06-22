@@ -18,11 +18,7 @@ asyncio.run(init_db())
 
 client = TestClient(app)
 
-from unittest.mock import patch
-
-@patch("services.ingest_service.VectorStore")
-@patch("services.ingest_service.TextEmbedder")
-def test_ingest_flow(mock_embedder, mock_vector_store):
+def test_ingest_flow():
     # 1. Start job
     response = client.post(
         "/api/v1/ingest",
@@ -52,13 +48,12 @@ def test_ingest_flow(mock_embedder, mock_vector_store):
     assert status_data["job_id"] == job_id
     assert status_data["status"] in ["processing", "completed"]
     assert status_data["assets_queued"] == 0
-    assert status_data["progress"] == 0.0
+    if status_data["status"] == "completed":
+        assert status_data["progress"] == 100.0
 
 from core.websocket_manager import manager
 
-@patch("services.ingest_service.VectorStore")
-@patch("services.ingest_service.TextEmbedder")
-def test_websocket_ingest_progress(mock_embedder, mock_vector_store):
+def test_websocket_ingest_progress():
     # Trigger an ingest job first
     response = client.post(
         "/api/v1/ingest",

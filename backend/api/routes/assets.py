@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import uuid
@@ -9,11 +9,30 @@ from database import get_db
 from models.asset import Asset
 from models.scene import Scene
 from schemas.asset import AssetResponse
+from schemas.ingest import IngestOptions, IngestResponse
 from services.storage_service import storage_service
+from services.ingest_service import run_reingest_pipeline, run_regenerate_insights_job
 from core.embeddings.factory import get_vector_store
 
 router = APIRouter(prefix="/api/v1/assets", tags=["assets"])
 logger = logging.getLogger(__name__)
+
+def _build_asset_response(asset: Asset) -> AssetResponse:
+    return AssetResponse(
+        asset_id=str(asset.id),
+        file_name=asset.file_name,
+        file_size=asset.file_size_bytes,
+        duration=asset.duration_sec,
+        status=asset.status if hasattr(asset, 'status') else "ready",
+        created_at=asset.ingested_at,
+        tags=asset.tags if hasattr(asset, 'tags') else None,
+        resolution=asset.resolution if hasattr(asset, 'resolution') else None,
+        media_type=asset.media_type if hasattr(asset, 'media_type') else None,
+        summary=asset.summary if hasattr(asset, 'summary') else None,
+        moods=asset.moods if hasattr(asset, 'moods') else None,
+        objects=asset.objects if hasattr(asset, 'objects') else None,
+        best_for=asset.best_for if hasattr(asset, 'best_for') else None,
+    )
 
 @router.get("", response_model=List[AssetResponse])
 async def list_assets(
@@ -25,21 +44,7 @@ async def list_assets(
         select(Asset).order_by(Asset.ingested_at.desc()).limit(limit).offset(offset)
     )
     assets = result.scalars().all()
-    
-    response = []
-    for asset in assets:
-        response.append(AssetResponse(
-            asset_id=str(asset.id),
-            file_name=asset.file_name,
-            file_size=asset.file_size_bytes,
-            duration=asset.duration_sec,
-            status=asset.status if hasattr(asset, 'status') else "ready",
-            created_at=asset.ingested_at,
-            tags=asset.tags if hasattr(asset, 'tags') else None,
-            resolution=asset.resolution if hasattr(asset, 'resolution') else None,
-            media_type=asset.media_type if hasattr(asset, 'media_type') else None
-        ))
-    return response
+    return [_build_asset_response(a) for a in assets]
 
 @router.get("/{asset_id}", response_model=AssetResponse)
 async def get_asset(
@@ -51,18 +56,7 @@ async def get_asset(
         asset = await db.get(Asset, asset_uuid)
         if not asset:
             raise HTTPException(status_code=404, detail="Asset not found")
-            
-        return AssetResponse(
-            asset_id=str(asset.id),
-            file_name=asset.file_name,
-            file_size=asset.file_size_bytes,
-            duration=asset.duration_sec,
-            status=asset.status if hasattr(asset, 'status') else "ready",
-            created_at=asset.ingested_at,
-            tags=asset.tags if hasattr(asset, 'tags') else None,
-            resolution=asset.resolution if hasattr(asset, 'resolution') else None,
-            media_type=asset.media_type if hasattr(asset, 'media_type') else None
-        )
+        return _build_asset_response(asset)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid asset ID format")
 
@@ -77,7 +71,6 @@ async def delete_asset(
         if not asset:
             raise HTTPException(status_code=404, detail="Asset not found")
 
-        # 1. Delete from Vector DB
         vector_store = get_vector_store()
         if hasattr(vector_store, "delete_by_asset"):
             if __import__("inspect").iscoroutinefunction(vector_store.delete_by_asset):
@@ -85,18 +78,13 @@ async def delete_asset(
             else:
                 vector_store.delete_by_asset(asset_id)
 
-        # 2. Collect files to delete from S3
         video_key = asset.file_path
-        
-        # Load scenes to get keyframes
         scenes_result = await db.execute(select(Scene).where(Scene.asset_id == asset_uuid))
         scenes = scenes_result.scalars().all()
         keyframe_keys = [s.keyframe_s3_key for s in scenes if s.keyframe_s3_key]
         
-        # 3. Delete from S3/MinIO
         await storage_service.delete_asset_files(asset_id, video_key, keyframe_keys)
 
-        # 4. Delete from PostgreSQL (cascade will handle scenes)
         await db.delete(asset)
         await db.commit()
 
@@ -106,3 +94,40 @@ async def delete_asset(
     except Exception as e:
         logger.error(f"Error deleting asset: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during deletion")
+
+@router.post("/{asset_id}/reingest", response_model=IngestResponse)
+async def reingest_asset(
+    asset_id: str,
+    options: IngestOptions,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        asset_uuid = uuid.UUID(asset_id)
+        asset = await db.get(Asset, asset_uuid)
+        if not asset:
+            raise HTTPException(status_code=404, detail="Asset not found")
+
+        job_id_str = str(uuid.uuid4())
+        background_tasks.add_task(run_reingest_pipeline, job_id_str, asset_id, options)
+        return IngestResponse(job_id=job_id_str, status="queued", assets_queued=1, message="Re-ingestion pipeline started.")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid asset ID format")
+
+@router.post("/{asset_id}/regenerate-insights", response_model=IngestResponse)
+async def regenerate_insights(
+    asset_id: str,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        asset_uuid = uuid.UUID(asset_id)
+        asset = await db.get(Asset, asset_uuid)
+        if not asset:
+            raise HTTPException(status_code=404, detail="Asset not found")
+
+        job_id_str = str(uuid.uuid4())
+        background_tasks.add_task(run_regenerate_insights_job, job_id_str, asset_id)
+        return IngestResponse(job_id=job_id_str, status="queued", assets_queued=1, message="Regenerate insights job started.")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid asset ID format")
