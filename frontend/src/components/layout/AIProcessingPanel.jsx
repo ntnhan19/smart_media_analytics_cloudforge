@@ -87,8 +87,8 @@ export default function AIProcessingPanel() {
     const interval = setInterval(() => {
       setSmoothStats(prev => {
         const chase = (current, target) => {
-          if (current < target) return Math.min(current + 3, target);
-          if (current > target) return target; // jump down instantly if jobs removed
+          if (current < target) return Math.min(current + 15, target);
+          if (current > target) return Math.max(current - 15, target);
           return current;
         };
         return {

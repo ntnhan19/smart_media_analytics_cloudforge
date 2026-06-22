@@ -16,7 +16,7 @@ const getStepName = (step) => {
   return stepMap[step] || "Processing...";
 };
 
-function JobQueueCard({ job, onRemove }) {
+function JobQueueCard({ job, onRemove, isSelected, onClick }) {
   useIngestWebSocket(job.job_id);
   const [isRetrying, setIsRetrying] = useState(false);
   const [displayProgress, setDisplayProgress] = useState(0);
@@ -25,13 +25,26 @@ function JobQueueCard({ job, onRemove }) {
     const interval = setInterval(() => {
       setDisplayProgress(prev => {
         const target = job.status === 'completed' ? 100 : (job.progress || 0);
-        if (prev < target) return Math.min(prev + 2, target);
+        if (prev < target) {
+          const step = job.status === 'completed' ? 15 : 5;
+          return Math.min(prev + step, target);
+        }
         if (prev > target) return target;
         return prev;
       });
-    }, 100);
+    }, 50);
     return () => clearInterval(interval);
   }, [job.progress, job.status]);
+
+  // Tự động xóa job completed sau 3 giây (Quy chế dọn dẹp DoD)
+  useEffect(() => {
+    if (job.status === 'completed') {
+      const timer = setTimeout(() => {
+        onRemove(job.job_id);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [job.status, job.job_id, onRemove]);
 
   const handleRetry = async () => {
     setIsRetrying(true);
@@ -52,7 +65,10 @@ function JobQueueCard({ job, onRemove }) {
   const displayTitle = `IMG_${job.job_id.substring(0,6).toUpperCase()}.mp4`;
 
   return (
-    <div className={`w-full ${isFailed ? 'bg-[#EF4444]/10 border-[#EF4444]' : 'bg-[#16132A] border-[#2D2844]'} border rounded-[8px] flex p-[12px] mb-[12px] transition-colors relative`}>
+    <div 
+      onClick={onClick}
+      className={`w-full ${isFailed ? 'bg-[#EF4444]/10 border-[#EF4444]' : (isSelected ? 'bg-[#7B5CF5]/10 border-[#7B5CF5]' : 'bg-[#16132A] border-[#2D2844] hover:bg-[#7B5CF5]/5')} border rounded-[8px] flex p-[12px] transition-colors relative cursor-pointer`}
+    >
       {isFailed && (
         <button onClick={() => onRemove(job.job_id)} className="absolute top-[4px] right-[4px] text-gray-400 hover:text-white bg-[#1A162B] rounded-full p-[2px]">
           <X className="w-4 h-4" />
@@ -124,28 +140,28 @@ function JobQueueCard({ job, onRemove }) {
   );
 }
 
-export default function IngestQueue() {
+export default function IngestQueue({ selectedJobId, onSelectJob }) {
   const { activeJobs, removeJob, clearCompletedJobs } = useJobs();
 
-  if (!activeJobs || activeJobs.length === 0) return null;
+  if (!activeJobs || activeJobs.length === 0) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center h-[200px] text-gray-500 text-[12px]">
+        No jobs in queue
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full flex flex-col items-center bg-[#0B0914] p-4 rounded-lg border border-[#2D2844]">
-      <div className="w-full flex justify-between items-center mb-[16px]">
-        <h2 className="font-inter font-bold text-[14px] text-white">INgest Queue</h2>
-        <span 
-          onClick={clearCompletedJobs}
-          className="font-inter font-normal text-[12px] text-gray-400 cursor-pointer hover:text-white transition-colors"
-        >
-          Clear Completed
-        </span>
-      </div>
-
-      <div className="w-full flex flex-col items-center max-h-[600px] overflow-y-auto no-scrollbar">
-        {activeJobs.map(job => (
-          <JobQueueCard key={job.job_id} job={job} onRemove={removeJob} />
-        ))}
-      </div>
+    <div className="w-full flex flex-col max-h-[800px] overflow-y-auto no-scrollbar gap-3">
+      {activeJobs.map(job => (
+        <JobQueueCard 
+          key={job.job_id} 
+          job={job} 
+          onRemove={removeJob} 
+          isSelected={job.job_id === selectedJobId}
+          onClick={() => onSelectJob(job.job_id)}
+        />
+      ))}
     </div>
   );
 }

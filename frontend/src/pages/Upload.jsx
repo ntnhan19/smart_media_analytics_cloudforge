@@ -1,118 +1,146 @@
 import { useState } from 'react';
 import { useJobs } from '../contexts/JobContext';
 import { uploadMedia } from '../services/api';
-import { Upload as UploadIcon, Loader2, Play } from 'lucide-react';
 import IngestQueue from '../components/upload/IngestQueue';
+import UploadArea from '../components/upload/UploadArea';
+import AIPipelineTimeline from '../components/upload/AIPipelineTimeline';
+import GeneratedResultReview from '../components/upload/GeneratedResultReview';
+import { Settings, Plus, ChevronDown } from 'lucide-react';
 
 export default function Upload() {
   const [isUploading, setIsUploading] = useState(false);
-  const { addJob, clearAllFinishedJobs } = useJobs();
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState(null);
+  const { activeJobs, addJob, clearAllFinishedJobs } = useJobs();
+
+  const selectedJob = activeJobs?.find(j => j.job_id === selectedJobId);
+  const selectedAssetId = selectedJob?.asset_id;
+
+  const handleSelectJob = (jobId) => {
+    setSelectedJobId(jobId);
+    setIsReviewOpen(true); // Tự động mở panel khi click vào queue
+  };
 
   const handleUpload = async (count = 1) => {
     setIsUploading(true);
-    
-    // Quét sạch sẽ các job cũ (cả xanh lẫn đỏ) trước khi bắt đầu mẻ mới
     clearAllFinishedJobs();
-
     try {
-      // Gửi n request đồng thời để test đa luồng
-      const promises = Array.from({ length: count }).map(async (_, index) => {
-        const isFake = count > 1 && index === count - 1; 
-        
-        // CỐ TÌNH: Ép hệ thống nhét 1 thẻ báo lỗi trực tiếp vào Frontend mà không cần gọi API
-        // để đảm bảo 100% bạn thấy được UI báo đỏ
-        if (isFake) {
-          addJob({
-            job_id: `fail-mock-${Date.now()}`,
-            asset_id: "mock-asset-id",
-            status: 'failed',
-            progress: 15,
-            current_step: 'scene_detection',
-            error_message: 'Video file corrupted or missing'
-          });
-          return;
-        }
-
-        const payload = {
-          source_path: `/app/data/media/demo.mp4`,
-          options: {
-            scene_detection: true,
-            transcription: true,
-            vision_caption: true,
-            whisper_model: "base"
-          }
-        };
-        
-        try {
-          const response = await uploadMedia(payload);
-          if (response && response.job_id) {
-            addJob({
-              job_id: response.job_id,
-              asset_id: response.asset_id,
-              status: 'queued',
-              progress: 0,
-              current_step: 'uploading_to_s3',
-              error_message: null
+      await Promise.all(
+        Array.from({ length: count }).map(async () => {
+          try {
+            const res = await uploadMedia({
+              source_path: `/app/data/media/demo.mp4`,
+              options: { scene_detection: true, transcription: true, vision_caption: true, whisper_model: 'base' },
             });
-          }
-        } catch (err) {
-          console.error('Individual upload failed:', err);
-        }
-      });
-
-      await Promise.all(promises);
-    } catch (error) {
-      console.error('Trigger ingest failed', error);
-    } finally {
-      setIsUploading(false);
-    }
+            if (res?.job_id) addJob({ job_id: res.job_id, asset_id: res.asset_id, status: 'queued', progress: 0, current_step: 'uploading_to_s3', error_message: null });
+          } catch (e) { console.error(e); }
+        })
+      );
+    } finally { setIsUploading(false); }
   };
 
   return (
-    <div className="text-white p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-8">Trigger Ingest Pipeline</h1>
-      
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Cột trái: Mock Upload */}
-        <div className="max-w-md w-full shrink-0 bg-[#16132A] border border-[#4F8EF7] rounded-lg p-6 h-fit">
-          <p className="text-gray-400 mb-6 text-sm">
-            Nhấn các nút dưới đây để kích hoạt API <code>/api/v1/ingest</code> trên Backend.
-          </p>
-          
-          <div className="flex flex-col gap-4">
-            <button
-              onClick={() => handleUpload(1)}
-              disabled={isUploading}
-              className="w-full bg-[#4ADE80] hover:bg-[#3BCE70] disabled:bg-gray-600 disabled:cursor-not-allowed text-[#16132A] font-bold py-3 rounded flex items-center justify-center gap-2 transition-colors"
-            >
-              {isUploading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <UploadIcon className="w-5 h-5" />
-              )}
-              {isUploading ? 'Triggering...' : 'Start 1 Demo Job'}
-            </button>
+    <div className="h-full overflow-hidden text-white font-inter flex flex-col gap-2">
 
-            <button
-              onClick={() => handleUpload(3)}
-              disabled={isUploading}
-              className="w-full bg-[#7B5CF5] hover:bg-[#6A4BE4] disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 rounded flex items-center justify-center gap-2 transition-colors"
-            >
-              {isUploading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Play className="w-5 h-5" />
-              )}
-              {isUploading ? 'Triggering...' : 'Start 3 Jobs (Include 1 Fake to test Error)'}
-            </button>
+      {/* ── HEADER BAR ── */}
+      <div className="shrink-0 flex items-center justify-between py-1">
+        {/* Left: Title */}
+        <div>
+          <h1 className="text-[15px] font-bold text-white leading-tight">Ingest &amp; Upload Media</h1>
+          <p className="text-[10px] text-gray-400 leading-tight">Add your media to your local library</p>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
+          {/* Settings button */}
+          <button className="flex items-center gap-2 px-3 py-1.5 bg-[#16132A] border border-[#4F8EF7] rounded-md text-white text-[11px] hover:bg-[#4F8EF7]/10 transition-colors">
+            <Settings className="w-4 h-4" />
+            <span className="font-light">Settings</span>
+          </button>
+
+          {/* Divider */}
+          <div className="h-5 w-px bg-white/20" />
+
+          {/* Add Assets button */}
+          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4F8EF7] hover:bg-[#4F8EF7]/90 rounded-md text-white text-[11px] font-bold transition-colors">
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Assets</span>
+            <ChevronDown className="w-3.5 h-3.5 ml-0.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Divider line */}
+      <div className="shrink-0 h-px bg-white/5" />
+
+      {/* ── MAIN GRID WRAPPER ── */}
+      <div 
+        className="flex-1 min-h-0 overflow-hidden"
+        style={{ 
+          display: 'grid', 
+          gridTemplateRows: isReviewOpen ? '59.5fr 40.5fr' : '1fr auto', 
+          gap: '10px' 
+        }}
+      >
+        {/* ROW 1: 3 CỘT CHÍNH */}
+        <div className="min-h-0 overflow-hidden grid grid-cols-3 gap-3">
+
+          {/* Cột 1: Upload Files */}
+          <div className="min-h-0 overflow-hidden flex flex-col gap-2">
+            <h2 className="text-[11px] font-bold shrink-0">
+              1. <span className="text-[#7B5CF5] underline underline-offset-4">Upload Files</span>
+            </h2>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <UploadArea onStartIngest={() => handleUpload(3)} isUploading={isUploading} />
+            </div>
+          </div>
+
+          {/* Cột 2: Configure AI */}
+          <div className="min-h-0 overflow-hidden flex flex-col gap-2">
+            <h2 className="text-[11px] font-bold shrink-0">
+              2. {activeJobs?.length > 0 ? <span className="text-[#7B5CF5] underline underline-offset-4">Configure AI</span> : "Configure AI"}
+            </h2>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <AIPipelineTimeline />
+            </div>
+          </div>
+
+          {/* Cột 3: Ingest Queue */}
+          <div className="min-h-0 overflow-hidden flex flex-col gap-2">
+            <h2 className="text-[11px] font-bold shrink-0">
+              3. {activeJobs?.length > 0 ? <span className="text-[#7B5CF5] underline underline-offset-4">Review &amp; Complete</span> : "Review &amp; Complete"}
+            </h2>
+            <div className="flex-1 min-h-0 overflow-hidden bg-[#120F1D] border border-white/5 rounded-lg flex flex-col">
+              <div className="flex justify-between items-center px-4 pt-3 pb-2 shrink-0 border-b border-white/5">
+                <span className="text-[12px] font-bold">Ingest Queue</span>
+                <button onClick={clearAllFinishedJobs} className="text-[10px] text-gray-400 hover:text-white transition-colors">
+                  Clear Completed
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 py-2">
+                <IngestQueue selectedJobId={selectedJobId} onSelectJob={handleSelectJob} />
+              </div>
+              <div className="px-4 py-2 border-t border-white/5 shrink-0">
+                <button className="text-[10px] text-gray-400 hover:text-white flex items-center gap-1 transition-colors">
+                  View all completed
+                  <svg width="8" height="5" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Cột phải: Ingest Queue (List View) */}
-        <div className="flex-1 min-w-[300px]">
-          <IngestQueue />
+        {/* ── ROW 2: Generated Result Review ── */}
+        <div className="min-h-0 overflow-hidden border-t border-white/5 pt-2">
+          <GeneratedResultReview 
+            isOpen={isReviewOpen} 
+            onToggle={() => setIsReviewOpen(!isReviewOpen)} 
+            jobId={selectedJobId}
+            assetId={selectedAssetId}
+          />
         </div>
       </div>
+
     </div>
   );
 }
