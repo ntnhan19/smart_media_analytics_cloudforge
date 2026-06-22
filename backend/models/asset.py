@@ -19,5 +19,9 @@ class Asset(Base):
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
     full_transcript = Column(Text)
     tags = Column(JSON().with_variant(postgresql.JSONB, 'postgresql'))
+    summary = Column(Text)
+    moods = Column(JSON().with_variant(postgresql.JSONB, 'postgresql'))
+    objects = Column(JSON().with_variant(postgresql.JSONB, 'postgresql'))
+    best_for = Column(JSON().with_variant(postgresql.JSONB, 'postgresql'))
 
     scenes = relationship("Scene", back_populates="asset", cascade="all, delete-orphan")
