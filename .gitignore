@@ -211,10 +211,9 @@ hs_err_pid*
 # IDE & EDITORS
 # =============================================================================
 
-# VS Code — keep .vscode/extensions.json and .vscode/settings.json if shared
+# VS Code — ignore settings.json as it contains local paths
 .vscode/*
 !.vscode/extensions.json
-!.vscode/settings.json
 !.vscode/launch.json
 
 # JetBrains (PyCharm, WebStorm, etc.)
