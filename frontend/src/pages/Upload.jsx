@@ -137,6 +137,8 @@ export default function Upload() {
             onToggle={() => setIsReviewOpen(!isReviewOpen)} 
             jobId={selectedJobId}
             assetId={selectedAssetId}
+            status={selectedJob?.status}
+            errorMessage={selectedJob?.error_message}
           />
         </div>
       </div>

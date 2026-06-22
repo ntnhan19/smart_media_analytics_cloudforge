@@ -70,7 +70,10 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
       className={`w-full ${isFailed ? 'bg-[#EF4444]/10 border-[#EF4444]' : (isSelected ? 'bg-[#7B5CF5]/10 border-[#7B5CF5]' : 'bg-[#16132A] border-[#2D2844] hover:bg-[#7B5CF5]/5')} border rounded-[8px] flex p-[12px] transition-colors relative cursor-pointer`}
     >
       {isFailed && (
-        <button onClick={() => onRemove(job.job_id)} className="absolute top-[4px] right-[4px] text-gray-400 hover:text-white bg-[#1A162B] rounded-full p-[2px]">
+        <button 
+          onClick={(e) => { e.stopPropagation(); onRemove(job.job_id); }} 
+          className="absolute top-[4px] right-[4px] text-gray-400 hover:text-white bg-[#1A162B] rounded-full p-[2px]"
+        >
           <X className="w-4 h-4" />
         </button>
       )}
@@ -110,7 +113,7 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
                {job.error_message || "Unknown error"}
              </span>
              <button 
-                onClick={handleRetry}
+                onClick={(e) => { e.stopPropagation(); handleRetry(); }}
                 disabled={isRetrying}
                 className="bg-[#EF4444] text-white p-[4px] rounded disabled:opacity-50 flex items-center justify-center"
               >

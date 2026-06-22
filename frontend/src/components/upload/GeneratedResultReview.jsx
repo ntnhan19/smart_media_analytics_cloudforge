@@ -19,7 +19,7 @@ const mockTranscript = [
 
 const mockTags = ['BRIDGE', 'NATURE', 'AERIAL', 'RIVER', 'MOUNTAIN', 'LANDSCAPE', 'SCENIC', 'OUTDOOR', 'BRIDGE'];
 
-export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId }) {
+export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId, status, errorMessage }) {
   const navigate = useNavigate();
   const displayTitle = jobId ? `(IMG_${jobId.substring(0, 6).toUpperCase()}.mp4)` : '(No Video Selected)';
 
@@ -29,6 +29,35 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
     } else {
       alert("Asset is still processing or no asset ID available.");
     }
+  };
+
+  const getStatusBadge = () => {
+    if (!status) return null;
+    
+    let colorClass = "border-[#4F8EF7]/60 text-[#4F8EF7]";
+    let dotClass = "bg-[#4F8EF7] animate-pulse";
+    let text = "Processing";
+
+    if (status === 'failed') {
+      colorClass = "border-[#EF4444]/60 text-[#EF4444]";
+      dotClass = "bg-[#EF4444]";
+      text = "Failed";
+    } else if (status === 'completed') {
+      colorClass = "border-[#4ADE80]/60 text-[#4ADE80]";
+      dotClass = "bg-[#4ADE80]";
+      text = "Completed";
+    } else if (status === 'queued') {
+      colorClass = "border-gray-400/60 text-gray-400";
+      dotClass = "bg-gray-400";
+      text = "Queued";
+    }
+
+    return (
+      <span className={`flex items-center gap-1.5 border text-[11px] font-light px-2.5 py-0.5 rounded ml-2 ${colorClass}`}>
+        <span className={`w-1.5 h-1.5 rounded-full inline-block ${dotClass}`} />
+        {text}
+      </span>
+    );
   };
 
   return (
@@ -49,12 +78,7 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
             {isOpen && <span className="text-gray-400 font-light text-[12px]">{displayTitle}</span>}
           </h2>
           
-          {isOpen && (
-            <span className="flex items-center gap-1.5 border border-[#4ADE80]/60 text-[#4ADE80] text-[11px] font-light px-2.5 py-0.5 rounded ml-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-pulse inline-block" />
-              Processing
-            </span>
-          )}
+          {isOpen && getStatusBadge()}
         </div>
         
         {isOpen && (
@@ -69,8 +93,20 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
         )}
       </div>
 
-      {/* 4 Columns Grid (Chỉ render khi isOpen = true) */}
-      {isOpen && (
+      {/* Nội dung bên dưới chỉ hiện khi mở (isOpen = true) */}
+      {isOpen && status === 'failed' ? (
+        <div className="flex-1 flex flex-col items-center justify-center border border-[#EF4444]/20 bg-[#EF4444]/5 rounded-xl min-h-[220px]">
+          <div className="w-12 h-12 rounded-full bg-[#EF4444]/10 flex items-center justify-center mb-3">
+            <svg className="w-6 h-6 text-[#EF4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 className="text-[#EF4444] text-[16px] font-bold mb-2">AI Processing Failed</h3>
+          <p className="text-[#EF4444]/70 text-[13px] text-center max-w-md">
+            {errorMessage || "An unexpected error occurred while analyzing this media. Please click the Retry button on the job card to try again."}
+          </p>
+        </div>
+      ) : isOpen && (
         <div className="grid grid-cols-4 gap-4 flex-1 min-h-[220px]">
 
           {/* Col 1: Selected Assets */}
