@@ -1,13 +1,17 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from typing import Optional
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from schemas.ingest import IngestRequest, IngestResponse, IngestStatusResponse
 from models.ingest_job import IngestJob
 from database import get_db
-from services.ingest_service import run_ingest_pipeline
 from core.websocket_manager import manager
+from services.ingest_service import run_ingest_pipeline, run_ingest_pipeline_with_cleanup
 import uuid
 import logging
+import json
+import os
+import shutil
 
 router = APIRouter(prefix="/api/v1/ingest", tags=["ingest"])
 logger = logging.getLogger(__name__)
@@ -45,6 +49,61 @@ async def start_ingest_job(
         )
     except Exception as e:
         logger.error(f"Failed to start ingest job: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.post("/upload", response_model=IngestResponse, status_code=202)
+async def upload_ingest_job(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    options: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        # Parse options
+        from schemas.ingest import IngestOptions
+        ingest_options = IngestOptions()
+        if options and options.strip():
+            try:
+                options_dict = json.loads(options)
+                ingest_options = IngestOptions(**options_dict)
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid JSON provided for options: {options}. Using defaults.")
+            
+        # Create a new job in DB
+        new_job = IngestJob(
+            status="queued"
+        )
+        db.add(new_job)
+        await db.commit()
+        await db.refresh(new_job)
+        
+        job_id_str = str(new_job.job_id)
+        
+        # Save file to temp location
+        upload_dir = f"/tmp/uploads/{job_id_str}"
+        os.makedirs(upload_dir, exist_ok=True)
+        file_path = os.path.join(upload_dir, file.filename)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        # Start background task with cleanup
+        background_tasks.add_task(
+            run_ingest_pipeline_with_cleanup,
+            job_id_str=job_id_str,
+            source_path=upload_dir,
+            options=ingest_options
+        )
+        
+        return IngestResponse(
+            job_id=job_id_str,
+            asset_id=None,
+            status="queued",
+            assets_queued=1,
+            message="Ingestion pipeline started from uploaded file."
+        )
+    except Exception as e:
+        logger.error(f"Failed to start ingest job from upload: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/retry/{job_id}", response_model=IngestResponse, status_code=202)
@@ -106,6 +165,7 @@ async def get_ingest_status(
         
         return IngestStatusResponse(
             job_id=job_id,
+            asset_id=str(job.asset_id) if job.asset_id else None,
             status=job.status,
             assets_queued=job.assets_queued,
             assets_processed=job.assets_processed,
@@ -139,6 +199,7 @@ async def websocket_endpoint(
             await websocket.send_text(json.dumps({
                 "event": job.status,
                 "job_id": job_id,
+                "asset_id": str(job.asset_id) if job.asset_id else None,
                 "status": job.status,
                 "progress": progress,
                 "assets_queued": job.assets_queued,

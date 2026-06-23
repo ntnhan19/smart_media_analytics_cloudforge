@@ -58,6 +58,7 @@ async def publish_job_progress(
     current_step: str,
     error_message: Optional[str] = None,
     update_db: bool = True,  # Flag linh hoạt tránh deadlock đa luồng
+    asset_id: Optional[str] = None,
 ) -> None:
     """Cập nhật trạng thái ingest_jobs và phát tín hiệu realtime qua Redis/Websocket."""
     payload = {
@@ -66,6 +67,7 @@ async def publish_job_progress(
         "progress": round(float(progress), 2),
         "current_step": current_step,
         "error_message": error_message,
+        "asset_id": asset_id,
     }
 
     # Chỉ cập nhật DB ở luồng Async chính an toàn
@@ -78,6 +80,8 @@ async def publish_job_progress(
                     job.progress = float(progress)
                     if error_message:
                         job.error_message = error_message[:500]
+                    if asset_id:
+                        job.asset_id = uuid.UUID(asset_id)
                     await db.commit()
         except Exception as db_err:
             logger.warning(f"DB progress update skipped to avoid deadlock: {db_err}")
@@ -183,12 +187,19 @@ async def _process_single_file(
             raise RuntimeError(f"Upload source media failed: {video_s3_key}")
 
     asset = await _create_asset(db, file_path, video_s3_key)
+    
+    # Cập nhật asset_id vào job
+    job = await db.get(IngestJob, uuid.UUID(job_id_str))
+    if job:
+        job.asset_id = asset.id
+        await db.commit()
+        
     loop = asyncio.get_running_loop()
 
     # Callback tối ưu: Đẩy tiến độ dạng threadsafe, ngắt tuyệt đối luồng ghi DB tránh deadlock
     def progress_callback(current_step: str, progress: float) -> None:
         asyncio.run_coroutine_threadsafe(
-            publish_job_progress(job_id_str, "processing", progress, current_step, update_db=False),
+            publish_job_progress(job_id_str, "processing", progress, current_step, update_db=False, asset_id=str(asset.id)),
             loop,
         )
 
@@ -271,6 +282,23 @@ async def run_ingest_pipeline(
             await publish_job_progress(
                 job_id_str, "failed", job.progress, "failed", error_message=str(exc)
             )
+
+async def run_ingest_pipeline_with_cleanup(
+    job_id_str: str,
+    source_path: str,
+    options: IngestOptions,
+) -> None:
+    """Hàm chạy nền nạp dữ liệu từ upload có dọn dẹp file tạm."""
+    try:
+        await run_ingest_pipeline(job_id_str, source_path, options)
+    finally:
+        import shutil
+        if os.path.exists(source_path):
+            try:
+                shutil.rmtree(source_path)
+                logger.info(f"Cleaned up temp upload directory: {source_path}")
+            except Exception as e:
+                logger.error(f"Failed to cleanup temp directory {source_path}: {e}")
 
 
 async def run_regenerate_insights_job(job_id_str: str, asset_id_str: str) -> None:

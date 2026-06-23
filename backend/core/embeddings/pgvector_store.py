@@ -55,7 +55,7 @@ class PGVectorStore:
             # Simple filter handling (e.g., {"asset_id": "..."})
             if filters:
                 if "asset_id" in filters:
-                    stmt = stmt.where(Scene.asset_id == filters["asset_id"])
+                    stmt = stmt.where(Scene.asset_id == uuid.UUID(filters["asset_id"]))
                     
             result = await db.execute(stmt)
             scenes = result.scalars().all()
