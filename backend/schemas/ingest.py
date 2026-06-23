@@ -14,12 +14,14 @@ class IngestRequest(BaseModel):
 
 class IngestResponse(BaseModel):
     job_id: str
+    asset_id: Optional[str] = None
     status: str
     assets_queued: int
     message: str
 
 class IngestStatusResponse(BaseModel):
     job_id: str
+    asset_id: Optional[str] = None
     status: str
     assets_queued: int
     assets_processed: int
