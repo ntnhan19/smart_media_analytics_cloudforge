@@ -302,6 +302,75 @@ class OllamaRefinementLLM(BaseRefinementLLM):
         logger.info(f"RefinementLLM ({self.model_name}) unloaded")
         gc.collect()
 
+    def generate_asset_insights(self, aggregated_text: str, max_new_tokens: int = 500, temperature: float = 0.2) -> Dict[str, Any]:
+        """Tổng hợp AI Insights (Summary, Moods, Objects, Best For) cho toàn bộ Asset"""
+        prompt = (
+            "Dựa trên các phân cảnh và lời thoại sau đây của một video, hãy tổng hợp thông tin chung "
+            "về toàn bộ video này và xuất ra chuẩn JSON (không kèm markdown block).\n\n"
+            f"Nội dung:\n{aggregated_text[:3000]}\n\n"
+            "Yêu cầu định dạng JSON:\n"
+            "{\n"
+            '  "summary": "Tóm tắt ngắn gọn 2-3 câu về nội dung chính của video",\n'
+            '  "moods": ["Vui vẻ", "Hồi hộp", ...],\n'
+            '  "objects": ["Xe hơi", "Biển", "Điện thoại", ...],\n'
+            '  "best_for": ["Vlog", "Quảng cáo", "Tiktok", ...]\n'
+            "}"
+        )
+        try:
+            payload = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "stream": False,
+                "format": "json",
+                "options": {
+                    "temperature": temperature,
+                    "num_predict": max_new_tokens,
+                    "num_thread": 6,
+                    "num_ctx": 4096,
+                },
+                "keep_alive": -1
+            }
+            response = requests.post(f"{self.base_url}/api/generate", json=payload, timeout=90)
+            if response.status_code != 200:
+                logger.error(f"Ollama asset insights failed: {response.text}")
+                return self._get_fallback_asset_insights(aggregated_text)
+            
+            result = response.json()
+            generated_text = result.get("response", "").strip()
+            return self._parse_json_asset_insights(generated_text, aggregated_text)
+        except Exception as e:
+            log_exception(e, "OllamaRefinementLLM.generate_asset_insights")
+            return self._get_fallback_asset_insights(aggregated_text)
+        finally:
+            gc.collect()
+
+    def _parse_json_asset_insights(self, text: str, fallback_text: str) -> Dict[str, Any]:
+        text = text.strip()
+        for fence in ("```json", "```"):
+            if text.startswith(fence):
+                text = text[len(fence):].strip()
+        if text.endswith("```"):
+            text = text[:-3].strip()
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            match = re.search(r"\{[\s\S]*\}", text)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except:
+                    pass
+            return self._get_fallback_asset_insights(fallback_text)
+
+    def _get_fallback_asset_insights(self, text: str) -> Dict[str, Any]:
+        return {
+            "summary": "Không thể tổng hợp tự động do lỗi hệ thống.",
+            "moods": ["unknown"],
+            "objects": [],
+            "best_for": ["unknown"]
+        }
+
 
 # =============================================================================
 # Bedrock Stub

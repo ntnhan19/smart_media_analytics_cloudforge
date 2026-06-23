@@ -316,7 +316,11 @@ async def run_regenerate_insights_job(job_id_str: str, asset_id_str: str) -> Non
             if not llm:
                 raise RuntimeError("Failed to initialize Refinement LLM")
 
-            insights = await loop.run_in_executor(None, llm.generate_asset_insights, full_text)
+            try:
+                insights = await loop.run_in_executor(None, llm.generate_asset_insights, full_text)
+            finally:
+                if llm:
+                    llm.unload()
             
             await publish_job_progress(job_id_str, "processing", 90.0, "saving_results")
 
