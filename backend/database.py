@@ -2,7 +2,10 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import declarative_base
 from typing import AsyncGenerator
 
-from config import settings
+try:
+    from config import settings
+except ImportError:  # Allows importing as backend.database from repo root.
+    from backend.config import settings
 
 # Create async engine
 engine = create_async_engine(
