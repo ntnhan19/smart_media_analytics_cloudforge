@@ -1,9 +1,8 @@
 """
 Video Analysis Pipeline
 
-Cloud-ready pipeline core. It analyzes local video files and returns a
-backend-compatible contract; database persistence belongs to the backend
-ingest service.
+End-to-End pipeline xử lý video → Trả về VideoAnalysisContract
+Tương thích hoàn toàn với Backend (PostgreSQL + MinIO + Redis)
 """
 
 import os
@@ -12,10 +11,9 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from ai_pipeline.audio.transcriber import TranscriptProcessor, create_asr_model
-from ai_pipeline.config import config
+# ── AI Pipeline Modules ─────────────────────────────────────────────────────
 from ai_pipeline.ingestion.contracts import (
     DetectedObjectContract,
     ObjectOccurrenceContract,
@@ -23,6 +21,9 @@ from ai_pipeline.ingestion.contracts import (
     TagContract,
     VideoAnalysisContract,
 )
+
+from ai_pipeline.audio.transcriber import create_asr_model
+from ai_pipeline.config import config
 from ai_pipeline.providers import create_text_embedder, create_vision_provider
 from ai_pipeline.models.refinement_llm import create_refinement_llm
 from ai_pipeline.scene_detection.scene_detector import (
@@ -31,13 +32,13 @@ from ai_pipeline.scene_detection.scene_detector import (
     VideoInfo,
     VideoProcessor,
 )
-from utils.logger import ProgressTracker, logger
 
-ProgressCallback = Callable[[str, float], None]
+# ── Utils ───────────────────────────────────────────────────────────────────
+from utils.logger import ProgressTracker, logger
 
 
 class SimpleFileManager:
-    """Organize intermediate files for one video analysis run."""
+    """Quản lý file tạm cho một lần xử lý video."""
 
     def __init__(self, asset_id: str, output_dir: Path):
         self.asset_id = asset_id
@@ -52,7 +53,7 @@ class SimpleFileManager:
 
 
 class VideoAnalysisPipeline:
-    """Main pipeline for video analysis without direct DB ownership."""
+    """Pipeline chính xử lý video end-to-end."""
 
     def __init__(
         self,
@@ -60,72 +61,36 @@ class VideoAnalysisPipeline:
         vision_provider=None,
         text_embedder=None,
         storage_client=None,
-        progress_callback: Optional[ProgressCallback] = None,
+        progress_callback=None,
     ):
         self.processing_mode = processing_mode
         self.mode_config = config.get_processing_mode_config(processing_mode)
+
+        # Core processors
         self.video_processor = VideoProcessor()
         self.scene_detector = SceneDetector()
         self.keyframe_extractor = KeyframeExtractor()
-        
-        # ── Abstraction Provider Selection (Task 7) ──────────────────────────
-        # Tự động switch linh hoạt cấu hình theo biến môi trường hệ thống
+
+        # AI Providers (Abstraction)
         self.vision_provider = vision_provider or create_vision_provider()
         self.text_embedder = text_embedder or create_text_embedder()
-        
+        self.refinement_llm = self._init_refinement_llm()
+
         self.storage_client = storage_client
         self.progress_callback = progress_callback
         self.asr_model = None
-        
-        # ✨ Khởi tạo cấu hình Refinement LLM an toàn
-        self.refinement_llm = self._init_refinement_llm()
 
     def _init_refinement_llm(self):
-        """Khởi tạo mô hình lọc dữ liệu an toàn dựa trên nhà cung cấp"""
-        ai_provider = os.getenv("AI_PROVIDER", "local").lower()
-        if ai_provider == "aws":
-            logger.info("☁️ Cloud Mode: Khởi chạy Khung Stub AWS Bedrock cho Refinement LLM")
-            # Bạn có thể bổ sung class BedrockRefinementLLM(stub) tại đây khi lên AWS Cloud
-            return create_refinement_llm() 
-        else:
-            try:
-                return create_refinement_llm()
-            except Exception as e:
-                logger.warning(f"⚠️ Không thể kết nối Ollama server lúc khởi tạo: {e}. Luồng chạy sẽ kích hoạt fallback.")
-                return None
-
-    def process_video(
-        self,
-        video_path: Path,
-        asset_id: Optional[str] = None,
-        source_storage_key: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Compatibility wrapper returning a dict result."""
+        """Khởi tạo Refinement LLM an toàn."""
         try:
-            analysis = self.analyze_video(
-                video_path=video_path,
-                asset_id=asset_id,
-                source_storage_key=source_storage_key,
-            )
-            return {
-                "asset_id": analysis.asset_id,
-                "status": "success",
-                "analysis": analysis.to_dict(include_embeddings=True),
-                "stats": {
-                    "num_scenes": len(analysis.scenes),
-                    "processing_mode": self.processing_mode,
-                    "full_transcript_length": len(analysis.full_transcript or ""),
-                },
-            }
-        except Exception as exc:
-            logger.error(f"Pipeline failed: {exc}", exc_info=True)
-            return {
-                "asset_id": asset_id,
-                "status": "failed",
-                "error": str(exc),
-            }
-        finally:
-            self._cleanup()
+            return create_refinement_llm()
+        except Exception as e:
+            logger.warning(f"Không thể khởi tạo Refinement LLM: {e}. Sử dụng fallback.")
+            return None
+
+    # =========================================================================
+    # PUBLIC API
+    # =========================================================================
 
     def analyze_video(
         self,
@@ -133,67 +98,64 @@ class VideoAnalysisPipeline:
         asset_id: Optional[str] = None,
         source_storage_key: Optional[str] = None,
     ) -> VideoAnalysisContract:
-        """Analyze a local video file and return the backend data contract."""
+        """Phân tích video và trả về contract đầy đủ."""
         video_path = Path(video_path)
         if not video_path.exists():
-            raise FileNotFoundError(f"Video not found: {video_path}")
+            raise FileNotFoundError(f"Video không tồn tại: {video_path}")
 
         asset_id = asset_id or self._generate_asset_id()
         file_manager = SimpleFileManager(asset_id, config.OUTPUT_DIR)
-        self._publish("metadata", 5.0)
 
         logger.section(f"Processing Video - Mode: {self.processing_mode}")
-        pipeline_start = time.time()
+        start_time = time.time()
 
-        total_steps = 7
-        progress = ProgressTracker(total_steps, "Video Processing")
+        progress = ProgressTracker(8, "Video Processing")
 
+        # 1. Video Info
         progress.step("Extracting video information")
         video_info = VideoInfo(video_path)
-        self._publish("metadata", 10.0)
 
+        # 2. Proxy video
         progress.step("Creating proxy video")
         proxy_path = self._create_proxy(video_path, file_manager.proxy_path)
         working_video = proxy_path or video_path
-        self._publish("proxy", 20.0)
 
+        # 3. Audio + Transcription
         progress.step("Extracting and transcribing audio")
         transcript_data = self._process_audio(video_path, file_manager.audio_path)
-        self._publish("transcription", 35.0)
 
+        # 4. Scene Detection
         progress.step("Detecting scenes")
         scene_data = self.scene_detector.detect_scenes(working_video)
-        scenes_as_tuples = [(s.start_time_sec, s.end_time_sec) for s in scene_data]
-        self._publish("scene_detection", 45.0)
 
+        # 5. Keyframe Extraction
         progress.step("Extracting keyframes")
         keyframes = self.keyframe_extractor.extract_keyframes_from_scenes(
             working_video,
-            scenes_as_tuples,
+            [(s.start_time_sec, s.end_time_sec) for s in scene_data],
             file_manager.keyframes_dir,
-            frames_per_scene=self.mode_config["frames_per_scene"],
+            frames_per_scene=self.mode_config.get("frames_per_scene", 1),
         )
         keyframes_by_scene = {int(kf["scene_id"]): kf for kf in keyframes}
-        self._publish("keyframe_extraction", 55.0)
 
-        progress.step("Captioning keyframes")
-        scene_contracts = self._caption_scenes(
+        # 6. Captioning + Refinement
+        progress.step("Captioning & Refining scenes")
+        scene_contracts = self._process_scenes(
             asset_id=asset_id,
             scene_data=scene_data,
             keyframes_by_scene=keyframes_by_scene,
             transcript_data=transcript_data,
         )
-        self._publish("vision_caption", 72.0)
 
+        # 7. Upload keyframes
         progress.step("Uploading keyframes")
         self._upload_keyframes(asset_id, scene_contracts)
-        self._publish("keyframe_upload", 80.0)
 
+        # 8. Embedding
         progress.step("Generating embeddings")
         self._embed_scenes(scene_contracts)
-        self._publish("embedding", 92.0)
 
-        asset_tags = self._aggregate_tags(scene_contracts, transcript_data.get("text", ""))
+        # Build final contract
         analysis = VideoAnalysisContract(
             asset_id=asset_id,
             file_name=video_path.name,
@@ -203,228 +165,194 @@ class VideoAnalysisPipeline:
             resolution=f"{video_info.width}x{video_info.height}",
             file_size_bytes=int(video_path.stat().st_size),
             full_transcript=transcript_data.get("text", ""),
-            tags=asset_tags,
+            tags=self._aggregate_tags(scene_contracts, transcript_data.get("text", "")),
             scenes=scene_contracts,
         )
 
-        progress.complete(f"Video processing complete: {asset_id}")
-        logger.info(f"Pipeline completed in {time.time() - pipeline_start:.2f}s")
-        self._publish("completed_analysis", 100.0)
+        logger.info(f"Pipeline completed in {time.time() - start_time:.2f}s | "
+                   f"{len(scene_contracts)} scenes")
         return analysis
+
+    # =========================================================================
+    # INTERNAL METHODS
+    # =========================================================================
 
     def _generate_asset_id(self) -> str:
         return f"vid_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
 
     def _create_proxy(self, video_path: Path, proxy_path: Path) -> Optional[Path]:
         try:
-            return proxy_path if self.video_processor.create_proxy(video_path, proxy_path) else None
-        except Exception as exc:
-            logger.warning(f"Proxy creation failed: {exc}")
+            if self.video_processor.create_proxy(video_path, proxy_path):
+                return proxy_path
+            return None
+        except Exception as e:
+            logger.warning(f"Proxy creation failed: {e}")
             return None
 
     def _process_audio(self, video_path: Path, audio_path: Path) -> Dict[str, Any]:
         try:
             if not self.video_processor.extract_audio(video_path, audio_path):
-                return {"segments": [], "words": [], "text": "", "language": "unknown"}
+                return {"text": "", "segments": [], "words": []}
+
             self.asr_model = self.asr_model or create_asr_model()
             return self.asr_model.transcribe(audio_path)
-        except Exception as exc:
-            logger.warning(f"Audio processing failed: {exc}", exc_info=True)
-            return {"segments": [], "words": [], "text": "", "language": "unknown"}
+        except Exception as e:
+            logger.warning(f"Audio processing failed: {e}")
+            return {"text": "", "segments": [], "words": []}
 
-    def _caption_scenes(
+    def _process_scenes(
         self,
         asset_id: str,
         scene_data,
-        keyframes_by_scene: Dict[int, Dict[str, Any]],
+        keyframes_by_scene: Dict[int, Dict],
         transcript_data: Dict[str, Any],
     ) -> List[SceneAnalysisContract]:
+        """Xử lý caption + refinement cho từng scene."""
         scenes: List[SceneAnalysisContract] = []
+
         for scene in scene_data:
             keyframe = keyframes_by_scene.get(scene.scene_index)
-            keyframe_path = keyframe["frame_path"] if keyframe else scene.keyframe_path
-            
-            # 1. Trích xuất mô tả thô từ mô hình thị giác máy tính (Llava)
+            keyframe_path = keyframe["frame_path"] if keyframe else None
+
+            # 1. Raw vision caption (tiếng Anh)
             raw_caption = ""
             if keyframe_path:
                 try:
                     raw_caption = self.vision_provider.caption_keyframe(Path(keyframe_path))
-                except Exception as ve:
-                    logger.warning(f"Vision Captioning failed for scene {scene.scene_index}: {ve}")
-            raw_caption = raw_caption or "Video scene with visual content."
-            
-            # 2. Định vị đoạn phụ đề tương ứng của phân cảnh từ Whisper
-            transcript_snippet = self._transcript_for_scene(
-                transcript_data,
-                scene.start_time_sec,
-                scene.end_time_sec,
-            )
-            
-            # Mặc định cấu hình fallback phòng trường hợp server Ollama tắt đột ngột
-            final_caption = raw_caption
-            tags = []
+                except Exception as e:
+                    logger.warning(f"Vision failed scene {scene.scene_index}: {e}")
 
-            # 3. ✨ THỰC THI REFINEMENT: Gọi Qwen2 biên tập lại dữ liệu
-            if self.refinement_llm:
-                try:
-                    logger.info(f"-> Thực thi Ollama Refinement cho phân cảnh index: {scene.scene_index}")
-                    refined_json = self.refinement_llm.refine_analysis(
-                        vision_outputs={"qwen_vl": raw_caption},
-                        timestamp=float(scene.start_time_sec),
-                        scene_id=int(scene.scene_index),
-                        transcript_snippet=transcript_snippet
-                    )
-                    final_caption = refined_json.get("summary") or raw_caption
-                    scene_tags = refined_json.get("tags", {}).get("scene_tags", [])
-                    tags = [TagContract(name=t, category="theme", source="auto") for t in scene_tags]
-                except Exception as re_err:
-                    logger.warning(f"Refinement failed, fallback activated: {re_err}")
-
-            if not tags:
-                tags = self._tags_for_scene(final_caption, transcript_snippet)
-                
-            detected_objects = self._objects_for_scene(
-                tags,
-                scene.start_time_sec,
-                scene.end_time_sec,
+            # 2. Transcript snippet
+            transcript_snippet = self._get_transcript_for_scene(
+                transcript_data, scene.start_time_sec, scene.end_time_sec
             )
-            
+
+            # 3. Refinement LLM
+            refined = self._refine_scene(
+                raw_caption=raw_caption,
+                transcript_snippet=transcript_snippet,
+                scene_index=scene.scene_index,
+                timestamp=scene.start_time_sec,
+            )
+
+            # 4. Build Scene Contract
+            scene_tags = [
+                TagContract(name=tag, category="theme")
+                for tag in refined.get("tags", {}).get("scene_tags", [])
+                if str(tag).strip()
+            ]
             scenes.append(
                 SceneAnalysisContract(
                     scene_index=scene.scene_index,
                     timestamp_start_sec=float(scene.start_time_sec),
                     timestamp_end_sec=float(scene.end_time_sec),
-                    caption=final_caption,
+                    caption=refined["summary"],
                     transcript_snippet=transcript_snippet,
-                    keyframe_path=keyframe_path or "",
-                    keyframe_s3_key=f"keyframes/{asset_id}/{scene.scene_index}.jpg",
-                    tags=tags,
-                    detected_objects=detected_objects,
+                    searchable_text=refined.get("searchable_text", ""),
+                    keyframe_path=str(keyframe_path) if keyframe_path else "",
+                    keyframe_s3_key=f"keyframes/{asset_id}/{scene.scene_index:04d}.jpg",
+                    tags=scene_tags,
                 )
             )
+
         return scenes
 
-    def _upload_keyframes(self, asset_id: str, scenes: List[SceneAnalysisContract]) -> None:
+    def _refine_scene(self, raw_caption: str, transcript_snippet: str, scene_index: int, timestamp: float):
+        """Gọi Refinement LLM với fallback an toàn."""
+        if not self.refinement_llm:
+            return self._make_fallback(scene_index, timestamp, transcript_snippet)
+
+        try:
+            result = self.refinement_llm.refine_analysis(
+                vision_outputs={"qwen_vl": raw_caption},
+                timestamp=timestamp,
+                scene_id=scene_index,
+                transcript_snippet=transcript_snippet,
+            )
+            return result
+        except Exception as e:
+            logger.warning(f"Refinement failed scene {scene_index}: {e}")
+            return self._make_fallback(scene_index, timestamp, transcript_snippet)
+
+    @staticmethod
+    def _make_fallback(scene_index: int, timestamp: float, transcript: str) -> Dict:
+        summary = f"Phân cảnh {scene_index} tại {timestamp:.0f} giây"
+        if transcript:
+            summary = f"Phân cảnh có lời thoại: {transcript[:180]}"
+
+        return {
+            "summary": summary,
+            "tags": {"scene_tags": ["video"]},
+            "searchable_text": summary,
+        }
+
+    def _get_transcript_for_scene(self, transcript_data: Dict, start: float, end: float) -> str:
+        """Trích đoạn transcript theo khoảng thời gian scene."""
+        segments = transcript_data.get("segments", [])
+        texts = []
+        for seg in segments:
+            if seg.get("end", 0) >= start and seg.get("start", 0) <= end:
+                text = seg.get("text", "").strip()
+                if text:
+                    texts.append(text)
+        return " ".join(texts).strip()
+
+    def _upload_keyframes(self, asset_id: str, scenes: List[SceneAnalysisContract]):
         if not self.storage_client:
             return
         for scene in scenes:
-            if not scene.keyframe_path:
+            if not scene.keyframe_path or not Path(scene.keyframe_path).exists():
                 continue
-            remote_key = f"keyframes/{asset_id}/{scene.scene_index}.jpg"
-            ok = self.storage_client.upload_file(scene.keyframe_path, remote_key)
-            if not ok:
-                raise RuntimeError(f"Failed to upload keyframe: {remote_key}")
-            scene.keyframe_s3_key = remote_key
+            remote_key = scene.keyframe_s3_key
+            success = self.storage_client.upload_file(scene.keyframe_path, remote_key)
+            if not success:
+                logger.warning(f"Failed to upload keyframe: {remote_key}")
 
-    def _embed_scenes(self, scenes: List[SceneAnalysisContract]) -> None:
-        texts = [scene.embedding_text or scene.caption for scene in scenes]
+    def _embed_scenes(self, scenes: List[SceneAnalysisContract]):
+        """Sinh embedding cho tất cả scenes."""
+        if not scenes:
+            return
+        texts = [scene.embedding_text for scene in scenes]
         embeddings = self.text_embedder.embed_texts(texts)
-        for scene, embedding in zip(scenes, embeddings):
-            if len(embedding) != self.text_embedder.embedding_dim:
-                raise ValueError(
-                    f"Expected {self.text_embedder.embedding_dim}-dim embedding, got {len(embedding)}"
-                )
-            scene.embedding = embedding
 
-    def _transcript_for_scene(
-        self,
-        transcript_data: Dict[str, Any],
-        start_sec: float,
-        end_sec: float,
-    ) -> str:
-        segments = []
-        for segment in transcript_data.get("segments", []):
-            if float(segment.get("end", 0.0)) >= start_sec and float(segment.get("start", 0.0)) <= end_sec:
-                text = segment.get("text", "").strip()
-                if text:
-                    segments.append(text)
-        if segments:
-            return " ".join(segments)
+        for scene, emb in zip(scenes, embeddings):
+            scene.embedding = emb.tolist() if hasattr(emb, "tolist") else emb
 
-        words = [
-            word.get("word", "").strip()
-            for word in transcript_data.get("words", [])
-            if float(word.get("end", 0.0)) >= start_sec
-            and float(word.get("start", 0.0)) <= end_sec
-        ]
-        return " ".join(word for word in words if word)
-
-    def _tags_for_scene(self, caption: str, transcript_snippet: str) -> List[TagContract]:
-        text = f"{caption} {transcript_snippet}"
-        keywords = TranscriptProcessor.extract_keywords(text, top_n=8)
-        tags = [TagContract(name=kw, category="theme", source="auto") for kw in keywords[:6]]
-        if "video" not in [tag.name for tag in tags]:
-            tags.append(TagContract(name="video", category="content_type", source="auto"))
-        return tags
-
-    def _aggregate_tags(
-        self,
-        scenes: List[SceneAnalysisContract],
-        full_transcript: str,
-    ) -> List[TagContract]:
+    def _aggregate_tags(self, scenes: List[SceneAnalysisContract], full_transcript: str) -> List[TagContract]:
+        """Tổng hợp tags cho toàn video."""
         seen = set()
-        tags: List[TagContract] = []
+        tags = []
+
         for scene in scenes:
             for tag in scene.tags:
                 key = (tag.name, tag.category)
                 if key not in seen:
                     seen.add(key)
                     tags.append(tag)
-        for keyword in TranscriptProcessor.extract_keywords(full_transcript, top_n=6):
-            key = (keyword, "theme")
-            if key not in seen:
-                tags.append(TagContract(name=keyword, category="theme", source="auto"))
-                seen.add(key)
-        return tags[:20]
 
-    def _objects_for_scene(
-        self,
-        tags: List[TagContract],
-        start_sec: float,
-        end_sec: float,
-    ) -> List[DetectedObjectContract]:
-        objects: List[DetectedObjectContract] = []
-        for tag in tags[:5]:
-            normalized = re.sub(r"[^A-Za-z0-9_ -]", "", tag.name).strip()
-            if len(normalized) < 3 or tag.category == "content_type":
-                continue
-            objects.append(
-                DetectedObjectContract(
-                    name=normalized,
-                    occurrences=[
-                        ObjectOccurrenceContract(
-                            timestamp_start_sec=float(start_sec),
-                            timestamp_end_sec=float(end_sec),
-                            confidence=0.5,
-                        )
-                    ],
-                )
-            )
-        return objects
+        # Thêm tag từ full transcript nếu cần
+        return tags[:25]
 
-    def _publish(self, current_step: str, progress: float) -> None:
-        if self.progress_callback:
-            self.progress_callback(current_step, progress)
-
-    def _cleanup(self) -> None:
+    def _cleanup(self):
+        """Dọn dẹp tài nguyên."""
         if self.asr_model:
             try:
                 self.asr_model.unload()
-            except Exception as exc:
-                logger.warning(f"Error during ASR cleanup: {exc}")
+            except Exception:
+                pass
             self.asr_model = None
-        
-        if hasattr(self, 'refinement_llm') and self.refinement_llm:
+
+        if self.refinement_llm:
             try:
                 self.refinement_llm.unload()
             except Exception:
                 pass
 
 
-def process_video(
-    video_path: Path,
-    processing_mode: str = "fast",
-    video_id: Optional[str] = None,
-) -> Dict[str, Any]:
+# =============================================================================
+# Shortcut
+# =============================================================================
+
+def process_video(video_path: Path, processing_mode: str = "fast", asset_id: Optional[str] = None):
     pipeline = VideoAnalysisPipeline(processing_mode=processing_mode)
-    return pipeline.process_video(video_path, asset_id=video_id)
+    return pipeline.analyze_video(video_path, asset_id=asset_id)

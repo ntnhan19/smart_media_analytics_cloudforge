@@ -1,240 +1,313 @@
 """
-Embedding Models — Ollama-based Production Grade
-- BGE-M3 embedding qua Ollama
-- Batch processing + Retry + Circuit Breaker pattern
-- Clean architecture, comprehensive logging & monitoring
-- Graceful degradation khi Ollama unavailable
+embedding.py
+Semantic Embedding Layer cho Video Semantic Search
+Tối ưu cho use-case Editor: Upload video → Tìm lại dễ dàng bằng ngôn ngữ tự nhiên
 """
 
 import gc
-import requests
-import numpy as np
 import time
-from typing import List, Dict, Any, Union, Optional
 from dataclasses import dataclass
-from functools import lru_cache
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
+import requests
 
 from ai_pipeline.config import config
 from utils.logger import logger, log_model_loading, log_exception
 
 
-# ── Configuration ─────────────────────────────────────────────────────────────
-@dataclass
-class OllamaEmbeddingConfig:
-    base_url: str = "http://localhost:11434"
+# =============================================================================
+# Configuration
+# =============================================================================
+
+@dataclass(frozen=True)
+class EmbeddingConfig:
+    base_url: str = getattr(config, "OLLAMA_BASE_URL", "http://host.docker.internal:11434")
     model: str = "bge-m3:latest"
-    timeout: int = 60
+    timeout: int = 90
+    health_timeout: int = 5
     max_retries: int = 3
     retry_delay: float = 1.5
-    default_batch_size: int = 64          # Tăng batch size cho hiệu suất
-    embedding_dim: int = 1024             # Default cho BGE-M3
+    batch_size: int = 32
+    normalize: bool = True
 
 
-class EmbeddingConfig:
-    ollama = OllamaEmbeddingConfig()
+CFG = EmbeddingConfig()
 
 
-# ── Core Functions ───────────────────────────────────────────────────────────
+# =============================================================================
+# Text Processing
+# =============================================================================
 
-def _check_ollama_server(base_url: str) -> bool:
-    """Check if Ollama server is healthy."""
+def _clean_text(text: str, max_len: int = 2000) -> str:
+    """Làm sạch text trước khi embedding."""
+    if not text:
+        return ""
+    text = str(text).replace("\x00", " ")
+    text = " ".join(text.split())
+    return text[:max_len]
+
+
+def _normalize_tag(tag: str) -> str:
+    """Chuẩn hóa tag: ca_si_nam → ca si nam"""
+    if not tag:
+        return ""
+    tag = str(tag).strip().replace("_", " ").replace("-", " ")
+    return " ".join(tag.split())
+
+
+def _dedupe_preserve_order(items: List[str]) -> List[str]:
+    """Giữ thứ tự gốc, loại bỏ trùng lặp."""
+    seen = set()
+    result = []
+    for item in items:
+        item = str(item).strip()
+        if item and item.lower() not in seen:
+            seen.add(item.lower())
+            result.append(item)
+    return result
+
+
+# =============================================================================
+# Semantic Document Builder
+# =============================================================================
+
+def build_scene_semantic_document(
+    summary: str = "",
+    searchable_text: str = "",
+    tags: Optional[Dict[str, Any]] = None,
+    transcript_snippet: str = "",
+    extra_metadata: Optional[Dict[str, Any]] = None,
+) -> str:
+    """
+    Xây dựng document tối ưu cho embedding & semantic search.
+    Ưu tiên thứ tự: searchable_text > summary > tags > transcript.
+    """
+    tags = tags or {}
+    extra_metadata = extra_metadata or {}
+
+    parts: List[str] = []
+
+    if summary:
+        parts.append(f"Tóm tắt: {_clean_text(summary, 600)}")
+
+    if searchable_text:
+        parts.append(f"Nội dung chính: {_clean_text(searchable_text, 1100)}")
+
+    # Tags
+    scene_tags = _dedupe_preserve_order(
+        [_normalize_tag(t) for t in tags.get("scene_tags", [])]
+    )
+    if scene_tags:
+        parts.append(f"Thẻ: {', '.join(scene_tags)}")
+
+    if transcript_snippet:
+        parts.append(f"Lời thoại: {_clean_text(transcript_snippet, 800)}")
+
+    # Extra metadata (nếu có)
+    if extra_metadata.get("video_domain"):
+        parts.append(f"Ngữ cảnh: {extra_metadata['video_domain']}")
+
+    return "\n".join(parts) if parts else "Phân cảnh video"
+
+
+def build_query_document(query: str) -> str:
+    """Chuẩn hóa query từ người dùng/editor."""
+    query = _clean_text(query, 1200)
+    return f"Truy vấn tìm kiếm: {query}" if query else "tìm video"
+
+
+# =============================================================================
+# Ollama Embedding Client
+# =============================================================================
+
+def _is_ollama_healthy(base_url: str) -> bool:
     try:
-        response = requests.get(f"{base_url}/api/tags", timeout=3)
-        return response.status_code == 200
+        resp = requests.get(f"{base_url}/api/tags", timeout=CFG.health_timeout)
+        return resp.status_code == 200
     except Exception:
         return False
 
 
 def _get_ollama_embeddings(
-    texts: List[str], 
-    model: str,
-    base_url: str
+    texts: List[str], model: str, base_url: str
 ) -> Optional[np.ndarray]:
-    """Batch embedding call with retry logic."""
+    """Gọi API embedding của Ollama."""
     if not texts:
-        return np.array([], dtype=np.float32)
+        return np.zeros((0, 1024), dtype=np.float32)
 
-    for attempt in range(EmbeddingConfig.ollama.max_retries + 1):
-        try:
-            response = requests.post(
-                f"{base_url}/api/embed",
-                json={"model": model, "input": texts},
-                timeout=EmbeddingConfig.ollama.timeout
-            )
-            response.raise_for_status()
-            
-            data = response.json()
-            embeddings = data.get("embeddings")
+    try:
+        resp = requests.post(
+            f"{base_url}/api/embed",
+            json={"model": model, "input": texts},
+            timeout=CFG.timeout,
+        )
+        resp.raise_for_status()
+        data = resp.json()
 
-            if embeddings and len(embeddings) == len(texts):
-                emb_array = np.array(embeddings, dtype=np.float32)
-                
-                # Safety check for zero vectors
-                if np.allclose(emb_array, 0, atol=1e-6):
-                    logger.warning("Received near-zero embeddings from Ollama")
-                
-                return emb_array
-
-            logger.warning("Ollama returned incomplete embedding batch")
+        embeddings = data.get("embeddings")
+        if not embeddings:
             return None
 
-        except requests.exceptions.RequestException as e:
-            if attempt == EmbeddingConfig.ollama.max_retries:
-                logger.error(f"Ollama embedding failed after {attempt+1} attempts: {e}")
-                return None
-            time.sleep(EmbeddingConfig.ollama.retry_delay * (attempt + 1))
-            
+        arr = np.array(embeddings, dtype=np.float32)
+
+        if CFG.normalize:
+            norms = np.linalg.norm(arr, axis=1, keepdims=True)
+            arr = arr / np.maximum(norms, 1e-12)
+
+        return arr
+
+    except Exception as e:
+        logger.warning(f"Ollama embedding error: {e}")
+        return None
+
+
+def _get_embeddings_with_retry(
+    texts: List[str], model: str, base_url: str
+) -> np.ndarray:
+    """Thực hiện retry khi gọi embedding."""
+    for attempt in range(CFG.max_retries + 1):
+        try:
+            result = _get_ollama_embeddings(texts, model, base_url)
+            if result is not None:
+                return result
         except Exception as e:
-            logger.error(f"Unexpected error during embedding: {e}")
-            if attempt == EmbeddingConfig.ollama.max_retries:
-                return None
-            time.sleep(EmbeddingConfig.ollama.retry_delay)
+            if attempt == CFG.max_retries:
+                logger.error(f"Embedding failed after {CFG.max_retries} retries: {e}")
+                break
 
-    return None
+        time.sleep(CFG.retry_delay * (attempt + 1))
+
+    # Fallback: vector zero
+    return np.zeros((len(texts), 1024), dtype=np.float32)
 
 
-# ── Main Classes ─────────────────────────────────────────────────────────────
+# =============================================================================
+# Embedding Model
+# =============================================================================
 
 class EmbeddingModel:
-    """Production-ready Ollama Embedding Model."""
+    """Main class xử lý embedding sử dụng bge-m3."""
 
-    def __init__(self):
-        self.model_name = EmbeddingConfig.ollama.model
-        self.base_url = EmbeddingConfig.ollama.base_url
-        self.embedding_dim: Optional[int] = None
-        self.is_ready = False
-        self._initialize_model()
+    def __init__(self, model_name: Optional[str] = None, base_url: Optional[str] = None):
+        self.model_name = model_name or CFG.model
+        self.base_url = base_url or CFG.base_url
+        self.embedding_dim: int = 1024
+        self.is_ready: bool = False
 
-    def _initialize_model(self):
-        """Initialize and validate Ollama embedding model."""
+        self._initialize()
+
+    def _initialize(self) -> None:
         try:
-            if not _check_ollama_server(self.base_url):
-                logger.error(f" Ollama server is not running at {self.base_url}")
+            if not _is_ollama_healthy(self.base_url):
+                logger.error(f"Ollama server not reachable at {self.base_url}")
                 return
 
             log_model_loading(self.model_name, "loading")
 
-            # Verify model availability
-            resp = requests.get(f"{self.base_url}/api/tags", timeout=5)
-            available_models = [m["name"] for m in resp.json().get("models", [])]
-
-            if self.model_name not in available_models:
-                logger.error(f" Model '{self.model_name}' not found. Run: ollama pull {self.model_name}")
-                return
-
-            # Test embedding to get real dimension
-            test_emb = _get_ollama_embeddings(["Test initialization of embedding model"], 
-                                            self.model_name, self.base_url)
-            
-            if test_emb is not None and test_emb.shape[0] > 0:
+            # Test để lấy dimension thật
+            test_emb = _get_embeddings_with_retry(
+                ["Test initialization"], self.model_name, self.base_url
+            )
+            if test_emb.shape[0] > 0:
                 self.embedding_dim = test_emb.shape[1]
-                self.is_ready = True
-                log_model_loading(self.model_name, "loaded")
-                logger.info(f"[OK] Ollama Embedding initialized: {self.model_name} (dim={self.embedding_dim})")
-            else:
-                logger.error("Failed to get test embedding from Ollama")
+
+            self.is_ready = True
+            logger.info(
+                f"✅ EmbeddingModel ready: {self.model_name} "
+                f"(dim={self.embedding_dim}) @ {self.base_url}"
+            )
 
         except Exception as e:
-            log_exception(e, "EmbeddingModel._initialize_model")
+            log_exception(e, "EmbeddingModel._initialize")
+            self.is_ready = False
 
-    def encode(
-        self,
-        texts: Union[str, List[str]],
-        batch_size: int = None,
-        **kwargs
-    ) -> np.ndarray:
-        """Encode texts to embeddings with batching."""
+    def encode(self, texts: Union[str, List[str]], batch_size: Optional[int] = None) -> np.ndarray:
+        """Encode một hoặc nhiều text."""
         if isinstance(texts, str):
             texts = [texts]
 
-        if not self.is_ready:
-            logger.warning("Embedding model not ready. Returning zero vectors.")
-            dim = self.embedding_dim or EmbeddingConfig.ollama.embedding_dim
-            return np.zeros((len(texts), dim), dtype=np.float32)
+        texts = [_clean_text(t) for t in texts]
+        batch_size = batch_size or CFG.batch_size
 
-        batch_size = batch_size or EmbeddingConfig.ollama.default_batch_size
-        all_embeddings = []
+        if not texts or not self.is_ready:
+            return np.zeros((len(texts), self.embedding_dim), dtype=np.float32)
+
+        all_embeddings: List[np.ndarray] = []
 
         for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
-            batch_emb = _get_ollama_embeddings(batch, self.model_name, self.base_url)
+            batch = texts[i : i + batch_size]
+            emb = _get_embeddings_with_retry(batch, self.model_name, self.base_url)
+            all_embeddings.append(emb)
 
-            if batch_emb is not None:
-                all_embeddings.append(batch_emb)
-            else:
-                # Fallback
-                dim = self.embedding_dim or EmbeddingConfig.ollama.embedding_dim
-                zero_batch = np.zeros((len(batch), dim), dtype=np.float32)
-                all_embeddings.append(zero_batch)
-                logger.warning(f"Embedding batch failed at index {i}, using zero vectors")
+        return np.vstack(all_embeddings)
 
-        if all_embeddings:
-            return np.vstack(all_embeddings)
-        
-        dim = self.embedding_dim or EmbeddingConfig.ollama.embedding_dim
-        return np.zeros((len(texts), dim), dtype=np.float32)
+    def encode_query(self, query: str) -> np.ndarray:
+        """Embed truy vấn từ editor."""
+        doc = build_query_document(query)
+        return self.encode(doc)[0]
 
-    def get_embedding_dimension(self) -> int:
-        return self.embedding_dim or EmbeddingConfig.ollama.embedding_dim
-
-
-class RerankerModel:
-    """Dummy Reranker - Production safe fallback."""
-
-    def __init__(self):
-        logger.debug("Dummy Reranker initialized (Ollama-only mode)")
-
-    def rerank(
+    def encode_scene_document(
         self,
-        query: str,
-        documents: List[str],
-        top_k: int = None,
-    ) -> List[Dict[str, Any]]:
-        if not documents:
-            return []
+        summary: str = "",
+        searchable_text: str = "",
+        tags: Optional[Dict] = None,
+        transcript_snippet: str = "",
+        extra_metadata: Optional[Dict] = None,
+    ) -> np.ndarray:
+        """Embed một scene document."""
+        doc = build_scene_semantic_document(
+            summary=summary,
+            searchable_text=searchable_text,
+            tags=tags,
+            transcript_snippet=transcript_snippet,
+            extra_metadata=extra_metadata,
+        )
+        return self.encode(doc)[0]
 
-        results = [
-            {"index": i, "text": doc, "score": 1.0 - (i * 0.001)}
-            for i, doc in enumerate(documents)
-        ]
+    def unload(self) -> None:
+        logger.info(f"EmbeddingModel ({self.model_name}) unloaded")
+        gc.collect()
 
-        if top_k:
-            results = results[:top_k]
 
-        return results
-
+# =============================================================================
+# Manager & Factory
+# =============================================================================
 
 class EmbeddingManager:
-    """Central manager for embedding models."""
+    """Facade quản lý embedding."""
 
     def __init__(self):
-        self.embedding_model: Optional[EmbeddingModel] = None
+        self._model: Optional[EmbeddingModel] = None
 
-    def load_embedding_model(self):
-        if self.embedding_model is None:
-            self.embedding_model = EmbeddingModel()
-
-    def load_all(self):
-        self.load_embedding_model()
+    def get_model(self) -> EmbeddingModel:
+        if self._model is None:
+            self._model = EmbeddingModel()
+        return self._model
 
     def encode(self, texts: Union[str, List[str]]) -> np.ndarray:
-        if self.embedding_model is None:
-            self.load_embedding_model()
-        return self.embedding_model.encode(texts)
+        return self.get_model().encode(texts)
 
-    def rerank(self, query: str, documents: List[str], top_k: int = None) -> List[Dict[str, Any]]:
-        return RerankerModel().rerank(query, documents, top_k)
+    def encode_query(self, query: str) -> np.ndarray:
+        return self.get_model().encode_query(query)
 
-    def unload_all(self):
-        """Clean up resources."""
-        self.embedding_model = None
+    def encode_scene_document(self, **kwargs) -> np.ndarray:
+        return self.get_model().encode_scene_document(**kwargs)
+
+    def unload(self) -> None:
+        if self._model:
+            self._model.unload()
+        self._model = None
         gc.collect()
-        logger.info("Embedding context cleared (Ollama mode)")
 
 
-# Factory functions
+# =============================================================================
+# Factory
+# =============================================================================
+
 def create_embedding_model() -> EmbeddingModel:
     return EmbeddingModel()
 
-def create_reranker_model() -> RerankerModel:
-    return RerankerModel()
+
+def create_embedding_manager() -> EmbeddingManager:
+    return EmbeddingManager()

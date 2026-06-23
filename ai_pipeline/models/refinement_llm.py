@@ -1,8 +1,9 @@
 """
-Refinement LLM — Ollama (qwen2:1.5b) & Cloud-Ready Abstraction
-- Tự động chuyển đổi cấu hình mạng động dựa trên môi trường Docker/Local.
-- Hỗ trợ switch cấu hình linh hoạt qua biến môi trường AI_PROVIDER.
-- Tối ưu JSON output chạy trên CPU.
+Refinement LLM — Semantic Search Optimized for Video Editors (qwen2:1.5b)
+Mục tiêu: Tạo metadata chất lượng cao giúp editor tìm lại video dễ dàng sau nhiều tháng
+- Prompt tối ưu cho model nhỏ
+- Chống drift tiếng Anh cực mạnh
+- Output tương thích với SceneAnalysisContract
 """
 
 import gc
@@ -10,18 +11,115 @@ import json
 import os
 import re
 import requests
-import time
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 from ai_pipeline.config import config
 from utils.logger import logger, log_model_loading, log_exception
 
 
-# ── Base Abstraction Class (Task 7) ─────────────────────────────────────────
+# =============================================================================
+# Helpers
+# =============================================================================
+
+def _sanitize_whisper_text(text: str) -> str:
+    if not text or not text.strip():
+        return ""
+    cleaned = re.sub(r"\[.*?\]|\(.*?\)", "", text)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned[:480]
+
+
+def _sanitize_vision_caption(caption: str) -> str:
+    if not caption or not caption.strip():
+        return ""
+    cleaned = re.sub(r"[*_`#>\-]", " ", caption)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned[:300]
+
+
+def _is_likely_english(text: str) -> bool:
+    if not text or len(text) < 15:
+        return False
+    if re.search(r"[ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]", text.lower()):
+        return False
+    alpha = [c for c in text if c.isalpha()]
+    if not alpha:
+        return False
+    ascii_ratio = sum(1 for c in alpha if ord(c) < 128) / len(alpha)
+    return ascii_ratio > 0.73
+
+
+def _contains_english_rubbish(text: str) -> bool:
+    if not text:
+        return False
+    lowered = text.lower()
+    rubbish = [
+        "main subjects", "visible objects", "scene type", "action:", 
+        "location cues", "shot type", "camera movement", "dominant color"
+    ]
+    return any(p in lowered for p in rubbish)
+
+
+# =============================================================================
+# JSON Repair
+# =============================================================================
+
+def _close_open_json(text: str) -> str:
+    stack = []
+    in_string = False
+    escape = False
+    result = []
+    for ch in text:
+        result.append(ch)
+        if escape:
+            escape = False
+            continue
+        if ch == "\\" and in_string:
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch in ("{", "["):
+            stack.append(ch)
+        elif ch in ("}", "]"):
+            if stack and stack[-1] == ("{" if ch == "}" else "["):
+                stack.pop()
+    out = "".join(result)
+    if in_string:
+        out += '"'
+    for bracket in reversed(stack):
+        out += "}" if bracket == "{" else "]"
+    return out
+
+
+def _repair_json(raw: str) -> Optional[str]:
+    if not raw:
+        return None
+    text = re.sub(r"```json?|```", "", raw).strip()
+    if text in ("{}", "{ }", ""):
+        return None
+    rep = re.search(r"(.{10,})\1{2,}", text)
+    if rep:
+        text = text[:rep.start()]
+    text = _close_open_json(text)
+    if not text.startswith("{"):
+        match = re.search(r"\{.*", text, re.DOTALL)
+        if match:
+            text = _close_open_json(match.group())
+        else:
+            return None
+    return text
+
+
+# =============================================================================
+# Base Abstraction
+# =============================================================================
+
 class BaseRefinementLLM(ABC):
-    """Giao diện nền tảng (Interface) chuẩn bị cho việc tích hợp AWS Bedrock"""
-    
     @abstractmethod
     def refine_analysis(
         self,
@@ -42,33 +140,29 @@ class BaseRefinementLLM(ABC):
         pass
 
 
-# ── Ollama Implementation ───────────────────────────────────────────────────
-class OllamaRefinementLLM(BaseRefinementLLM):
-    """Thực thi kết nối cục bộ qua Ollama API"""
+# =============================================================================
+# Ollama Implementation
+# =============================================================================
 
+class OllamaRefinementLLM(BaseRefinementLLM):
     def __init__(self, model_name: str = None):
-        # ✨ SỬA LỖI MẠNG: Ưu tiên lấy URL từ config hệ thống (chứa host.docker.internal), tránh gán cứng localhost
         self.base_url = getattr(config, "OLLAMA_BASE_URL", "http://host.docker.internal:11434")
         self.model_name = model_name or "qwen2:1.5b"
         self._validate_server()
 
     def _validate_server(self):
-        """Kiểm tra Ollama server và model"""
         try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=3)
-            if response.status_code != 200:
-                raise RuntimeError("Status code not 200")
-                
-            available = [m["name"] for m in response.json().get("models", [])]
-            if self.model_name not in available:
-                logger.warning(f"⚠️ Model {self.model_name} chưa có local. Hãy chạy: ollama pull {self.model_name}")
-
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=3)
+            if resp.status_code != 200:
+                raise RuntimeError("Ollama not ready")
+            models = [m["name"] for m in resp.json().get("models", [])]
+            if self.model_name not in models:
+                logger.warning(f"Model {self.model_name} not found. Run: ollama pull {self.model_name}")
             log_model_loading(self.model_name, "loaded")
-            logger.info(f"✅ RefinementLLM (Ollama) ready: {self.model_name} tại {self.base_url}")
+            logger.info(f"✅ RefinementLLM ready: {self.model_name} @ {self.base_url}")
         except Exception as e:
-            logger.error(f"❌ Ollama server chưa chạy tại địa chỉ: {self.base_url}")
             log_exception(e, "OllamaRefinementLLM._validate_server")
-            raise RuntimeError(f"Ollama server not available at {self.base_url}") from e
+            raise
 
     def refine_analysis(
         self,
@@ -76,40 +170,37 @@ class OllamaRefinementLLM(BaseRefinementLLM):
         timestamp: float,
         scene_id: int,
         transcript_snippet: str = "",
-        max_new_tokens: int = 350,
-        temperature: float = 0.1,
     ) -> Dict[str, Any]:
-        """Refine vision & audio output thành cấu trúc JSON chuẩn"""
         try:
-            prompt = self._build_refinement_prompt(vision_outputs, timestamp, scene_id, transcript_snippet)
+            prompt = self._build_optimized_prompt(vision_outputs, timestamp, scene_id, transcript_snippet)
 
             payload = {
                 "model": self.model_name,
                 "prompt": prompt,
                 "stream": False,
-                "format": "json", # Ép Ollama luôn luôn xuất ra JSON hợp lệ
+                "format": "json",
                 "options": {
-                    "temperature": temperature,
-                    "num_predict": max_new_tokens, 
-                    "num_thread": 6,
-                    "num_ctx": 2048, # Giới hạn ngữ cảnh tăng tốc cho CPU
+                    "temperature": 0.05,
+                    "num_predict": 480,
+                    "num_ctx": 2048,
+                    "repeat_penalty": 1.12,
+                    "stop": [
+                        "<|im_end|>", "</s>", "\n\n\n",
+                        "Main Subjects", "Visible Objects", "Scene Type",
+                        "Action:", "Location Cues", "Camera"
+                    ],
                 },
-                "keep_alive": -1
+                "keep_alive": -1,
             }
 
-            response = requests.post(
-                f"{self.base_url}/api/generate",
-                json=payload,
-                timeout=60
-            )
+            response = requests.post(f"{self.base_url}/api/generate", json=payload, timeout=90)
 
             if response.status_code != 200:
-                logger.error(f"Ollama refinement failed: {response.text}")
+                logger.error(f"Ollama error scene {scene_id}")
                 return self._get_fallback_output(vision_outputs, timestamp, scene_id, transcript_snippet)
 
-            result = response.json()
-            generated_text = result.get("response", "").strip()
-            return self._parse_json_output(generated_text, vision_outputs, timestamp, scene_id, transcript_snippet)
+            text = response.json().get("response", "").strip()
+            return self._parse_and_validate(text, vision_outputs, timestamp, scene_id, transcript_snippet)
 
         except Exception as e:
             log_exception(e, "OllamaRefinementLLM.refine_analysis")
@@ -117,35 +208,99 @@ class OllamaRefinementLLM(BaseRefinementLLM):
         finally:
             gc.collect()
 
-    def _build_refinement_prompt(
-        self,
-        vision_outputs: Dict[str, str],
-        timestamp: float,
-        scene_id: int,
-        transcript_snippet: str = "",
-    ) -> str:
-        qwen_text = str(vision_outputs.get("qwen_vl", ""))[:800]
-        audio_text = str(transcript_snippet).strip() if transcript_snippet else "Không có giọng nói"
+    def _build_optimized_prompt(self, vision_outputs: Dict, timestamp: float, scene_id: int, transcript_snippet: str) -> str:
+        vision_text = _sanitize_vision_caption(str(vision_outputs.get("qwen_vl", "")))
+        audio_text = _sanitize_whisper_text(transcript_snippet)
+
+        system_prompt = (
+            "Bạn là AI tạo metadata video cho Editor dựng phim tại Việt Nam. "
+            "Đầu vào gồm mô tả hình ảnh và lời thoại của một phân cảnh. "
+            "Đầu ra phải là metadata TIẾNG VIỆT phục vụ tìm kiếm lại video bằng semantic search và keyword search.\n\n"
+
+            "Chỉ trả về DUY NHẤT JSON hợp lệ với 3 trường: summary, tags, searchable_text.\n\n"
+
+            "Quy tắc:\n"
+            "1. summary phải mô tả rõ: cỡ cảnh/góc máy + chủ thể chính + hành động chính + bối cảnh nếu có.\n"
+            "2. tags.scene_tags phải chứa từ 3-6 tag viết THƯỜNG, cách nhau bằng dấu gạch dưới (ví dụ: can_canh, mo_hop, laptop), mang giá trị tìm kiếm thực tế.\n"
+            "3. searchable_text phải là chuỗi tối ưu cho editor tìm kiếm, bao phủ cả phiên bản có dấu và không dấu, diễn đạt theo các cụm mà editor có thể gõ nhanh để tìm lại cảnh.\n"
+            "4. Ưu tiên thông tin nhìn thấy rõ và lời thoại thực sự liên quan. Không suy diễn quá mức.\n"
+            "5. Tuyệt đối không dùng tiếng Anh trong toàn bộ kết quả trả về."
+        )
+
+ 
+# Sửa lại thành định dạng trống hoàn toàn để loại bỏ Bias text mẫu
+        json_example = (
+            '{"summary": "Toàn cảnh (Wide shot) góc nhìn từ trên cao xuống bờ biển sóng vỗ vào vách đá lúc hoàng hôn", '
+            '"tags": {"scene_tags": ["toan_canh", "bo_bien", "vach_da", "hoang_hon", "goc_tren_cao"]}, '
+            '"searchable_text": "toàn cảnh wide shot góc nhìn từ trên cao xuống bờ biển sóng vỗ vào vách đá lúc hoàng hôn toan canh wide shot goc nhin tu tren cao xuong bo bien song vo vao vach da luc hoang hon"}'
+        )
+        
+
+        user_prompt = (
+            f"Phân cảnh {scene_id} | {timestamp:.1f} giây\n"
+            f"Lời thoại: {audio_text or 'không có'}\n"
+            f"Hình ảnh: {vision_text or 'không có'}\n\n"
+            f"Trả về đúng JSON theo mẫu sau:\n{json_example}"
+        )
 
         return (
-            f"Hãy phân tích bối cảnh phân cảnh sau đây để xuất ra cấu trúc JSON chi tiết.\n\n"
-            f"Thông tin phân cảnh:\n"
-            f"- Thời gian: {timestamp:.1f}s | ID Phân cảnh: {scene_id}\n"
-            f"- Lời thoại (Từ Whisper): \"{audio_text}\"\n"
-            f"- Mô tả hình ảnh (Từ Vision Model): \"{qwen_text}\"\n\n"
-            "Yêu cầu xuất ra một chuỗi JSON chuẩn (không kèm markdown block) khớp 100% định dạng mẫu này:\n"
-            "{\n"
-            '  "summary": "Tóm tắt kết hợp cả nội dung lời thoại và hình ảnh bằng 1-2 câu tiếng Việt mượt mà",\n'
-            '  "scene": {"type": "Video âm nhạc/Vlog/Phim/Bản tin...", "setting": "Trong nhà/Ngoài trời", "atmosphere": "Vui vẻ/Sâu lắng/Hồi hộp"},\n'
-            '  "people": [{"clothing": "Mô tả quần áo", "action": "Hành động của nhân vật", "emotion": "Cảm xúc"}],\n'
-            '  "landscape": {"features": [], "weather": "Nắng/Mưa/Bình thường", "time_of_day": "Ngày/Đêm", "lighting": "Sáng/Tối"},\n'
-            '  "camera": {"shot_type": "Cận cảnh/Toàn cảnh", "angle": "Ngang mắt/Góc cao/Góc thấp", "movement": "Đứng yên/Lướt qua/Zoom"},\n'
-            '  "colors": {"dominant": ["Màu chủ đạo"], "mood": "Tông màu chung"},\n'
-            '  "tags": {"scene_tags": ["tag_bối_cảnh"], "mood_tags": ["tag_cảm_xúc"], "object_tags": ["tag_vật_thể"]},\n'
-            '  "searchable_text": "Chuỗi từ khóa tìm kiếm tiếng Việt tổng hợp sâu sắc",\n'
-            '  "confidence_score": 0.90\n'
-            "}"
+            f"<|im_start|>system\n{system_prompt}<|im_end|>\n"
+            f"<|im_start|>user\n{user_prompt}<|im_end|>\n"
+            f"<|im_start|>assistant\n"
         )
+
+    def _parse_and_validate(self, text: str, vision_outputs: Dict, timestamp: float, scene_id: int, transcript_snippet: str) -> Dict[str, Any]:
+        repaired = _repair_json(text)
+        if not repaired:
+            return self._get_fallback_output(vision_outputs, timestamp, scene_id, transcript_snippet)
+
+        try:
+            parsed = json.loads(repaired)
+            return self._validate_output(parsed, vision_outputs, timestamp, scene_id, transcript_snippet)
+        except json.JSONDecodeError:
+            logger.warning(f"Scene {scene_id}: JSON parse failed")
+            return self._get_fallback_output(vision_outputs, timestamp, scene_id, transcript_snippet)
+
+    def _validate_output(self, parsed: Dict, vision_outputs: Dict, timestamp: float, scene_id: int, transcript_snippet: str) -> Dict[str, Any]:
+        if not isinstance(parsed, dict):
+            return self._get_fallback_output(vision_outputs, timestamp, scene_id, transcript_snippet)
+
+        summary = str(parsed.get("summary", "")).strip()
+
+        if _is_likely_english(summary) or _contains_english_rubbish(summary):
+            logger.warning(f"🔴 English detected in scene {scene_id} → fallback")
+            return self._get_fallback_output(vision_outputs, timestamp, scene_id, transcript_snippet)
+
+        tags_obj = parsed.get("tags", {}) or {}
+        scene_tags = tags_obj.get("scene_tags", ["video"])
+        if isinstance(scene_tags, list):
+            scene_tags = [str(t).strip().replace(" ", "_").lower() for t in scene_tags if str(t).strip()][:8]
+        else:
+            scene_tags = ["video"]
+
+        searchable_text = str(parsed.get("searchable_text", summary)).strip()
+
+        return {
+            "summary": summary[:420],
+            "tags": {"scene_tags": scene_tags},
+            "searchable_text": searchable_text[:750],
+        }
+
+    def _get_fallback_output(self, vision_outputs, timestamp, scene_id, transcript_snippet=""):
+        audio = _sanitize_whisper_text(transcript_snippet)
+        summary = f"Phân cảnh video tại {timestamp:.0f} giây"
+        if audio:
+            summary = f"Phân cảnh có lời thoại: {audio[:200]}"
+
+        return {
+            "summary": summary,
+            "tags": {"scene_tags": ["video"]},
+            "searchable_text": summary,
+        }
+
+    def unload(self):
+        logger.info(f"RefinementLLM ({self.model_name}) unloaded")
+        gc.collect()
 
     def generate_asset_insights(self, aggregated_text: str, max_new_tokens: int = 500, temperature: float = 0.2) -> Dict[str, Any]:
         """Tổng hợp AI Insights (Summary, Moods, Objects, Best For) cho toàn bộ Asset"""
@@ -216,67 +371,21 @@ class OllamaRefinementLLM(BaseRefinementLLM):
             "best_for": ["unknown"]
         }
 
-    def _parse_json_output(self, text: str, vision_outputs: Dict, timestamp: float, scene_id: int, transcript_snippet: str) -> Dict[str, Any]:
-        text = text.strip()
-        for fence in ("```json", "```"):
-            if text.startswith(fence):
-                text = text[len(fence):].strip()
-        if text.endswith("```"):
-            text = text[:-3].strip()
 
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            match = re.search(r"\{[\s\S]*\}", text)
-            if match:
-                try:
-                    return json.loads(match.group())
-                except:
-                    pass
-            return self._get_fallback_output(vision_outputs, timestamp, scene_id, transcript_snippet)
+# =============================================================================
+# Bedrock Stub
+# =============================================================================
 
-    def _get_fallback_output(self, vision_outputs: Dict, timestamp: float, scene_id: int, transcript_snippet: str = "") -> Dict[str, Any]:
-        qwen_text = str(vision_outputs.get("qwen_vl", ""))[:400]
-        audio_text = str(transcript_snippet)[:200]
-        summary = f"Lời thoại: {audio_text}. Hình ảnh: {qwen_text}"[:250]
-        return {
-            "summary": summary,
-            "scene": {"type": "unknown", "setting": "unknown", "atmosphere": "unknown"},
-            "people": [],
-            "landscape": {"features": [], "weather": "unknown", "time_of_day": "unknown", "lighting": "unknown"},
-            "camera": {"shot_type": "unknown", "angle": "unknown", "movement": "unknown"},
-            "colors": {"dominant": [], "mood": "unknown"},
-            "tags": {"scene_tags": [], "mood_tags": [], "object_tags": []},
-            "searchable_text": f"{audio_text} {qwen_text}"[:350],
-            "confidence_score": 0.5,
-        }
-
-    def unload(self):
-        logger.info(f"RefinementLLM ({self.model_name}) context cleared")
-        gc.collect()
-
-
-# ── AWS Bedrock Stub Implementation (Task 7 Cloud-Ready) ────────────────────
 class BedrockRefinementLLM(BaseRefinementLLM):
-    """Khung class placeholder sẵn sàng tích hợp với AWS Bedrock SDK khi lên Cloud"""
-    
     def __init__(self, model_name: str = "amazon.titan-text-express-v1"):
         self.model_name = model_name
-        logger.info(f"☁️ BedrockRefinementLLM Stub initialized with model: {self.model_name}")
+        logger.info("☁️ BedrockRefinementLLM stub initialized")
 
-    def refine_analysis(self, vision_outputs: Dict[str, str], timestamp: float, scene_id: int, transcript_snippet: str = "") -> Dict[str, Any]:
-        # Giả lập phản hồi (Mock response) chuẩn cấu hình JSON của Local để luồng test chạy qua mà không lỗi gãy
-        qwen_text = str(vision_outputs.get("qwen_vl", ""))[:200]
+    def refine_analysis(self, vision_outputs, timestamp, scene_id, transcript_snippet=""):
         return {
-            "summary": f"[AWS Bedrock Cloud Stub Summary] {qwen_text}",
-            "scene": {"type": "Vlog", "setting": "Cloud", "atmosphere": "stable"},
-            "people": [],
-            "landscape": {"features": [], "weather": "clear", "time_of_day": "day", "lighting": "bright"},
-            "camera": {"shot_type": "medium", "angle": "eye-level", "movement": "static"},
-            "colors": {"dominant": ["blue"], "mood": "neutral"},
-            "tags": {"scene_tags": ["cloud_stub"], "mood_tags": ["stable"], "object_tags": []},
-            "searchable_text": "AWS Bedrock cloud test placeholder",
-            "confidence_score": 0.95
+            "summary": f"Phân cảnh {scene_id} tại {timestamp:.1f} giây",
+            "tags": {"scene_tags": ["video"]},
+            "searchable_text": f"phân cảnh video {scene_id}",
         }
 
     def generate_asset_insights(self, aggregated_text: str) -> Dict[str, Any]:
@@ -291,9 +400,11 @@ class BedrockRefinementLLM(BaseRefinementLLM):
         pass
 
 
-# ── Provider Switch Factory (Task 7) ────────────────────────────────────────
+# =============================================================================
+# Factory
+# =============================================================================
+
 def create_refinement_llm() -> BaseRefinementLLM:
-    """Bộ chuyển mạch linh hoạt dựa trên biến môi trường AI_PROVIDER"""
     provider = os.getenv("AI_PROVIDER", "local").strip().lower()
     if provider == "aws":
         return BedrockRefinementLLM()

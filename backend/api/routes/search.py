@@ -30,7 +30,14 @@ async def search_media(
         # Build filters
         filters = None
         if request.filters:
-            filters = request.filters.model_dump(exclude_unset=True)
+            dumped = request.filters.model_dump(exclude_unset=True, exclude_none=True)
+            filters = {}
+            if "asset_id" in dumped:
+                filters["asset_id"] = dumped["asset_id"]
+            # Chroma and PGVector currently only fully support asset_id in our implementations
+            
+            if not filters:
+                filters = None
             
         # Search Vector Store (handle sync vs async and parameter names difference)
         if __import__("inspect").iscoroutinefunction(vector_store.search):

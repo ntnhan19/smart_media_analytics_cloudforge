@@ -135,6 +135,9 @@ ai_pipeline/database/*
 data/media/*
 !data/media/.gitkeep
 
+backend/data/*
+!backend/data/.gitkeep
+
 # ChromaDB vector store
 data/chromadb/*
 !data/chromadb/.gitkeep
@@ -142,6 +145,7 @@ data/chromadb/*
 # Whisper model cache
 data/whisper_cache/*
 !data/whisper_cache/.gitkeep
+backend/models/whisper/
 
 # Storage directories
 storage/uploads/*

@@ -13,4 +13,5 @@ class IngestJob(Base):
     assets_processed = Column(Integer, default=0)
     progress = Column(Float, default=0.0)
     error_message = Column(Text)
+    asset_id = Column(UUID(as_uuid=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
