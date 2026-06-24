@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useJobs } from '../../contexts/JobContext';
 import { useIngestWebSocket } from '../../hooks/useIngestWebSocket';
-import { retryJob } from '../../services/api';
+import { retryJob, getAsset } from '../../services/api';
 import { X, RotateCcw, Pause, Image as ImageIcon } from 'lucide-react';
 
 const getStepName = (step) => {
@@ -20,6 +21,24 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
   useIngestWebSocket(job.job_id);
   const [isRetrying, setIsRetrying] = useState(false);
   const [displayProgress, setDisplayProgress] = useState(0);
+  const queryClient = useQueryClient();
+  const { updateJob } = useJobs();
+
+  // Fetch metadata when asset_id is available and step changes
+  useEffect(() => {
+    if (job.asset_id && (!job.duration || !job.resolution)) {
+      getAsset(job.asset_id).then(data => {
+        if (data && (data.duration || data.resolution)) {
+          updateJob({
+            job_id: job.job_id,
+            duration: data.duration,
+            resolution: data.resolution,
+            file_size: data.file_size || job.file_size
+          });
+        }
+      }).catch(err => console.error("Failed to fetch asset metadata", err));
+    }
+  }, [job.asset_id, job.current_step, job.status, job.duration, job.resolution, job.job_id, updateJob]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -36,15 +55,13 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
     return () => clearInterval(interval);
   }, [job.progress, job.status]);
 
-  // Tự động xóa job completed sau 3 giây (Quy chế dọn dẹp DoD)
+  // User manual clear or auto-clear on new job
   useEffect(() => {
     if (job.status === 'completed') {
-      const timer = setTimeout(() => {
-        onRemove(job.job_id);
-      }, 3000);
-      return () => clearTimeout(timer);
+      // Cập nhật lại list ở Dashboard
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
     }
-  }, [job.status, job.job_id, onRemove]);
+  }, [job.status, job.job_id, queryClient]);
 
   const handleRetry = async () => {
     setIsRetrying(true);
@@ -62,14 +79,14 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
   const stepText = isFailed ? "Failed" : (isCompleted ? "Completed" : getStepName(job.current_step));
   const progressColor = isFailed ? '#EF4444' : (isCompleted ? '#4ADE80' : '#7B5CF5');
 
-  const displayTitle = `IMG_${job.job_id.substring(0,6).toUpperCase()}.mp4`;
+  const displayTitle = job.file_name ?? `Job #${job.job_id.substring(0,6).toUpperCase()}`;
 
   return (
     <div 
       onClick={onClick}
       className={`w-full ${isFailed ? 'bg-[#EF4444]/10 border-[#EF4444]' : (isSelected ? 'bg-[#7B5CF5]/10 border-[#7B5CF5]' : 'bg-[#16132A] border-[#2D2844] hover:bg-[#7B5CF5]/5')} border rounded-[8px] flex p-[12px] transition-colors relative cursor-pointer`}
     >
-      {isFailed && (
+      {(isFailed || isCompleted) && (
         <button 
           onClick={(e) => { e.stopPropagation(); onRemove(job.job_id); }} 
           className="absolute top-[4px] right-[4px] text-gray-400 hover:text-white bg-[#1A162B] rounded-full p-[2px]"
@@ -99,10 +116,14 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
         {/* Row 2: Subtitle & ETA */}
         <div className="flex justify-between items-center mb-[8px]">
           <span className="font-inter font-normal text-[10px] text-gray-400 truncate max-w-[180px]">
-            215MB - 00:01:09 - 1920x1080
+            {[
+              job.file_size ? `${(job.file_size / (1024*1024)).toFixed(1)}MB` : null, 
+              job.duration ? `${Math.floor(job.duration)}s` : null, 
+              job.resolution
+            ].filter(Boolean).join(' - ') || 'Loading metadata...'}
           </span>
           <span className="font-inter font-normal text-[10px] text-gray-400">
-            {isCompleted ? '' : (isFailed ? '' : `ETA: 00:40`)}
+            {/* ETA hidden for now */}
           </span>
         </div>
 

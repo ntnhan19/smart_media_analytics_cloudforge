@@ -21,13 +21,20 @@ export const JobProvider = ({ children }) => {
 
   const addJob = useCallback((job) => {
     setActiveJobs(prev => {
-      // Kiểm tra xem job đã tồn tại chưa
-      const exists = prev.find(j => j.job_id === job.job_id);
-      if (exists) return prev;
+      // Clear completed jobs when a new job starts
+      const nonCompleted = prev.filter(j => j.status !== 'completed');
 
-      return [...prev, {
+      // Kiểm tra xem job đã tồn tại chưa
+      const exists = nonCompleted.find(j => j.job_id === job.job_id);
+      if (exists) return nonCompleted;
+
+      return [...nonCompleted, {
         job_id: job.job_id,
         asset_id: job.asset_id || null,
+        file_name: job.file_name || null,
+        file_size: job.file_size || null,
+        duration: job.duration || null,
+        resolution: job.resolution || null,
         status: job.status || 'queued',
         progress: job.progress || 0,
         current_step: job.current_step || null,
@@ -62,8 +69,12 @@ export const JobProvider = ({ children }) => {
     setActiveJobs(prev => prev.filter(j => j.status !== 'completed' && j.status !== 'failed'));
   }, []);
 
+  const clearAllJobs = useCallback(() => {
+    setActiveJobs([]);
+  }, []);
+
   return (
-    <JobContext.Provider value={{ activeJobs, addJob, updateJob, removeJob, clearCompletedJobs, clearAllFinishedJobs }}>
+    <JobContext.Provider value={{ activeJobs, addJob, updateJob, removeJob, clearCompletedJobs, clearAllFinishedJobs, clearAllJobs }}>
       {children}
     </JobContext.Provider>
   );

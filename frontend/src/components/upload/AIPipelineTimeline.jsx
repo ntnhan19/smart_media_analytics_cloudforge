@@ -3,14 +3,14 @@ import { useJobs } from '../../contexts/JobContext';
 import { CheckCircle2, Loader2, Clock } from 'lucide-react';
 
 const PIPELINE_STAGES = [
-  { id: 'upload', name: 'Upload', desc: 'Uploading files to local system', step_keys: ['uploading_to_s3'] },
-  { id: 'metadata', name: 'Extract Metadata', desc: 'Reading metadata and file information', step_keys: [] }, // fake instant step
+  { id: 'upload', name: 'Upload', desc: 'Uploading files to local system', step_keys: ['uploading_file', 'uploading_to_s3'] },
+  { id: 'metadata', name: 'Extract Metadata', desc: 'Reading metadata and file information', step_keys: ['metadata'] }, 
   { id: 'scene', name: 'Scene Detection', desc: 'Detecting scene changes in videos', step_keys: ['scene_detection'] },
-  { id: 'thumbnail', name: 'Thumbnail Generation', desc: 'Generating thumbnails for each scene', step_keys: [] }, // fake instant step
-  { id: 'audio', name: 'Audio Transcription (Whisper)', desc: 'Transcribing speech to text', step_keys: ['audio_transcription'] },
-  { id: 'caption', name: 'AI Caption Generation (LlaVa)', desc: 'Generating captions for each scene', step_keys: ['frame_analysis'] },
+  { id: 'thumbnail', name: 'Proxy & Thumbnail', desc: 'Generating thumbnails for each scene', step_keys: ['proxy'] }, 
+  { id: 'audio', name: 'Audio Transcription (Whisper)', desc: 'Transcribing speech to text', step_keys: ['transcription'] },
+  { id: 'caption', name: 'AI Caption Generation (LlaVa)', desc: 'Generating captions for each scene', step_keys: ['vision_caption', 'keyframe_extraction', 'keyframe_upload'] },
   { id: 'embedding', name: 'Embedding Generation', desc: 'Generating vectors embedding', step_keys: ['embedding'] },
-  { id: 'index', name: 'Search Indexing', desc: 'Indexing to vector database', step_keys: [] } // fake instant step
+  { id: 'index', name: 'Search Indexing', desc: 'Indexing to vector database', step_keys: ['persisting_results'] } 
 ];
 
 // Helper to determine stage progress for a single job
@@ -23,21 +23,37 @@ const getJobStageProgress = (job) => {
 
   const step = job.current_step;
   
-  if (step === 'uploading_to_s3') {
+  if (['uploading_file', 'uploading_to_s3'].includes(step)) {
     targets.upload = job.progress || 10;
+  } else if (step === 'metadata') {
+    targets.upload = 100;
+    targets.metadata = job.progress || 10;
   } else if (step === 'scene_detection') {
     targets.upload = 100;
     targets.metadata = 100;
     targets.scene = job.progress || 10;
-  } else if (step === 'audio_transcription') {
+  } else if (step === 'proxy') {
+    targets.upload = 100;
+    targets.metadata = 100;
+    targets.scene = 100;
+    targets.thumbnail = job.progress || 10;
+  } else if (step === 'transcription') {
     targets.upload = 100; targets.metadata = 100; targets.scene = 100; targets.thumbnail = 100;
     targets.audio = job.progress || 10;
-  } else if (step === 'frame_analysis') {
+  } else if (['vision_caption', 'keyframe_extraction', 'keyframe_upload'].includes(step)) {
     targets.upload = 100; targets.metadata = 100; targets.scene = 100; targets.thumbnail = 100; targets.audio = 100;
     targets.caption = job.progress || 10;
   } else if (step === 'embedding') {
     targets.upload = 100; targets.metadata = 100; targets.scene = 100; targets.thumbnail = 100; targets.audio = 100; targets.caption = 100;
     targets.embedding = job.progress || 10;
+  } else if (step === 'persisting_results') {
+    targets.upload = 100; targets.metadata = 100; targets.scene = 100; targets.thumbnail = 100; targets.audio = 100; targets.caption = 100; targets.embedding = 100;
+    targets.index = job.progress || 10;
+  }
+
+  // Handle fallback for unknown steps early in the pipeline
+  if (step === 'started' || step === 'fetching_data') {
+    targets.upload = job.progress || 5;
   }
 
   return targets;
@@ -45,6 +61,7 @@ const getJobStageProgress = (job) => {
 
 export default function AIPipelineTimeline() {
   const { activeJobs } = useJobs();
+  const totalSizeMB = (activeJobs || []).reduce((sum, j) => sum + (j.file_size || 0), 0) / (1024 * 1024);
   const [smoothStats, setSmoothStats] = useState({
     upload: { percent: 0, count: 0 },
     metadata: { percent: 0, count: 0 },
@@ -59,7 +76,19 @@ export default function AIPipelineTimeline() {
   const totalJobs = activeJobs ? activeJobs.length : 0;
 
   useEffect(() => {
-    if (totalJobs === 0) return;
+    if (totalJobs === 0) {
+      setSmoothStats({
+        upload: { percent: 0, count: 0 },
+        metadata: { percent: 0, count: 0 },
+        scene: { percent: 0, count: 0 },
+        thumbnail: { percent: 0, count: 0 },
+        audio: { percent: 0, count: 0 },
+        caption: { percent: 0, count: 0 },
+        embedding: { percent: 0, count: 0 },
+        index: { percent: 0, count: 0 },
+      });
+      return;
+    }
 
     let sums = { upload: 0, metadata: 0, scene: 0, thumbnail: 0, audio: 0, caption: 0, embedding: 0, index: 0 };
     let counts = { upload: 0, metadata: 0, scene: 0, thumbnail: 0, audio: 0, caption: 0, embedding: 0, index: 0 };
@@ -155,7 +184,9 @@ export default function AIPipelineTimeline() {
                       <span className="text-[#4ADE80] text-[10px] font-medium">Completed</span>
                       <CheckCircle2 className="w-5 h-5 text-[#4ADE80] fill-[#4ADE80]/20" />
                     </div>
-                    <span className="text-gray-500 text-[10px]">{stats.count} files: 1GB</span>
+                    <span className="text-gray-500 text-[10px]">
+                      {stats.count} files{totalSizeMB > 0 ? `: ${totalSizeMB.toFixed(2)} MB` : ''}
+                    </span>
                   </>
                 )}
                 
@@ -165,7 +196,7 @@ export default function AIPipelineTimeline() {
                       <span className="text-white text-[12px] font-bold">{Math.floor(stats.percent)}%</span>
                       <Loader2 className="w-5 h-5 text-[#7B5CF5] animate-spin" />
                     </div>
-                    <span className="text-gray-400 text-[10px]">ETA: 00:00:37</span>
+                    {/* <span className="text-gray-400 text-[10px]">ETA: 00:00:37</span> */}
                   </>
                 )}
 

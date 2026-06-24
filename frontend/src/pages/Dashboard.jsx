@@ -6,13 +6,7 @@ import Pagination from '../components/media/Pagination';
 import HealthCheck from '../components/ui/HealthCheck';
 import { Icon } from '@iconify/react';
 
-import { mockAssets } from '../mocks/assets';
-
-// Simulated API call (Phase 1)
-const fetchAssets = async () => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockAssets;
-};
+import { getAssets } from '../services/api';
 
 export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,8 +17,7 @@ export default function Dashboard() {
 
   const { data: assets, isLoading, error } = useQuery({
     queryKey: ['assets'],
-    queryFn: fetchAssets,
-    // In real app, we might paginate on server side: queryFn: () => fetchAssets(currentPage, filter)
+    queryFn: ({ signal }) => getAssets(signal),
   });
 
   // Client-side filtering and sorting
@@ -40,8 +33,8 @@ export default function Dashboard() {
 
     // Sort
     result.sort((a, b) => {
-      const dateA = new Date(a.ingested_at).getTime();
-      const dateB = new Date(b.ingested_at).getTime();
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
       return sortOrder === 'Newest' ? dateB - dateA : dateA - dateB;
     });
 

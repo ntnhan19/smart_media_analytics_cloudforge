@@ -95,11 +95,14 @@ export default function SearchResultCard({ result }) {
           
           {tags && tags.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {tags.slice(0, 3).map((tag, idx) => (
-                <span key={idx} className="px-1.5 py-0.5 bg-gray-800/50 text-gray-400 rounded text-[10px] whitespace-nowrap">
-                  #{tag}
-                </span>
-              ))}
+              {tags.slice(0, 3).map((tag, idx) => {
+                const tagText = typeof tag === 'object' && tag !== null ? tag.name : tag;
+                return (
+                  <span key={idx} className="px-1.5 py-0.5 bg-gray-800/50 text-gray-400 rounded text-[10px] whitespace-nowrap">
+                    #{tagText}
+                  </span>
+                );
+              })}
               {tags.length > 3 && (
                 <span className="text-[10px] text-gray-500">+{tags.length - 3}</span>
               )}

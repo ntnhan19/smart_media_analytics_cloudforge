@@ -1,13 +1,26 @@
 import PropTypes from 'prop-types';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Upload, Settings, Folder, Film, Image, Heart, Trash } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getAssets } from '../../services/api';
 import AIProcessingPanel from './AIProcessingPanel';
 
 export default function Sidebar({
   activeMenu,
   showLibraryCount = false,
-  libraryStats = { all: 0, videos: 0, images: 0, favourites: 0 }
 }) {
+  const { data: assets } = useQuery({
+    queryKey: ['assets'],
+    queryFn: ({ signal }) => getAssets(signal),
+    enabled: showLibraryCount,
+  });
+
+  const libraryStats = {
+    all: assets?.length || 0,
+    favourites: assets?.filter(a => a.is_favourite).length || 0,
+    trash: assets?.filter(a => a.is_trash).length || 0,
+  };
+
   const navItems = [
     { name: 'DASHBOARD', path: '/', id: 'dashboard', icon: LayoutDashboard },
     { name: 'Ingest / Upload', path: '/upload', id: 'upload', icon: Upload },
@@ -92,7 +105,7 @@ export default function Sidebar({
                 <span className="font-inter font-normal text-[12px] leading-[15px]">TRASH</span>
               </div>
               <div className="w-[41px] h-[13px] bg-[#4F8EF7] rounded-[5px] flex items-center justify-center">
-                <span className="font-inter font-normal text-[12px] leading-[15px] text-white">0</span>
+                <span className="font-inter font-normal text-[12px] leading-[15px] text-white">{libraryStats.trash || 0}</span>
               </div>
             </div>
           </div>

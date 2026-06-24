@@ -3,11 +3,11 @@ import { useJobs } from '../../contexts/JobContext';
 import { retryJob } from '../../services/api';
 import { AlertCircle, RotateCcw } from 'lucide-react';
 
-const MOCK_STAGES = [
-  { id: 'extracting', name: 'EXTRACTING SCENES', step_keys: ['uploading_to_s3', 'scene_detection'] },
-  { id: 'transcribing', name: 'TRANSCRIBING AUDIO', step_keys: ['audio_transcription'] },
-  { id: 'captioning', name: 'GENERATING CAPTION', step_keys: ['frame_analysis'] },
-  { id: 'embedding', name: 'GENERATING EMBEDDING', step_keys: ['embedding'] }
+const PANEL_STAGES = [
+  { id: 'extracting', name: 'EXTRACTING SCENES', step_keys: ['metadata', 'proxy', 'uploading_to_s3', 'scene_detection'] },
+  { id: 'transcribing', name: 'TRANSCRIBING AUDIO', step_keys: ['transcription'] },
+  { id: 'captioning', name: 'GENERATING CAPTION', step_keys: ['vision_caption', 'keyframe_extraction', 'keyframe_upload'] },
+  { id: 'embedding', name: 'GENERATING EMBEDDING', step_keys: ['embedding', 'persisting_results'] }
 ];
 
 // Helper to determine stage progress for a single job
@@ -21,17 +21,17 @@ const getJobStageProgress = (job) => {
   targets.overall = job.progress || 0;
   const step = job.current_step;
 
-  // Pipeline order: uploading -> scene_detection -> audio_transcription -> frame_analysis -> embedding
-  if (step === 'uploading_to_s3' || step === 'scene_detection') {
+  // Pipeline order: metadata → proxy → scene_detection → transcription → vision_caption → keyframe_extraction → keyframe_upload → embedding → persisting_results
+  if (['metadata', 'proxy', 'uploading_to_s3', 'scene_detection'].includes(step)) {
     targets.extracting = job.progress || 10;
-  } else if (step === 'audio_transcription') {
+  } else if (step === 'transcription') {
     targets.extracting = 100;
     targets.transcribing = job.progress || 10;
-  } else if (step === 'frame_analysis') {
+  } else if (['vision_caption', 'keyframe_extraction', 'keyframe_upload'].includes(step)) {
     targets.extracting = 100;
     targets.transcribing = 100;
     targets.captioning = job.progress || 10;
-  } else if (step === 'embedding') {
+  } else if (['embedding', 'persisting_results'].includes(step)) {
     targets.extracting = 100;
     targets.transcribing = 100;
     targets.captioning = 100;
@@ -57,7 +57,16 @@ export default function AIProcessingPanel() {
 
   // Calculate aggregated stats
   useEffect(() => {
-    if (totalJobs === 0) return;
+    if (totalJobs === 0) {
+      setSmoothStats({
+        extracting: { percent: 0, count: 0 },
+        transcribing: { percent: 0, count: 0 },
+        captioning: { percent: 0, count: 0 },
+        embedding: { percent: 0, count: 0 },
+        overall: 0
+      });
+      return;
+    }
 
     let sums = { extracting: 0, transcribing: 0, captioning: 0, embedding: 0, overall: 0 };
     let counts = { extracting: 0, transcribing: 0, captioning: 0, embedding: 0 };
@@ -122,7 +131,7 @@ export default function AIProcessingPanel() {
   if (totalJobs > 0) {
     failedJobs.forEach(job => {
       let matched = false;
-      MOCK_STAGES.forEach(stage => {
+      PANEL_STAGES.forEach(stage => {
         if (stage.step_keys.includes(job.current_step)) {
           errorStages[stage.id] = true;
           matched = true;
@@ -173,7 +182,7 @@ export default function AIProcessingPanel() {
 
         {/* Stages */}
         <div className="flex flex-col space-y-[14px]">
-          {MOCK_STAGES.map((stage) => {
+          {PANEL_STAGES.map((stage) => {
             const stats = smoothStats[stage.id];
             const hasError = errorStages[stage.id];
 

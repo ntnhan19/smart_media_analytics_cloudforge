@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useJobs } from '../contexts/JobContext';
-import { uploadMedia } from '../services/api';
+import { uploadMedia, uploadMediaFile } from '../services/api';
 import IngestQueue from '../components/upload/IngestQueue';
 import UploadArea from '../components/upload/UploadArea';
 import AIPipelineTimeline from '../components/upload/AIPipelineTimeline';
@@ -11,7 +11,7 @@ export default function Upload() {
   const [isUploading, setIsUploading] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState(null);
-  const { activeJobs, addJob, clearAllFinishedJobs } = useJobs();
+  const { activeJobs, addJob, clearAllFinishedJobs, clearAllJobs } = useJobs();
 
   const selectedJob = activeJobs?.find(j => j.job_id === selectedJobId);
   const selectedAssetId = selectedJob?.asset_id;
@@ -21,18 +21,26 @@ export default function Upload() {
     setIsReviewOpen(true); // Tự động mở panel khi click vào queue
   };
 
-  const handleUpload = async (count = 1) => {
+  const handleUpload = async (files) => {
+    // Prevent synthetic events from being treated as files
+    if (!files || files.type === 'click' || files._reactName === 'onClick') return;
+    
+    // Ensure files is an array (handles FileList if passed directly)
+    const filesArray = Array.isArray(files) ? files : Array.from(files);
+    if (filesArray.length === 0) return;
+
     setIsUploading(true);
     clearAllFinishedJobs();
     try {
       await Promise.all(
-        Array.from({ length: count }).map(async () => {
+        filesArray.map(async (f) => {
           try {
-            const res = await uploadMedia({
-              source_path: `/app/data/media/demo.mp4`,
-              options: { scene_detection: true, transcription: true, vision_caption: true, whisper_model: 'base' },
-            });
-            if (res?.job_id) addJob({ job_id: res.job_id, asset_id: res.asset_id, status: 'queued', progress: 0, current_step: 'uploading_to_s3', error_message: null });
+            // Sử dụng API upload file vật lý mới đã có ở BE
+            const res = await uploadMediaFile(
+              f,
+              { scene_detection: true, transcription: true, vision_caption: true, whisper_model: 'base' }
+            );
+            if (res?.job_id) addJob({ job_id: res.job_id, asset_id: res.asset_id ?? null, file_name: f.name, file_size: f.size, status: 'queued', progress: 0, current_step: null, error_message: null });
           } catch (e) { console.error(e); }
         })
       );
@@ -91,7 +99,7 @@ export default function Upload() {
               1. <span className="text-[#7B5CF5] underline underline-offset-4">Upload Files</span>
             </h2>
             <div className="flex-1 min-h-0 overflow-hidden">
-              <UploadArea onStartIngest={() => handleUpload(3)} isUploading={isUploading} />
+              <UploadArea onStartIngest={handleUpload} isUploading={isUploading} />
             </div>
           </div>
 
@@ -113,8 +121,8 @@ export default function Upload() {
             <div className="flex-1 min-h-0 overflow-hidden bg-[#120F1D] border border-white/5 rounded-lg flex flex-col">
               <div className="flex justify-between items-center px-4 pt-3 pb-2 shrink-0 border-b border-white/5">
                 <span className="text-[12px] font-bold">Ingest Queue</span>
-                <button onClick={clearAllFinishedJobs} className="text-[10px] text-gray-400 hover:text-white transition-colors">
-                  Clear Completed
+                <button onClick={clearAllJobs} className="text-[10px] text-[#EF4444] hover:text-[#F87171] transition-colors">
+                  Clear Queue
                 </button>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 py-2">
@@ -137,6 +145,7 @@ export default function Upload() {
             onToggle={() => setIsReviewOpen(!isReviewOpen)} 
             jobId={selectedJobId}
             assetId={selectedAssetId}
+            fileName={selectedJob?.file_name}
             status={selectedJob?.status}
             errorMessage={selectedJob?.error_message}
           />

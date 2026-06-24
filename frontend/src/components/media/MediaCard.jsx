@@ -50,11 +50,14 @@ export default function MediaCard({
         
         <div className="mt-auto pb-[14px] flex flex-wrap gap-[6px] items-center justify-center w-full">
           {/* User Tags */}
-          {tags && tags.slice(0, 3).map(tag => (
-            <div key={tag} className="px-[8px] py-[2px] border border-sma-purple rounded-[4px] flex items-center justify-center">
-              <span className="text-[12px] leading-[14px] text-white font-inter">{tag}</span>
-            </div>
-          ))}
+          {tags && tags.slice(0, 3).map((tag, idx) => {
+            const tagText = typeof tag === 'object' ? tag.name : tag;
+            return (
+              <div key={idx} className="px-[8px] py-[2px] border border-sma-purple rounded-[4px] flex items-center justify-center">
+                <span className="text-[12px] leading-[14px] text-white font-inter">{tagText}</span>
+              </div>
+            );
+          })}
           {/* +N Tag */}
           {tags && tags.length > 3 && (
             <div className="px-[8px] py-[2px] border border-sma-purple rounded-[4px] flex items-center justify-center">

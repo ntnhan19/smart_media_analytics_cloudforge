@@ -1,11 +1,24 @@
 import { UploadCloud, X, Play } from 'lucide-react';
+import { useState, useRef } from 'react';
 
 export default function UploadArea({ onStartIngest, isUploading }) {
-  const mockFiles = [
-    { id: 1, name: "IMG_XXX.mp4", size: "215MB", duration: "00:01:09", res: "1920x1080", format: "MP4", thumb: "/logo.png" },
-    { id: 2, name: "IMG_XXX.mp4", size: "215MB", duration: "00:01:09", res: "1920x1080", format: "MP4", thumb: "/logo.png" },
-    { id: 3, name: "IMG_XXX.mp4", size: "215MB", duration: "00:01:09", res: "1920x1080", format: "MP4", thumb: "/logo.png" },
-  ];
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    if (e.target.files) {
+      setSelectedFiles(Array.from(e.target.files));
+    }
+  };
+
+  const handleClearAll = () => setSelectedFiles([]);
+
+  const handleRemoveFile = (indexToRemove) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
+  const totalSize = selectedFiles.reduce((acc, file) => acc + file.size, 0);
+  const formattedSize = (totalSize / (1024 * 1024)).toFixed(1) + 'MB';
 
   return (
     <div className="flex flex-col gap-3 h-full overflow-hidden">
@@ -13,9 +26,20 @@ export default function UploadArea({ onStartIngest, isUploading }) {
       <div className="border border-dashed border-[#4F8EF7]/50 rounded-lg bg-[#120F1D] flex flex-col items-center justify-center p-6 relative transition-colors hover:bg-[#4F8EF7]/5 shrink-0" style={{ flex: '0 0 38%' }}>
         <UploadCloud className="w-8 h-8 text-[#7B5CF5] mb-4" />
         <p className="text-white text-[13px] mb-6 text-center">Drag & Drop files and folders here</p>
-        <button className="bg-[#7B5CF5] hover:bg-[#6A4BE4] text-white px-6 py-2 rounded text-[12px] font-bold transition-colors">
-          Browser Files
+        <button 
+          onClick={() => fileInputRef.current?.click()}
+          className="bg-[#7B5CF5] hover:bg-[#6A4BE4] text-white px-6 py-2 rounded text-[12px] font-bold transition-colors"
+        >
+          Browse Files
         </button>
+        <input 
+          type="file" 
+          multiple 
+          accept="video/*" 
+          className="hidden" 
+          ref={fileInputRef} 
+          onChange={handleFileChange} 
+        />
         <p className="text-gray-500 text-[11px] mt-4 absolute bottom-4">Support: MP4, MOV and more</p>
       </div>
 
@@ -23,12 +47,12 @@ export default function UploadArea({ onStartIngest, isUploading }) {
       <div className="border border-white/5 rounded-lg bg-[#120F1D] flex flex-col flex-1 min-h-0 overflow-hidden">
         <div className="p-4 border-b border-white/5 flex justify-between items-center">
           <h3 className="text-white text-[13px] font-bold">Selected Assets</h3>
-          <button className="text-gray-400 hover:text-white text-[11px] transition-colors">Clear All</button>
+          <button onClick={handleClearAll} className="text-gray-400 hover:text-white text-[11px] transition-colors">Clear All</button>
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3 min-h-0">
-          {mockFiles.map((f, i) => (
-            <div key={f.id} className="flex items-center gap-3">
+          {selectedFiles.map((f, i) => (
+            <div key={i} className="flex items-center gap-3">
               <div className="w-4 h-4 rounded border border-white/20 bg-[#7B5CF5] flex items-center justify-center shrink-0">
                 <svg viewBox="0 0 14 14" fill="none" className="w-3 h-3 text-white"><path d="M11.6666 3.5L5.24992 9.91667L2.33325 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
@@ -37,12 +61,12 @@ export default function UploadArea({ onStartIngest, isUploading }) {
               </div>
               <div className="flex flex-col flex-1 min-w-0">
                 <span className="text-white text-[11px] font-medium truncate">{f.name}</span>
-                <span className="text-gray-400 text-[10px] truncate">{f.size} - {f.duration} - {f.res}</span>
+                <span className="text-gray-400 text-[10px] truncate">{(f.size / (1024*1024)).toFixed(1)}MB</span>
               </div>
               <div className="bg-[#16132A] text-gray-300 text-[9px] px-2 py-0.5 rounded border border-white/10 shrink-0">
-                {f.format}
+                {f.type || 'MP4'}
               </div>
-              <button className="text-gray-500 hover:text-white p-1 shrink-0 transition-colors">
+              <button onClick={() => handleRemoveFile(i)} className="text-gray-500 hover:text-white p-1 shrink-0 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -51,10 +75,10 @@ export default function UploadArea({ onStartIngest, isUploading }) {
 
         {/* Start Ingest Footer */}
         <div className="p-4 border-t border-white/5 flex justify-between items-center bg-[#16132A]/50">
-          <span className="text-gray-400 text-[11px]">Total 3 files: 645MB</span>
+          <span className="text-gray-400 text-[11px]">Total {selectedFiles.length} files: {formattedSize}</span>
           <button 
-            onClick={onStartIngest}
-            disabled={isUploading}
+            onClick={() => onStartIngest(selectedFiles)}
+            disabled={isUploading || selectedFiles.length === 0}
             className="bg-[#7B5CF5] hover:bg-[#6A4BE4] disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded text-[12px] font-bold flex items-center gap-2 transition-colors"
           >
             {isUploading ? <span className="animate-spin text-[10px] mr-1">⌛</span> : <Play className="w-3 h-3" />}

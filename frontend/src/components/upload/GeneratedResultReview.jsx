@@ -19,9 +19,9 @@ const mockTranscript = [
 
 const mockTags = ['BRIDGE', 'NATURE', 'AERIAL', 'RIVER', 'MOUNTAIN', 'LANDSCAPE', 'SCENIC', 'OUTDOOR', 'BRIDGE'];
 
-export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId, status, errorMessage }) {
+export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId, status, errorMessage, fileName }) {
   const navigate = useNavigate();
-  const displayTitle = jobId ? `(IMG_${jobId.substring(0, 6).toUpperCase()}.mp4)` : '(No Video Selected)';
+  const displayTitle = fileName ? `(${fileName})` : (jobId ? `(IMG_${jobId.substring(0, 6).toUpperCase()}.mp4)` : '(No Video Selected)');
 
   const handleOpenAssets = () => {
     if (assetId) {
