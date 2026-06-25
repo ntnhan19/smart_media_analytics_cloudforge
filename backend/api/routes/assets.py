@@ -40,10 +40,22 @@ async def list_assets(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
+    from models.ingest_job import IngestJob
     result = await db.execute(
         select(Asset).order_by(Asset.ingested_at.desc()).limit(limit).offset(offset)
     )
     assets = result.scalars().all()
+    if assets:
+        asset_ids = [a.id for a in assets]
+        jobs_result = await db.execute(
+            select(IngestJob.asset_id, IngestJob.status)
+            .where(IngestJob.asset_id.in_(asset_ids))
+        )
+        job_statuses = {row[0]: row[1] for row in jobs_result}
+        
+        for a in assets:
+            a.status = job_statuses.get(a.id, "ready")
+            
     return [_build_asset_response(a) for a in assets]
 
 @router.get("/{asset_id}", response_model=AssetResponse)
@@ -71,6 +83,16 @@ async def delete_asset(
         if not asset:
             raise HTTPException(status_code=404, detail="Asset not found")
 
+        from models.ingest_job import IngestJob
+        active_job = await db.execute(
+            select(IngestJob).where(
+                IngestJob.asset_id == asset_uuid,
+                IngestJob.status.in_(["queued", "processing", "pending"])
+            )
+        )
+        if active_job.scalars().first():
+            raise HTTPException(status_code=400, detail="Cannot delete asset while it is being processed")
+
         vector_store = get_vector_store()
         if hasattr(vector_store, "delete_by_asset"):
             if __import__("inspect").iscoroutinefunction(vector_store.delete_by_asset):
@@ -89,6 +111,8 @@ async def delete_asset(
         await db.commit()
 
         return None
+    except HTTPException:
+        raise
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid asset ID format")
     except Exception as e:
@@ -108,9 +132,21 @@ async def reingest_asset(
         if not asset:
             raise HTTPException(status_code=404, detail="Asset not found")
 
-        job_id_str = str(uuid.uuid4())
+        from models.ingest_job import IngestJob
+        new_job = IngestJob(status="queued", asset_id=asset_uuid)
+        db.add(new_job)
+        await db.commit()
+        await db.refresh(new_job)
+        
+        job_id_str = str(new_job.job_id)
         background_tasks.add_task(run_reingest_pipeline, job_id_str, asset_id, options)
-        return IngestResponse(job_id=job_id_str, status="queued", assets_queued=1, message="Re-ingestion pipeline started.")
+        return IngestResponse(
+            job_id=job_id_str, 
+            asset_id=asset_id, 
+            status="queued", 
+            assets_queued=1, 
+            message="Re-ingestion pipeline started."
+        )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid asset ID format")
 
@@ -126,8 +162,20 @@ async def regenerate_insights(
         if not asset:
             raise HTTPException(status_code=404, detail="Asset not found")
 
-        job_id_str = str(uuid.uuid4())
+        from models.ingest_job import IngestJob
+        new_job = IngestJob(status="queued", asset_id=asset_uuid)
+        db.add(new_job)
+        await db.commit()
+        await db.refresh(new_job)
+
+        job_id_str = str(new_job.job_id)
         background_tasks.add_task(run_regenerate_insights_job, job_id_str, asset_id)
-        return IngestResponse(job_id=job_id_str, status="queued", assets_queued=1, message="Regenerate insights job started.")
+        return IngestResponse(
+            job_id=job_id_str, 
+            asset_id=asset_id, 
+            status="queued", 
+            assets_queued=1, 
+            message="Regenerate insights job started."
+        )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid asset ID format")
