@@ -165,6 +165,7 @@ class VideoAnalysisPipeline:
             resolution=f"{video_info.width}x{video_info.height}",
             file_size_bytes=int(video_path.stat().st_size),
             full_transcript=transcript_data.get("text", ""),
+            transcripts_json=transcript_data.get("segments", []),
             tags=self._aggregate_tags(scene_contracts, transcript_data.get("text", "")),
             scenes=scene_contracts,
         )

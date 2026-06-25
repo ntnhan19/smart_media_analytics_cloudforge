@@ -35,6 +35,7 @@ class Asset(Base):
     description = Column(Text, nullable=True)
     summary = Column(Text, nullable=True)               # Tóm tắt tổng thể video
     full_transcript = Column(Text, nullable=True)       # Toàn bộ text bóc từ audio
+    transcripts_json = Column(JSONB, nullable=True, default=list) # Danh sách mảng {start, end, text} của phụ đề
 
     # Các trường JSONB tối ưu lưu trữ mảng/đối tượng phức tạp trên PostgreSQL
     tags = Column(JSONB, nullable=True, default=list)   # List of TagContract
