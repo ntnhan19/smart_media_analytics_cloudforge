@@ -52,7 +52,7 @@ export const retryJob = async (jobId) => {
 };
 
 export const getAssets = async (signal) => {
-  const response = await api.get('/assets?limit=1000', { signal });
+  const response = await api.get('/assets?limit=100', { signal });
   return response.data;
 };
 

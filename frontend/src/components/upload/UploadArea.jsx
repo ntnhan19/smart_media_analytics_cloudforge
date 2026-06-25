@@ -1,5 +1,5 @@
 import { UploadCloud, X, Play } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function UploadArea({ onStartIngest, isUploading }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -15,6 +15,11 @@ export default function UploadArea({ onStartIngest, isUploading }) {
 
   const handleRemoveFile = (indexToRemove) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
+  const handleStartIngest = () => {
+    onStartIngest(selectedFiles);
+    setSelectedFiles([]);
   };
 
   const totalSize = selectedFiles.reduce((acc, file) => acc + file.size, 0);
@@ -57,7 +62,14 @@ export default function UploadArea({ onStartIngest, isUploading }) {
                 <svg viewBox="0 0 14 14" fill="none" className="w-3 h-3 text-white"><path d="M11.6666 3.5L5.24992 9.91667L2.33325 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
               <div className="w-[80px] h-[45px] bg-[#16132A] rounded overflow-hidden shrink-0 border border-white/10 relative">
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20"></div>
+                {f.type.startsWith('video/') ? (
+                  <video 
+                    src={URL.createObjectURL(f)} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20"></div>
+                )}
               </div>
               <div className="flex flex-col flex-1 min-w-0">
                 <span className="text-white text-[11px] font-medium truncate">{f.name}</span>
@@ -77,7 +89,7 @@ export default function UploadArea({ onStartIngest, isUploading }) {
         <div className="p-4 border-t border-white/5 flex justify-between items-center bg-[#16132A]/50">
           <span className="text-gray-400 text-[11px]">Total {selectedFiles.length} files: {formattedSize}</span>
           <button 
-            onClick={() => onStartIngest(selectedFiles)}
+            onClick={handleStartIngest}
             disabled={isUploading || selectedFiles.length === 0}
             className="bg-[#7B5CF5] hover:bg-[#6A4BE4] disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded text-[12px] font-bold flex items-center gap-2 transition-colors"
           >

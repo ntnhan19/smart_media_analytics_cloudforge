@@ -116,7 +116,7 @@ export default function Upload() {
           {/* Cột 3: Ingest Queue */}
           <div className="min-h-0 overflow-hidden flex flex-col gap-2">
             <h2 className="text-[11px] font-bold shrink-0">
-              3. {activeJobs?.length > 0 ? <span className="text-[#7B5CF5] underline underline-offset-4">Review &amp; Complete</span> : "Review &amp; Complete"}
+              3. {activeJobs?.length > 0 ? <span className="text-[#7B5CF5] underline underline-offset-4">Review {"&"} Complete</span> : "Review & Complete"}
             </h2>
             <div className="flex-1 min-h-0 overflow-hidden bg-[#120F1D] border border-white/5 rounded-lg flex flex-col">
               <div className="flex justify-between items-center px-4 pt-3 pb-2 shrink-0 border-b border-white/5">
