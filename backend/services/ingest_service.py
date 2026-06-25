@@ -143,6 +143,7 @@ async def _persist_analysis(
     asset.resolution = analysis.resolution
     asset.file_size_bytes = analysis.file_size_bytes
     asset.full_transcript = analysis.full_transcript or ""
+    asset.transcripts_json = analysis.transcripts_json or []
     asset.tags = [tag.to_dict() for tag in analysis.tags]
 
     for scene_data in analysis.scenes:
