@@ -231,7 +231,11 @@ export default function AssetDetail() {
     });
   }, [filteredScenes, sortBy, debouncedQuery]);
 
-  const filteredTranscript = transcriptMock; // Still mocked unless backend provides transcripts array in Asset
+  const filteredTranscript = (asset?.transcripts_json || []).map(line => ({
+    ...line,
+    start_sec: line.start !== undefined ? line.start : line.start_sec,
+    end_sec: line.end !== undefined ? line.end : line.end_sec
+  }));
 
   if (isLoadingAsset) {
     return <div className="flex h-screen items-center justify-center text-white">Loading Asset...</div>;

@@ -66,8 +66,8 @@ export const getAssetScenes = async (assetId, signal) => {
   return response.data;
 };
 
-export const reingestAsset = async (assetId) => {
-  const response = await api.post(`/assets/${assetId}/reingest`);
+export const reingestAsset = async (assetId, options = {}) => {
+  const response = await api.post(`/assets/${assetId}/reingest`, options);
   return response.data;
 };
 
