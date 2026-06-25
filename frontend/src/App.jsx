@@ -11,21 +11,25 @@ import UiKitDemo from './pages/UiKitDemo';
 
 const queryClient = new QueryClient();
 
+import { JobProvider } from './contexts/JobContext';
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AppShell />}>
-            <Route index element={<Dashboard />} />
-            <Route path="search" element={<Search />} />
-            <Route path="upload" element={<Upload />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="uikit" element={<UiKitDemo />} />
-          </Route>
-          <Route path="/assets/:id" element={<AssetDetail />} />
-        </Routes>
-      </BrowserRouter>
+      <JobProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<AppShell />}>
+              <Route index element={<Dashboard />} />
+              <Route path="search" element={<Search />} />
+              <Route path="assets/:id" element={<AssetDetail />} />
+              <Route path="upload" element={<Upload />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="uikit" element={<UiKitDemo />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </JobProvider>
     </QueryClientProvider>
   );
 }

@@ -1,14 +1,26 @@
 import PropTypes from 'prop-types';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Upload, Settings, Folder, Film, Image, Heart, Trash } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getAssets } from '../../services/api';
 import AIProcessingPanel from './AIProcessingPanel';
 
 export default function Sidebar({
   activeMenu,
   showLibraryCount = false,
-  libraryStats = { all: 0, videos: 0, images: 0, favourites: 0 },
-  jobId
 }) {
+  const { data: assets } = useQuery({
+    queryKey: ['assets'],
+    queryFn: ({ signal }) => getAssets(signal),
+    enabled: showLibraryCount,
+  });
+
+  const libraryStats = {
+    all: assets?.length || 0,
+    favourites: assets?.filter(a => a.is_favourite).length || 0,
+    trash: assets?.filter(a => a.is_trash).length || 0,
+  };
+
   const navItems = [
     { name: 'DASHBOARD', path: '/', id: 'dashboard', icon: LayoutDashboard },
     { name: 'Ingest / Upload', path: '/upload', id: 'upload', icon: Upload },
@@ -17,7 +29,7 @@ export default function Sidebar({
 
   return (
     <aside className="relative w-[310px] h-full bg-[#16132A] rounded-[6px] flex flex-col shrink-0 overflow-y-auto overflow-x-hidden">
-      <div className="relative pt-[20px] pb-[20px] flex flex-col items-left z-10 shrink-0">
+      <div className="relative pt-[8px] pb-[8px] flex flex-col items-left z-10 shrink-0">
         <img src="/logo.png" alt="SMA Logo" className="w-[160px] h-auto object-contain" />
       </div>
 
@@ -64,7 +76,7 @@ export default function Sidebar({
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <div className="flex items-center gap-[18px] text-white">
                 <Film className="w-[20px] h-[20px]" />
                 <span className="font-inter font-normal text-[12px] leading-[15px]">VIDEOS</span>
@@ -72,11 +84,12 @@ export default function Sidebar({
               <div className="w-[41px] h-[13px] bg-[#4F8EF7] rounded-[5px] flex items-center justify-center">
                 <span className="font-inter font-normal text-[12px] leading-[15px] text-white">{libraryStats.videos || 0}</span>
               </div>
-            </div>
+            </div> */}
 
 
 
-            <div className="flex items-center justify-between">
+
+            < div className="flex items-center justify-between">
               <div className="flex items-center gap-[18px] text-white">
                 <Heart className="w-[18px] h-[18px] ml-[1px]" />
                 <span className="font-inter font-normal text-[12px] leading-[15px]">FAVOURITES</span>
@@ -92,16 +105,17 @@ export default function Sidebar({
                 <span className="font-inter font-normal text-[12px] leading-[15px]">TRASH</span>
               </div>
               <div className="w-[41px] h-[13px] bg-[#4F8EF7] rounded-[5px] flex items-center justify-center">
-                <span className="font-inter font-normal text-[12px] leading-[15px] text-white">0</span>
+                <span className="font-inter font-normal text-[12px] leading-[15px] text-white">{libraryStats.trash || 0}</span>
               </div>
             </div>
           </div>
         </div>
-      )}
+      )
+      }
 
       {/* AI Processing Panel embedded in Sidebar */}
       <div className="flex justify-center w-full shrink-0">
-        <AIProcessingPanel jobId={jobId} />
+        <AIProcessingPanel />
       </div>
 
       <div className="mt-auto pt-4 pb-[16px] flex justify-center shrink-0">
@@ -110,7 +124,7 @@ export default function Sidebar({
         </button>
       </div>
 
-    </aside>
+    </aside >
   );
 }
 
@@ -122,7 +136,6 @@ Sidebar.propTypes = {
     videos: PropTypes.number,
     images: PropTypes.number,
     favourites: PropTypes.number,
-  }),
-  jobId: PropTypes.string,
+  })
 };
 
