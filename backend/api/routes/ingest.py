@@ -70,14 +70,30 @@ async def upload_ingest_job(
                 logger.warning(f"Invalid JSON provided for options: {options}. Using defaults.")
             
         # Create a new job in DB
+        asset_id = uuid.uuid4()
+        from models.asset import Asset
+        import os
+        ext = os.path.splitext(file.filename)[1].lower() if file.filename else ""
+        media_type = "audio" if ext in {".wav", ".mp3"} else "video"
+        
+        new_asset = Asset(
+            id=asset_id,
+            file_name=file.filename or "uploaded_file",
+            file_path=f"uploads/pending/{asset_id}",
+            media_type=media_type
+        )
+        db.add(new_asset)
+        
         new_job = IngestJob(
-            status="queued"
+            status="queued",
+            asset_id=asset_id
         )
         db.add(new_job)
         await db.commit()
         await db.refresh(new_job)
         
         job_id_str = str(new_job.job_id)
+        asset_id_str = str(asset_id)
         
         # Save file to temp location
         upload_dir = f"/tmp/uploads/{job_id_str}"
@@ -97,7 +113,7 @@ async def upload_ingest_job(
         
         return IngestResponse(
             job_id=job_id_str,
-            asset_id=None,
+            asset_id=asset_id_str,
             status="queued",
             assets_queued=1,
             message="Ingestion pipeline started from uploaded file."
