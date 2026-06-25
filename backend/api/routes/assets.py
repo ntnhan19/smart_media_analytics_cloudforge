@@ -32,6 +32,7 @@ def _build_asset_response(asset: Asset) -> AssetResponse:
         moods=asset.moods if hasattr(asset, 'moods') else None,
         objects=asset.objects if hasattr(asset, 'objects') else None,
         best_for=asset.best_for if hasattr(asset, 'best_for') else None,
+        transcripts_json=asset.transcripts_json if hasattr(asset, 'transcripts_json') else None,
     )
 
 @router.get("", response_model=List[AssetResponse])
