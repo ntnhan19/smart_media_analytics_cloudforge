@@ -60,3 +60,23 @@ export const getAsset = async (assetId, signal) => {
   const response = await api.get(`/assets/${assetId}`, { signal });
   return response.data;
 };
+
+export const getAssetScenes = async (assetId, signal) => {
+  const response = await api.get(`/assets/${assetId}/scenes`, { signal });
+  return response.data;
+};
+
+export const reingestAsset = async (assetId) => {
+  const response = await api.post(`/assets/${assetId}/reingest`);
+  return response.data;
+};
+
+export const regenerateInsights = async (assetId) => {
+  const response = await api.post(`/assets/${assetId}/regenerate-insights`);
+  return response.data;
+};
+
+export const getAssetStream = async (assetId, signal) => {
+  const response = await api.get(`/media/stream/${assetId}`, { signal });
+  return response.data; // Expected to return { stream_url: "..." }
+};

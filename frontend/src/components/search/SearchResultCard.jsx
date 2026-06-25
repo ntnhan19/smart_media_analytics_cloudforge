@@ -20,7 +20,8 @@ export default function SearchResultCard({ result }) {
   const {
     timestamp_start_sec,
     thumbnail_url,
-    caption
+    caption,
+    transcript_snippet
   } = scene || {};
 
   const handleClick = () => {
@@ -85,6 +86,12 @@ export default function SearchResultCard({ result }) {
         <h3 className="text-sm font-medium text-gray-100 line-clamp-2 mb-2 group-hover:text-blue-400 transition-colors" title={caption}>
           {caption || 'No caption available'}
         </h3>
+        
+        {transcript_snippet && (
+          <div className="text-xs text-gray-400 italic bg-gray-800/50 p-2 rounded border-l-2 border-purple-500 line-clamp-2" title={transcript_snippet}>
+            "{transcript_snippet}"
+          </div>
+        )}
         
         <div className="mt-auto pt-3 border-t border-gray-800/50 flex flex-col gap-2">
           <div className="flex items-center justify-between text-xs text-gray-400">

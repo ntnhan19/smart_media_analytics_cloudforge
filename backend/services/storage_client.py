@@ -132,6 +132,9 @@ class MinioStorageClient(StorageClient):
             ) from exc
 
         self._bucket = bucket
+        self._access_key = access_key
+        self._secret_key = secret_key
+        self._secure = secure
         self._client = Minio(
             endpoint,
             access_key=access_key,
@@ -240,17 +243,21 @@ class MinioStorageClient(StorageClient):
         """Generate a presigned GET URL for an object."""
         try:
             from datetime import timedelta
-            # To support docker-to-host url resolution, if endpoint is internal 'minio:9000',
-            # client presigned generation will use that endpoint.
-            # But the browser running frontend (localhost) won't resolve 'minio:9000'.
-            # We can dynamically swap 'minio:9000' to the host address.
-            url = self._client.presigned_get_object(
+            from minio import Minio
+
+            # Create an external-facing client so the signature is computed for 'localhost:9000'.
+            # This allows the browser to access MinIO directly from the host machine without SignatureDoesNotMatch errors.
+            # We explicitly pass region to prevent Minio client from doing a network request to localhost:9000 to find the region
+            external_client = Minio(
+                "localhost:9000",
+                access_key=self._access_key,
+                secret_key=self._secret_key,
+                secure=self._secure,
+                region="us-east-1",
+            )
+            url = external_client.presigned_get_object(
                 self._bucket, remote_path, expires=timedelta(seconds=expires_seconds)
             )
-            # If the backend is running in docker, we need to map external client requests
-            # from 'minio:9000' to 'localhost:9000' for the browser.
-            if "minio:9000" in url:
-                url = url.replace("minio:9000", "localhost:9000")
             return url
         except Exception as exc:
             logger.error(f"[MinIO] Failed to generate presigned URL for {remote_path}: {exc}")

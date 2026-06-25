@@ -1,8 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Settings, Captions } from 'lucide-react';
 
-export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], mediaType = 'video', onTimeUpdate, duration = 120, activeMarkers = [] }) {
+export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], mediaType = 'video', onTimeUpdate, duration = 120, activeMarkers = [], onPlayStateChange }) {
   const [isPlaying, setIsPlaying] = useState(false);
+  
+  useEffect(() => {
+    if (onPlayStateChange) onPlayStateChange(isPlaying);
+  }, [isPlaying, onPlayStateChange]);
   const [currentTime, setCurrentTime] = useState(initialTimestamp);
   const [actualDuration, setActualDuration] = useState(duration);
   const [isMuted, setIsMuted] = useState(false);
@@ -13,7 +17,7 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
   // Update local state if parent changes initialTimestamp (e.g. from seek clicks)
   useEffect(() => {
     setCurrentTime(initialTimestamp);
-    if (videoRef.current) {
+    if (videoRef.current && videoRef.current.readyState >= 1) { // HAVE_METADATA or higher
       if (Math.abs(videoRef.current.currentTime - initialTimestamp) > 0.5) {
         videoRef.current.currentTime = initialTimestamp;
       }
@@ -57,6 +61,11 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
       setActualDuration(videoRef.current.duration);
+      // Ensure we seek to initialTimestamp once metadata is loaded
+      if (initialTimestamp > 0) {
+        videoRef.current.currentTime = initialTimestamp;
+        setCurrentTime(initialTimestamp);
+      }
       videoRef.current.playbackRate = playbackRate;
     }
   };
@@ -93,10 +102,10 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
 
   const playPrevScene = () => {
     if (scenes.length === 0) return;
-    const currentIndex = scenes.findIndex(s => currentTime >= s.start_sec && currentTime < s.end_sec);
+    const currentIndex = scenes.findIndex(s => currentTime >= (s.start_sec ?? s.timestamp_start_sec) && currentTime < (s.end_sec ?? s.timestamp_end_sec));
     if (currentIndex > 0) {
       const prevScene = scenes[currentIndex - 1];
-      const targetTime = prevScene.start_sec;
+      const targetTime = (prevScene.start_sec ?? prevScene.timestamp_start_sec);
       setCurrentTime(targetTime);
       if (videoRef.current) videoRef.current.currentTime = targetTime;
       if (onTimeUpdate) onTimeUpdate(targetTime);
@@ -109,10 +118,10 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
 
   const playNextScene = () => {
     if (scenes.length === 0) return;
-    const currentIndex = scenes.findIndex(s => currentTime >= s.start_sec && currentTime < s.end_sec);
+    const currentIndex = scenes.findIndex(s => currentTime >= (s.start_sec ?? s.timestamp_start_sec) && currentTime < (s.end_sec ?? s.timestamp_end_sec));
     if (currentIndex !== -1 && currentIndex < scenes.length - 1) {
       const nextScene = scenes[currentIndex + 1];
-      const targetTime = nextScene.start_sec;
+      const targetTime = (nextScene.start_sec ?? nextScene.timestamp_start_sec);
       setCurrentTime(targetTime);
       if (videoRef.current) videoRef.current.currentTime = targetTime;
       if (onTimeUpdate) onTimeUpdate(targetTime);
@@ -167,8 +176,8 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
     );
   }
 
-  // Support local real video playback if src has .mp4, otherwise show mockup text
-  const isRealVideo = src && src.endsWith('.mp4');
+  // Support local real video playback if src is present (S3 presigned URLs have query params so endsWith doesn't work)
+  const isRealVideo = Boolean(src && src.length > 0);
 
   return (
     <div className="w-full h-full bg-black rounded-lg overflow-hidden border border-gray-800 relative flex flex-col">
@@ -177,8 +186,10 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
         
         {isRealVideo ? (
           <video 
+            id="main-video-player"
             ref={videoRef}
             src={src}
+            crossOrigin="anonymous"
             className="w-full h-full object-contain"
             onTimeUpdate={handleNativeTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
@@ -197,12 +208,12 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
         
       {/* Active scene overlay */}
         {showCC && (() => {
-          const activeScene = scenes.find(s => currentTime >= s.start_sec && currentTime < s.end_sec);
+          const activeScene = scenes.find(s => currentTime >= (s.start_sec ?? s.timestamp_start_sec) && currentTime < (s.end_sec ?? s.timestamp_end_sec));
           return activeScene ? (
             <div className="absolute top-[10px] left-[10px] z-20 flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-[4px] px-[10px] py-[5px]">
               <div className="w-2 h-2 rounded-full bg-[#7B5CF5] animate-pulse" />
               <span className="font-inter font-normal text-[11px] text-white/90 max-w-[240px] truncate">
-                {activeScene.description}
+                {activeScene.description || activeScene.caption}
               </span>
             </div>
           ) : null;
@@ -272,12 +283,12 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
             className="absolute top-0 left-0 h-full bg-[#7B5CF5] rounded-full"
             style={{ width: `${(currentTime / actualDuration) * 100}%` }}
           />
-          {scenes.map((scene) => (
+          {scenes.map((scene, idx) => (
             <div 
-              key={scene.id}
+              key={scene.id || scene.scene_id || idx}
               className="absolute top-1/2 -translate-y-1/2 w-1 h-2.5 bg-purple-400/50 rounded-sm"
-              style={{ left: `${(scene.start_sec / actualDuration) * 100}%`, transform: 'translate(-50%, -50%)' }}
-              title={`Scene at ${scene.start_sec}s`}
+              style={{ left: `${((scene.start_sec ?? scene.timestamp_start_sec) / actualDuration) * 100}%`, transform: 'translate(-50%, -50%)' }}
+              title={`Scene at ${(scene.start_sec ?? scene.timestamp_start_sec)}s`}
             />
           ))}
           {/* Active markers for object occurrences */}
@@ -285,8 +296,8 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
             <div 
               key={`marker-${idx}`}
               className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-[#a78bfa] rounded-full border border-[#7B5CF5] shadow-[0_0_6px_#7B5CF5] z-10"
-              style={{ left: `${(marker.timestamp_start / actualDuration) * 100}%`, transform: 'translate(-50%, -50%)' }}
-              title={`Object at ${marker.timestamp_start}s`}
+              style={{ left: `${(marker.timestamp_start_sec / actualDuration) * 100}%`, transform: 'translate(-50%, -50%)' }}
+              title={`Object at ${marker.timestamp_start_sec}s`}
             />
           ))}
         </div>
