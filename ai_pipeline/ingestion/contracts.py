@@ -179,6 +179,7 @@ class VideoAnalysisContract:
     resolution: str = ""
     file_size_bytes: int = 0
     full_transcript: str = ""
+    transcripts_json: List[Dict[str, Any]] = field(default_factory=list)
 
     tags: List[TagContract] = field(default_factory=list)
     scenes: List[SceneAnalysisContract] = field(default_factory=list)
