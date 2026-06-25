@@ -186,14 +186,22 @@ async def _process_single_file(
         if not success:
             raise RuntimeError(f"Upload source media failed: {video_s3_key}")
 
-    asset = await _create_asset(db, file_path, video_s3_key)
-    
-    # Cập nhật asset_id vào job
     job = await db.get(IngestJob, uuid.UUID(job_id_str))
-    if job:
-        job.asset_id = asset.id
-        await db.commit()
+    asset = None
+    if job and job.asset_id:
+        asset = await db.get(Asset, job.asset_id)
         
+    if not asset:
+        asset = await _create_asset(db, file_path, video_s3_key)
+        if job:
+            job.asset_id = asset.id
+            await db.commit()
+    else:
+        # Asset đã được tạo sẵn ở router, giờ chỉ cần cập nhật metadata thực
+        asset.file_path = video_s3_key
+        asset.file_size_bytes = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+        await db.commit()
+
     loop = asyncio.get_running_loop()
 
     # Callback tối ưu: Đẩy tiến độ dạng threadsafe, ngắt tuyệt đối luồng ghi DB tránh deadlock
