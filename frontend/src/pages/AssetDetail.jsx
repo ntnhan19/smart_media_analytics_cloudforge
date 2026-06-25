@@ -72,7 +72,9 @@ export default function AssetDetail() {
     },
     onSuccess: (data) => {
       // Connect to websocket to track progress
-      const ws = new WebSocket(`ws://localhost:8000/api/v1/ingest/ws/${data.job_id}`);
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/api/v1/ingest/ws/${data.job_id}`;
+      const ws = new WebSocket(wsUrl);
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
         setWsProgress({
@@ -104,7 +106,9 @@ export default function AssetDetail() {
     },
     onSuccess: (data) => {
       // Connect to websocket to track progress
-      const ws = new WebSocket(`ws://localhost:8000/api/v1/ingest/ws/${data.job_id}`);
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/api/v1/ingest/ws/${data.job_id}`;
+      const ws = new WebSocket(wsUrl);
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
         setWsProgress({
@@ -266,7 +270,7 @@ export default function AssetDetail() {
             <div className="relative rounded-[6px] overflow-hidden bg-black flex-shrink-0 border border-gray-800 shadow-xl w-full mt-[12px]" style={{height: 'calc(100vh - 365px)', minHeight: '260px', maxHeight: '420px'}}>
               <VideoPlayer 
                 src={streamUrl}
-                initialTimestamp={initialTimestamp || currentTime}
+                initialTimestamp={initialTimestamp}
                 scenes={scenes}
                 mediaType={asset.mediaType || 'video'}
                 onTimeUpdate={handleTimeUpdate}
