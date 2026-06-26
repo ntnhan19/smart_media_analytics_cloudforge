@@ -7,6 +7,8 @@ export default function HeaderBar({
   title = "SWEDEN'S TRIP.mp4", 
   showShare = true, 
   showBookmark = true,
+  isFavorite = undefined,
+  onToggleFavorite = undefined,
   downloadUrl = "/uploads/sweden_trip_2024.mp4",
   currentTime = 0
 }) {
@@ -14,8 +16,14 @@ export default function HeaderBar({
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
+  const currentFavoriteStatus = isFavorite !== undefined ? isFavorite : isBookmarked;
+
   const handleBookmark = () => {
-    setIsBookmarked(!isBookmarked);
+    if (onToggleFavorite) {
+      onToggleFavorite(!currentFavoriteStatus);
+    } else {
+      setIsBookmarked(!isBookmarked);
+    }
   };
 
   const handleShare = async () => {
@@ -70,7 +78,7 @@ export default function HeaderBar({
             className="w-[24px] h-[24px] flex items-center justify-center hover:opacity-80 transition-opacity"
             title="Bookmark"
           >
-            <Icon icon={isBookmarked ? "fluent-emoji-flat:star" : "fluent-emoji-flat:star"} width="20" height="20" className={!isBookmarked ? "grayscale opacity-70" : ""} />
+            <Icon icon={currentFavoriteStatus ? "fluent-emoji-flat:star" : "fluent-emoji-flat:star"} width="20" height="20" className={!currentFavoriteStatus ? "grayscale opacity-70" : ""} />
           </button>
         )}
         

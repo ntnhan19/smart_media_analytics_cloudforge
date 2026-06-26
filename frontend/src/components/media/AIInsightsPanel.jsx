@@ -2,17 +2,15 @@ import React, { useState } from 'react';
 import { Loader2, RotateCw } from 'lucide-react';
 import TagChip from './TagChip';
 import ObjectChip from './ObjectChip';
-import { sceneMock } from '../../mocks/assetDetail';
-
-export default function AIInsightsPanel({ insight, onObjectClick, selectedObjectId, onTagClick, selectedTagName, currentTime = 0, onRegenerate, isRegenerating = false }) {
+export default function AIInsightsPanel({ insight, scenes = [], onObjectClick, selectedObjectId, onTagClick, selectedTagName, currentTime = 0, onRegenerate, isRegenerating = false }) {
   const [showAllObjects, setShowAllObjects] = useState(false);
 
   if (!insight) return null;
 
   // Find active scene based on currentTime
-  const activeScene = sceneMock.find(s => currentTime >= s.start_sec && currentTime < s.end_sec);
+  const activeScene = scenes.find(s => currentTime >= (s.start_sec || s.timestamp_start_sec) && currentTime < (s.end_sec || s.timestamp_end_sec));
   const sceneLabel = activeScene
-    ? `Analyzing scene ${activeScene.start_sec.toFixed(2)} – ${activeScene.end_sec.toFixed(2)}`
+    ? `Analyzing scene ${(activeScene.start_sec || activeScene.timestamp_start_sec).toFixed(2)} – ${(activeScene.end_sec || activeScene.timestamp_end_sec).toFixed(2)}`
     : `Analyzing scene 00.00 – 01.60`;
 
   // Filter objects based on confidence > 0.6

@@ -102,26 +102,38 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
 
   const playPrevScene = () => {
     if (scenes.length === 0) return;
-    const currentIndex = scenes.findIndex(s => currentTime >= (s.start_sec ?? s.timestamp_start_sec) && currentTime < (s.end_sec ?? s.timestamp_end_sec));
-    if (currentIndex > 0) {
-      const prevScene = scenes[currentIndex - 1];
-      const targetTime = (prevScene.start_sec ?? prevScene.timestamp_start_sec);
-      setCurrentTime(targetTime);
-      if (videoRef.current) videoRef.current.currentTime = targetTime;
-      if (onTimeUpdate) onTimeUpdate(targetTime);
-    } else {
-      setCurrentTime(0);
-      if (videoRef.current) videoRef.current.currentTime = 0;
-      if (onTimeUpdate) onTimeUpdate(0);
+    // Find the closest scene whose start time is before (currentTime - 1) seconds
+    const marginTime = currentTime - 1;
+    let targetTime = 0; // fallback to start
+    
+    for (let i = scenes.length - 1; i >= 0; i--) {
+      const start = scenes[i].start_sec ?? scenes[i].timestamp_start_sec;
+      if (start < marginTime) {
+        targetTime = start;
+        break;
+      }
     }
+
+    setCurrentTime(targetTime);
+    if (videoRef.current) videoRef.current.currentTime = targetTime;
+    if (onTimeUpdate) onTimeUpdate(targetTime);
   };
 
   const playNextScene = () => {
     if (scenes.length === 0) return;
-    const currentIndex = scenes.findIndex(s => currentTime >= (s.start_sec ?? s.timestamp_start_sec) && currentTime < (s.end_sec ?? s.timestamp_end_sec));
-    if (currentIndex !== -1 && currentIndex < scenes.length - 1) {
-      const nextScene = scenes[currentIndex + 1];
-      const targetTime = (nextScene.start_sec ?? nextScene.timestamp_start_sec);
+    // Find the first scene whose start time is after (currentTime + 1) seconds
+    const marginTime = currentTime + 1;
+    let targetTime = null;
+    
+    for (let i = 0; i < scenes.length; i++) {
+      const start = scenes[i].start_sec ?? scenes[i].timestamp_start_sec;
+      if (start > marginTime) {
+        targetTime = start;
+        break;
+      }
+    }
+    
+    if (targetTime !== null) {
       setCurrentTime(targetTime);
       if (videoRef.current) videoRef.current.currentTime = targetTime;
       if (onTimeUpdate) onTimeUpdate(targetTime);
@@ -230,7 +242,7 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
       </div>
 
       {/* Controls Bar */}
-      <div className="h-[56px] bg-[#16132A]/90 border-t border-gray-800/50 px-3 flex items-center gap-2 flex-shrink-0">
+      <div className="relative z-20 h-[56px] bg-[#16132A]/90 border-t border-gray-800/50 px-3 flex items-center gap-2 flex-shrink-0">
         {/* Progress track - full width on top */}
         <div className="absolute left-0 right-0 bottom-[56px] px-3 h-[4px] cursor-pointer" onClick={handleSeek}>
           <div className="w-full h-full bg-gray-700 rounded-full relative">

@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Upload, Settings, Folder, Film, Image, Heart, Trash } from 'lucide-react';
@@ -15,10 +16,22 @@ export default function Sidebar({
     enabled: showLibraryCount,
   });
 
+  const [deletedCount, setDeletedCount] = React.useState(() => {
+    return parseInt(localStorage.getItem('deletedAssetsCount') || '0', 10);
+  });
+
+  React.useEffect(() => {
+    const handleAssetDeleted = () => {
+      setDeletedCount(parseInt(localStorage.getItem('deletedAssetsCount') || '0', 10));
+    };
+    window.addEventListener('assetDeleted', handleAssetDeleted);
+    return () => window.removeEventListener('assetDeleted', handleAssetDeleted);
+  }, []);
+
   const libraryStats = {
     all: assets?.length || 0,
-    favourites: assets?.filter(a => a.is_favourite).length || 0,
-    trash: assets?.filter(a => a.is_trash).length || 0,
+    favourites: assets?.filter(a => a.is_favorite).length || 0,
+    trash: deletedCount,
   };
 
   const navItems = [

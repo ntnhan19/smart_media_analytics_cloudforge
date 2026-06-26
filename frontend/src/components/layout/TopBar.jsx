@@ -6,7 +6,8 @@ import SearchBar from '../search/SearchBar';
 
 export default function TopBar({
   searchPlaceholder = "Search your media library...",
-  showUploadBtn = true
+  showUploadBtn = true,
+  showSearchBar = true
 }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,17 +19,19 @@ export default function TopBar({
   };
 
   return (
-    <header className="py-4 px-6 flex items-center justify-between bg-sma-bg text-white">
-      <div className="flex-1 max-w-[800px]">
-        {/* Sử dụng bản variant="large" bự chà bá */}
-        <SearchBar 
-          variant="large"
-          value={searchQuery}
-          onChange={setSearchQuery}
-          onSearch={handleSearch}
-          placeholder={searchPlaceholder}
-        />
-      </div>
+    <header className={`py-4 px-6 flex items-center bg-sma-bg text-white ${showSearchBar ? 'justify-between' : 'justify-end'}`}>
+      {showSearchBar && (
+        <div className="flex-1 max-w-[800px]">
+          {/* Sử dụng bản variant="large" bự chà bá */}
+          <SearchBar 
+            variant="large"
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onSearch={handleSearch}
+            placeholder={searchPlaceholder}
+          />
+        </div>
+      )}
 
       <div className="flex items-center gap-4 ml-8">
         {showUploadBtn && (
@@ -51,5 +54,6 @@ export default function TopBar({
 
 TopBar.propTypes = {
   searchPlaceholder: PropTypes.string,
-  showUploadBtn: PropTypes.bool
+  showUploadBtn: PropTypes.bool,
+  showSearchBar: PropTypes.bool
 };

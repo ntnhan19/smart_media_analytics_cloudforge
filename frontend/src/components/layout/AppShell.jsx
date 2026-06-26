@@ -6,7 +6,6 @@ import { Menu, X } from 'lucide-react';
 
 export default function AppShell() {
   const location = useLocation();
-  const isUploadPage = location.pathname.startsWith('/upload');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const getActiveMenu = () => {
@@ -39,8 +38,6 @@ export default function AppShell() {
         >
           {sidebarOpen ? <X className="w-3.5 h-3.5 text-white" /> : <Menu className="w-3.5 h-3.5 text-white" />}
         </button>
-
-        {isDashboard && <TopBar />}
 
         {/* Content: zero vertical padding để nội dung lấp đầy h-screen */}
         <div className="flex-1 min-h-0 overflow-hidden pl-11 pr-3 pt-2 pb-2">

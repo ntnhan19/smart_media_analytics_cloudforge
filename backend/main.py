@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from api.routes import health, search, ingest, assets, scenes, media
+from api.routes import health, search, ingest, assets, scenes, media, clips
 
 class JSONFormatter(logging.Formatter):
     def format(self, record):
@@ -70,6 +70,7 @@ app.include_router(ingest.router)
 app.include_router(assets.router)
 app.include_router(scenes.router)
 app.include_router(media.router)
+app.include_router(clips.router)
 
 if __name__ == "__main__":
     # pyrefly: ignore [missing-import]
