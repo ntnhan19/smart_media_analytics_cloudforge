@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import MediaCard from '../components/media/MediaCard';
 import FilterBar from '../components/media/FilterBar';
 import Pagination from '../components/media/Pagination';
-import HealthCheck from '../components/ui/HealthCheck';
 import { Icon } from '@iconify/react';
 
 import { getAssets } from '../services/api';

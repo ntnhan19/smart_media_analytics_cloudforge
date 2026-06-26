@@ -1,4 +1,3 @@
-import React from 'react';
 import Button from '../components/ui/Button';
 import IconWrapper from '../components/ui/IconWrapper';
 import TagBadge from '../components/ui/TagBadge';

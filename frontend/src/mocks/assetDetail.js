@@ -46,11 +46,11 @@ export const insightMock = {
     { label: "TRAVEL", score: 0.90 },
   ],
   objects: [
-    { name: "BRIDGE", occurrences: [{ timestamp_start: 0, timestamp_end: 1.6, confidence: 0.95 }, { timestamp_start: 3.2, timestamp_end: 4.8, confidence: 0.88 }, { timestamp_start: 6.4, timestamp_end: 8.0, confidence: 0.92 }] },
-    { name: "RIVER", occurrences: [{ timestamp_start: 0, timestamp_end: 3.2, confidence: 0.91 }, { timestamp_start: 4.8, timestamp_end: 8.0, confidence: 0.85 }] },
-    { name: "MOUNTAINS", occurrences: [{ timestamp_start: 0, timestamp_end: 8.0, confidence: 0.98 }] },
-    { name: "TREES", occurrences: [{ timestamp_start: 1.6, timestamp_end: 6.4, confidence: 0.89 }] },
-    { name: "BOAT", occurrences: [{ timestamp_start: 4.8, timestamp_end: 5.5, confidence: 0.45 }] }
+    { name: "BRIDGE", occurrences: [{ timestamp_start_sec: 0, timestamp_end_sec: 1.6, confidence: 0.95 }, { timestamp_start_sec: 3.2, timestamp_end_sec: 4.8, confidence: 0.88 }, { timestamp_start_sec: 6.4, timestamp_end_sec: 8.0, confidence: 0.92 }] },
+    { name: "RIVER", occurrences: [{ timestamp_start_sec: 0, timestamp_end_sec: 3.2, confidence: 0.91 }, { timestamp_start_sec: 4.8, timestamp_end_sec: 8.0, confidence: 0.85 }] },
+    { name: "MOUNTAINS", occurrences: [{ timestamp_start_sec: 0, timestamp_end_sec: 8.0, confidence: 0.98 }] },
+    { name: "TREES", occurrences: [{ timestamp_start_sec: 1.6, timestamp_end_sec: 6.4, confidence: 0.89 }] },
+    { name: "BOAT", occurrences: [{ timestamp_start_sec: 4.8, timestamp_end_sec: 5.5, confidence: 0.45 }] }
   ],
   best_for: [
     { name: "TRAVEL", category: "theme", source: "auto" },

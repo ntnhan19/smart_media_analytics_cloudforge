@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useJobs } from '../contexts/JobContext';
-import { uploadMedia, uploadMediaFile } from '../services/api';
+import { uploadMediaFile } from '../services/api';
 import IngestQueue from '../components/upload/IngestQueue';
 import UploadArea from '../components/upload/UploadArea';
 import AIPipelineTimeline from '../components/upload/AIPipelineTimeline';

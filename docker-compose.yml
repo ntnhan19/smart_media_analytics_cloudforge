@@ -81,6 +81,8 @@ services:
         condition: service_healthy # Wait for chromadb to be ready before starting
       redis:
         condition: service_healthy # Wait for redis to be ready before starting
+      minio:
+        condition: service_healthy # Wait for minio to be ready before starting
     healthcheck:
       # Calls /health endpoint — returns {"status": "ok"} when service is ready
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]

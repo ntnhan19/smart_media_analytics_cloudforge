@@ -4,14 +4,8 @@ import TagChip from './TagChip';
 import ObjectChip from './ObjectChip';
 import { sceneMock } from '../../mocks/assetDetail';
 
-export default function AIInsightsPanel({ insight, onObjectClick, selectedObjectId, onTagClick, selectedTagName, currentTime = 0 }) {
-  const [isRegenerating, setIsRegenerating] = useState(false);
+export default function AIInsightsPanel({ insight, onObjectClick, selectedObjectId, onTagClick, selectedTagName, currentTime = 0, onRegenerate, isRegenerating = false }) {
   const [showAllObjects, setShowAllObjects] = useState(false);
-
-  const handleRegenerate = () => {
-    setIsRegenerating(true);
-    setTimeout(() => setIsRegenerating(false), 2000); // Mock 2s loading
-  };
 
   if (!insight) return null;
 
@@ -48,7 +42,7 @@ export default function AIInsightsPanel({ insight, onObjectClick, selectedObject
           </span>
         </div>
         <button
-          onClick={handleRegenerate}
+          onClick={onRegenerate}
           disabled={isRegenerating}
           className="bg-[#7B5CF5] hover:bg-[#6c4ee0] disabled:bg-[#7B5CF5]/50 text-white text-[10px] font-bold px-[10px] py-[4px] rounded-full flex items-center gap-[4px] transition-all"
         >
