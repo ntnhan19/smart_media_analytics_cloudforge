@@ -156,7 +156,7 @@ export default function Search() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
+      <div className="bg-[#16132A] border border-[#2D2844] rounded-xl p-4 md:p-6 shadow-sm mb-4">
         <SearchBar 
           variant="large"
           value={searchQuery}

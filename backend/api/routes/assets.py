@@ -8,7 +8,7 @@ from typing import List
 from database import get_db
 from models.asset import Asset
 from models.scene import Scene
-from schemas.asset import AssetResponse
+from schemas.asset import AssetResponse, AssetFavoriteUpdate, PaginatedAssetResponse
 from schemas.ingest import IngestOptions, IngestResponse
 from services.storage_service import storage_service
 from services.ingest_service import run_reingest_pipeline, run_regenerate_insights_job
@@ -18,6 +18,10 @@ router = APIRouter(prefix="/api/v1/assets", tags=["assets"])
 logger = logging.getLogger(__name__)
 
 def _build_asset_response(asset: Asset) -> AssetResponse:
+    thumbnail_s3_key = getattr(asset, 'thumbnail_s3_key', None)
+    if not thumbnail_s3_key and hasattr(asset, 'scenes') and asset.scenes:
+        thumbnail_s3_key = asset.scenes[0].keyframe_s3_key
+
     return AssetResponse(
         asset_id=str(asset.id),
         file_name=asset.file_name,
@@ -33,15 +37,23 @@ def _build_asset_response(asset: Asset) -> AssetResponse:
         objects=asset.objects if hasattr(asset, 'objects') else None,
         best_for=asset.best_for if hasattr(asset, 'best_for') else None,
         transcripts_json=asset.transcripts_json if hasattr(asset, 'transcripts_json') else None,
+        thumbnail_url=storage_service.get_stream_url(thumbnail_s3_key) if thumbnail_s3_key else None,
+        is_favorite=asset.is_favorite if hasattr(asset, 'is_favorite') else False,
     )
 
-@router.get("", response_model=List[AssetResponse])
+@router.get("", response_model=PaginatedAssetResponse)
 async def list_assets(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
+    from sqlalchemy import func
     from models.ingest_job import IngestJob
+    
+    # Get total count
+    total_result = await db.execute(select(func.count(Asset.id)))
+    total_count = total_result.scalar() or 0
+    
     result = await db.execute(
         select(Asset).order_by(Asset.ingested_at.desc()).limit(limit).offset(offset)
     )
@@ -57,7 +69,10 @@ async def list_assets(
         for a in assets:
             a.status = job_statuses.get(a.id, "ready")
             
-    return [_build_asset_response(a) for a in assets]
+    return {
+        "items": [_build_asset_response(a) for a in assets],
+        "total": total_count
+    }
 
 @router.get("/{asset_id}", response_model=AssetResponse)
 async def get_asset(
@@ -178,5 +193,27 @@ async def regenerate_insights(
             assets_queued=1, 
             message="Regenerate insights job started."
         )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid asset ID format")
+
+@router.patch("/{asset_id}/favorite", response_model=AssetResponse)
+async def toggle_favorite(
+    asset_id: str,
+    update_data: AssetFavoriteUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        asset_uuid = uuid.UUID(asset_id)
+        asset = await db.get(Asset, asset_uuid)
+        if not asset:
+            raise HTTPException(status_code=404, detail="Asset not found")
+        
+        asset.is_favorite = update_data.is_favorite
+        await db.commit()
+        await db.refresh(asset)
+        
+        # Need to re-fetch scenes to build the response properly
+        await db.refresh(asset, ['scenes'])
+        return _build_asset_response(asset)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid asset ID format")

@@ -5,7 +5,7 @@ import HeaderBar from '../components/layout/HeaderBar';
 
 
 // Services
-import { getAsset, getAssetScenes, getAssetStream, searchMedia, reingestAsset, regenerateInsights } from '../services/api';
+import { getAsset, getAssetScenes, getAssetStream, searchMedia, reingestAsset, regenerateInsights, toggleFavorite } from '../services/api';
 
 // Components
 import VideoPlayer from '../components/media/VideoPlayer';
@@ -62,6 +62,15 @@ export default function AssetDetail() {
   // Search Mutation
   const searchMutation = useMutation({
     mutationFn: (q) => searchMedia({ query: q, filters: { asset_id: id }, top_k: 10 })
+  });
+
+  // Favorite Mutation
+  const favoriteMutation = useMutation({
+    mutationFn: (isFav) => toggleFavorite(id, isFav),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['asset', id]);
+      queryClient.invalidateQueries(['assets']);
+    }
   });
 
   // Reingest Mutation
@@ -267,7 +276,12 @@ export default function AssetDetail() {
           <div className="flex-1 flex flex-col h-full min-w-0">
             {/* Header */}
             <div className="flex-shrink-0 h-[40px] relative flex justify-between items-center">
-              <HeaderBar title={asset.title || asset.file_name} currentTime={currentTime} />
+              <HeaderBar 
+                title={asset.title || asset.file_name} 
+                currentTime={currentTime}
+                isFavorite={asset.is_favorite}
+                onToggleFavorite={(isFav) => favoriteMutation.mutate(isFav)}
+              />
             </div>
             
             {/* Video Player Area */}
@@ -325,7 +339,13 @@ export default function AssetDetail() {
                   <div>
 
                     <AIInsightsPanel 
-                      insight={insightMock} // Using mock fallback for now unless API returns insights
+                      insight={{
+                        summary: asset.summary || "No summary generated yet.",
+                        objects: asset.objects || [],
+                        moods: asset.moods || [],
+                        best_for: asset.best_for || []
+                      }}
+                      scenes={sortedScenes}
                       onObjectClick={handleObjectClick} 
                       selectedObjectId={selectedObjectId} 
                       onTagClick={handleTagClick} 
@@ -447,6 +467,7 @@ export default function AssetDetail() {
                   />
                 ) : (
                   <SceneList 
+                    assetId={id}
                     scenes={sortedScenes} 
                     currentTime={currentTime} 
                     onSeek={handleSeek}

@@ -26,19 +26,20 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
 
   // Fetch metadata when asset_id is available and step changes
   useEffect(() => {
-    if (job.asset_id && (!job.duration || !job.resolution)) {
+    if (job.asset_id && (!job.duration || !job.resolution || !job.thumbnail_url)) {
       getAsset(job.asset_id).then(data => {
-        if (data && (data.duration || data.resolution)) {
+        if (data && (data.duration || data.resolution || data.thumbnail_url)) {
           updateJob({
             job_id: job.job_id,
-            duration: data.duration,
-            resolution: data.resolution,
-            file_size: data.file_size || job.file_size
+            duration: data.duration || job.duration,
+            resolution: data.resolution || job.resolution,
+            file_size: data.file_size || job.file_size,
+            thumbnail_url: data.thumbnail_url || job.thumbnail_url
           });
         }
       }).catch(err => console.error("Failed to fetch asset metadata", err));
     }
-  }, [job.asset_id, job.current_step, job.status, job.duration, job.resolution, job.job_id, updateJob]);
+  }, [job.asset_id, job.current_step, job.status, job.duration, job.resolution, job.thumbnail_url, job.job_id, updateJob]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -96,8 +97,12 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
       )}
 
       {/* Thumbnail */}
-      <div className="w-[100px] h-[60px] bg-[#2D2844] rounded-[4px] shrink-0 flex items-center justify-center mr-[16px] overflow-hidden">
-        <ImageIcon className="w-6 h-6 text-gray-500" />
+      <div className="w-[100px] h-[60px] bg-[#2D2844] rounded-[4px] shrink-0 flex items-center justify-center mr-[16px] overflow-hidden relative">
+        {job.thumbnail_url ? (
+          <img src={job.thumbnail_url} alt="thumbnail" className="w-full h-full object-cover" />
+        ) : (
+          <ImageIcon className="w-6 h-6 text-gray-500" />
+        )}
       </div>
 
       {/* Info & Progress */}
