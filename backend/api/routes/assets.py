@@ -8,7 +8,7 @@ from typing import List
 from database import get_db
 from models.asset import Asset
 from models.scene import Scene
-from schemas.asset import AssetResponse, AssetFavoriteUpdate
+from schemas.asset import AssetResponse, AssetFavoriteUpdate, PaginatedAssetResponse
 from schemas.ingest import IngestOptions, IngestResponse
 from services.storage_service import storage_service
 from services.ingest_service import run_reingest_pipeline, run_regenerate_insights_job
@@ -41,13 +41,19 @@ def _build_asset_response(asset: Asset) -> AssetResponse:
         is_favorite=asset.is_favorite if hasattr(asset, 'is_favorite') else False,
     )
 
-@router.get("", response_model=List[AssetResponse])
+@router.get("", response_model=PaginatedAssetResponse)
 async def list_assets(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
+    from sqlalchemy import func
     from models.ingest_job import IngestJob
+    
+    # Get total count
+    total_result = await db.execute(select(func.count(Asset.id)))
+    total_count = total_result.scalar() or 0
+    
     result = await db.execute(
         select(Asset).order_by(Asset.ingested_at.desc()).limit(limit).offset(offset)
     )
@@ -63,7 +69,10 @@ async def list_assets(
         for a in assets:
             a.status = job_statuses.get(a.id, "ready")
             
-    return [_build_asset_response(a) for a in assets]
+    return {
+        "items": [_build_asset_response(a) for a in assets],
+        "total": total_count
+    }
 
 @router.get("/{asset_id}", response_model=AssetResponse)
 async def get_asset(

@@ -1,15 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Upload, Settings, Folder, Film, Image, Heart, Trash } from 'lucide-react';
+import { LayoutDashboard, Upload, Settings, Folder, Heart, Trash } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getAssets } from '../../services/api';
 import AIProcessingPanel from './AIProcessingPanel';
 
-export default function Sidebar({
-  activeMenu,
-  showLibraryCount = false,
-}) {
+export default function Sidebar({ activeMenu, showLibraryCount = false }) {
   const { data: assets } = useQuery({
     queryKey: ['assets'],
     queryFn: ({ signal }) => getAssets(signal),
@@ -29,126 +26,85 @@ export default function Sidebar({
   }, []);
 
   const libraryStats = {
-    all: assets?.length || 0,
-    favourites: assets?.filter(a => a.is_favorite).length || 0,
+    all: assets?.total || assets?.items?.length || 0,
+    favourites: assets?.items?.filter(a => a.is_favorite).length || 0,
     trash: deletedCount,
   };
 
   const navItems = [
-    { name: 'DASHBOARD', path: '/', id: 'dashboard', icon: LayoutDashboard },
-    { name: 'Ingest / Upload', path: '/upload', id: 'upload', icon: Upload },
-    { name: 'SETTINGS', path: '/settings', id: 'settings', icon: Settings },
+    { name: 'Dashboard', path: '/', id: 'dashboard', icon: LayoutDashboard },
+    { name: 'Upload', path: '/upload', id: 'upload', icon: Upload },
+    { name: 'Settings', path: '/settings', id: 'settings', icon: Settings },
   ];
 
   return (
-    <aside className="relative w-[310px] h-full bg-[#16132A] rounded-[6px] flex flex-col shrink-0 overflow-y-auto overflow-x-hidden">
-      <div className="relative pt-[8px] pb-[8px] flex flex-col items-left z-10 shrink-0">
+    // Sửa h-screen thành h-full để Sidebar bám theo container cha
+    // Sử dụng overflow-hidden để ngăn chặn thanh cuộn ngoài ý muốn
+    <aside className="w-[310px] h-full bg-[#16132A] flex flex-col shrink-0 overflow-hidden">
+
+      {/* Header - Cố định */}
+      <div className="pt-3 pb-3 pl-[20px] shrink-0">
         <img src="/logo.png" alt="SMA Logo" className="w-[160px] h-auto object-contain" />
       </div>
 
-      <nav className="flex flex-col items-center space-y-[16px] w-full px-[31px] relative z-10 shrink-0">
+      {/* Nav - Cố định */}
+      <nav className="flex flex-col items-center space-y-4 w-full px-[31px] shrink-0 my-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeMenu === item.id;
-
           return (
             <NavLink
               key={item.path}
               to={item.path}
-              className={`relative w-[240px] h-[36px] flex items-center rounded-[6px] transition-colors box-border ${isActive
-                ? 'bg-[#7B5CF5]'
-                : 'border border-[#4F8EF7]'
-                }`}
+              className={`relative w-[240px] h-[36px] flex items-center rounded-[6px] transition-colors ${isActive ? 'bg-[#7B5CF5]' : 'border border-[#4F8EF7]'}`}
             >
-              <Icon className="absolute left-[12px] w-[22px] h-[22px] text-white" />
-              <span className="w-full text-center font-inter font-bold text-[18px] leading-[22px] text-white">
-                {item.name}
-              </span>
+              <Icon className="absolute left-[12px] w-[20px] h-[20px] text-white" />
+              <span className="w-full text-center font-bold text-[16px] text-white">{item.name}</span>
             </NavLink>
           );
         })}
       </nav>
 
-      {showLibraryCount && libraryStats && (
-        <div className="mt-[20px] relative w-full px-[24px] shrink-0 mb-[16px]">
-          <div className="relative flex items-center justify-center mb-[16px]">
-            <div className="absolute w-[258px] h-px bg-[#D9D9D9]"></div>
-            <span className="bg-[#16132A] px-2 relative z-10 font-inter font-medium text-[10px] leading-[12px] text-white">
-              LIBRARY
-            </span>
-          </div>
-
-          <div className="flex flex-col space-y-[16px] pl-[10px] pr-[10px]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-[18px] text-white">
-                <Folder className="w-[20px] h-[20px]" />
-                <span className="font-inter font-normal text-[12px] leading-[15px]">ALL ASSETS</span>
-              </div>
-              <div className="w-[41px] h-[13px] bg-[#4F8EF7] rounded-[5px] flex items-center justify-center">
-                <span className="font-inter font-normal text-[12px] leading-[15px] text-white">{libraryStats.all || 0}</span>
-              </div>
+      {/* Nội dung linh hoạt - Chỉ phần này mới được cuộn */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto scrollbar-hide">
+        {showLibraryCount && (
+          <div className="relative w-full px-[24px] py-3">
+            <div className="relative flex items-center justify-center mb-4">
+              <div className="absolute w-full h-px bg-[#D9D9D9]"></div>
+              <span className="bg-[#16132A] px-2 relative z-10 text-[10px] text-white">LIBRARY</span>
             </div>
-
-            {/* <div className="flex items-center justify-between">
-              <div className="flex items-center gap-[18px] text-white">
-                <Film className="w-[20px] h-[20px]" />
-                <span className="font-inter font-normal text-[12px] leading-[15px]">VIDEOS</span>
-              </div>
-              <div className="w-[41px] h-[13px] bg-[#4F8EF7] rounded-[5px] flex items-center justify-center">
-                <span className="font-inter font-normal text-[12px] leading-[15px] text-white">{libraryStats.videos || 0}</span>
-              </div>
-            </div> */}
-
-
-
-
-            < div className="flex items-center justify-between">
-              <div className="flex items-center gap-[18px] text-white">
-                <Heart className="w-[18px] h-[18px] ml-[1px]" />
-                <span className="font-inter font-normal text-[12px] leading-[15px]">FAVOURITES</span>
-              </div>
-              <div className="w-[41px] h-[13px] bg-[#4F8EF7] rounded-[5px] flex items-center justify-center">
-                <span className="font-inter font-normal text-[12px] leading-[15px] text-white">{libraryStats.favourites || 0}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-[18px] text-white">
-                <Trash className="w-[20px] h-[20px]" />
-                <span className="font-inter font-normal text-[12px] leading-[15px]">TRASH</span>
-              </div>
-              <div className="w-[41px] h-[13px] bg-[#4F8EF7] rounded-[5px] flex items-center justify-center">
-                <span className="font-inter font-normal text-[12px] leading-[15px] text-white">{libraryStats.trash || 0}</span>
-              </div>
+            <div className="flex flex-col space-y-3 px-[10px]">
+              {[
+                { label: 'All Assets', icon: Folder, count: libraryStats.all },
+                { label: 'Favourites', icon: Heart, count: libraryStats.favourites },
+                { label: 'Trash', icon: Trash, count: libraryStats.trash }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-white">
+                    <item.icon className="w-5 h-5" />
+                    <span className="text-[12px]">{item.label}</span>
+                  </div>
+                  <div className="w-10 h-5 bg-[#4F8EF7] rounded-[5px] flex items-center justify-center text-[11px] text-white">
+                    {item.count}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+        )}
+
+        {/* AI Processing Panel - Tự căn lề */}
+        <div className="flex justify-center w-full mt-auto py-4">
+          <AIProcessingPanel />
         </div>
-      )
-      }
-
-      {/* AI Processing Panel embedded in Sidebar */}
-      <div className="flex justify-center w-full shrink-0">
-        <AIProcessingPanel />
       </div>
 
-      <div className="mt-auto pt-4 pb-[16px] flex justify-center shrink-0">
-        <button className="w-[250px] h-[44px] box-border border border-[#4F8EF7] rounded-[8px] flex items-center justify-center text-white hover:bg-[#4F8EF7]/10 transition-colors">
-          <span className="font-inter font-normal text-[10px] leading-[12px]">LOGIN & SIGN IN</span>
+      {/* Footer - Cố định */}
+      <div className="pt-3 pb-4 flex justify-center shrink-0 border-t border-[#2D2844]">
+        <button className="w-[250px] h-10 border border-[#4F8EF7] rounded-[8px] flex items-center justify-center text-white hover:bg-[#4F8EF7]/10 transition-colors text-[10px]">
+          Login / Signup
         </button>
       </div>
-
-    </aside >
+    </aside>
   );
 }
-
-Sidebar.propTypes = {
-  activeMenu: PropTypes.string.isRequired,
-  showLibraryCount: PropTypes.bool,
-  libraryStats: PropTypes.shape({
-    all: PropTypes.number,
-    videos: PropTypes.number,
-    images: PropTypes.number,
-    favourites: PropTypes.number,
-  })
-};
-

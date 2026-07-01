@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 import uuid
 
@@ -23,6 +23,10 @@ class AssetResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PaginatedAssetResponse(BaseModel):
+    items: List[AssetResponse]
+    total: int
 
 class AssetFavoriteUpdate(BaseModel):
     is_favorite: bool
