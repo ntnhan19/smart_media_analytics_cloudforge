@@ -15,13 +15,13 @@ const formatDuration = (seconds) => {
 
 const StatusBadge = ({ status }) => {
   if (!status || status === 'ready' || status === 'completed') return null;
-  
+
   const colors = {
     queued: 'bg-gray-500',
     processing: 'bg-sma-purple',
     failed: 'bg-red-500'
   };
-  
+
   const bgClass = colors[status] || 'bg-gray-500';
   return (
     <div className={`absolute top-[8px] right-[12px] px-2 py-1 rounded text-[10px] font-bold text-white uppercase ${bgClass} z-10 shadow-md`}>
@@ -74,7 +74,7 @@ export default function MediaCard({
     try {
       await deleteAsset(asset_id);
       if (showToast) showToast('Xóa video thành công', 'success');
-      
+
       // Update local storage deleted count for UI display
       const currentCount = parseInt(localStorage.getItem('deletedAssetsCount') || '0', 10);
       localStorage.setItem('deletedAssetsCount', (currentCount + 1).toString());
@@ -95,46 +95,43 @@ export default function MediaCard({
 
   return (
     <div
-      className="w-full max-w-[218px] h-[230px] rounded-[6px] border border-sma-purple overflow-hidden cursor-pointer hover:border-sma-purple/80 bg-sma-surface flex flex-col relative group"
+      // Thay đổi: H-[210px] thon gọn hơn, an toàn cho 2 dòng grid
+      className="w-full h-[210px] rounded-[6px] border border-sma-purple overflow-hidden cursor-pointer hover:border-sma-purple/80 bg-sma-surface flex flex-col relative group"
       onClick={handleCardClick}
     >
-      <div className="w-full h-[157px] bg-gray-900 flex-shrink-0 relative group">
+      <div className="w-full flex-1 bg-gray-900 relative group overflow-hidden">
         {thumbnail_url ? (
           <img
             src={thumbnail_url}
             alt={file_name}
-            className={`w-full h-full object-cover ${isProcessing ? 'opacity-50' : ''}`}
+            className={`absolute inset-0 w-full h-full object-cover ${isProcessing ? 'opacity-50' : ''}`}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+          <div className="absolute inset-0 w-full h-full flex items-center justify-center text-gray-500 text-xs">
             {media_type?.toUpperCase() || 'UNKNOWN'}
           </div>
         )}
-        
+
         <StatusBadge status={status} />
 
-        {/* Favorite Star Badge */}
         {is_favorite && (
           <div className="absolute top-[8px] right-[40px] z-10 flex items-center justify-center filter drop-shadow-md">
             <Icon icon="fluent-emoji-flat:star" width="20" height="20" />
           </div>
         )}
 
-        {/* Overlay text for resolution and format */}
-        <div className="absolute top-[8px] left-[12px] text-white font-inter text-[15px] drop-shadow-md z-10 flex flex-row items-center gap-1.5 font-medium shadow-black">
-          {resolution && <span style={{textShadow: "1px 1px 2px black"}}>{resolution}</span>}
-          <span style={{textShadow: "1px 1px 2px black"}}>{media_type === 'video' ? 'MP4' : media_type === 'image' ? 'JPG' : 'MP3'}</span>
+        <div className="absolute top-[8px] left-[12px] text-white font-inter text-[13px] drop-shadow-md z-10 flex flex-row items-center gap-1.5 font-medium shadow-black">
+          {resolution && <span style={{ textShadow: "1px 1px 2px black" }}>{resolution}</span>}
+          <span style={{ textShadow: "1px 1px 2px black" }}>{media_type === 'video' ? 'MP4' : media_type === 'image' ? 'JPG' : 'MP3'}</span>
         </div>
 
-        {/* Duration */}
         {actualDuration > 0 && (
           <div className="absolute bottom-[8px] right-[12px] bg-black/60 px-1.5 py-0.5 rounded text-white text-[11px] font-inter z-10">
             {formatDuration(actualDuration)}
           </div>
         )}
 
-        {/* Delete Button - Shows on hover */}
-        <div 
+        <div
           className="absolute bottom-[8px] left-[12px] z-20 no-navigate opacity-0 group-hover:opacity-100 transition-opacity"
           title={isProcessing ? "Không thể xóa Asset khi đang xử lý." : "Xóa Asset"}
         >
@@ -144,20 +141,18 @@ export default function MediaCard({
               if (!isProcessing) setShowConfirm(true);
             }}
             disabled={isProcessing}
-            className={`p-1.5 rounded-full transition-colors shadow-md ${
-              isProcessing 
-                ? 'bg-gray-800/80 text-gray-500 cursor-not-allowed' 
-                : 'bg-red-500/80 text-white hover:bg-red-500'
-            }`}
+            className={`p-1.5 rounded-full transition-colors shadow-md ${isProcessing
+              ? 'bg-gray-800/80 text-gray-500 cursor-not-allowed'
+              : 'bg-red-500/80 text-white hover:bg-red-500'
+              }`}
           >
             <Icon icon="lucide:trash-2" width="14" height="14" />
           </button>
         </div>
 
-        {/* Progress Bar for processing */}
         {isProcessing && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800 z-10">
-            <div 
+            <div
               className="h-full bg-sma-purple transition-all duration-300 ease-linear"
               style={{ width: `${displayProgress}%` }}
             />
@@ -165,43 +160,41 @@ export default function MediaCard({
         )}
       </div>
 
-      <div className="px-[12px] pt-[12px] flex-1 flex flex-col items-center">
-        <h3 className="text-[14px] leading-[18px] text-white truncate font-inter w-full text-center" title={file_name}>
+      <div className="px-3 py-1.5 shrink-0 flex flex-col justify-between items-center w-full gap-1 h-[56px] bg-sma-surface border-t border-[#2D2844]">
+        <h3 className="text-[12px] leading-tight text-white truncate font-inter w-full text-center shrink-0" title={file_name}>
           {file_name}
         </h3>
-        
-        <div className="mt-auto pb-[14px] flex flex-wrap gap-[6px] items-center justify-center w-full">
-          {/* User Tags */}
+
+        <div className="flex flex-nowrap overflow-hidden gap-1 items-center justify-center w-full min-h-0">
           {tags && tags.slice(0, 3).map((tag, idx) => {
             const tagText = typeof tag === 'object' ? tag.name : tag;
+            const formattedTag = tagText ? tagText.replace(/_/g, ' ') : '';
             return (
-              <div key={idx} className="px-[8px] py-[2px] border border-sma-purple rounded-[4px] flex items-center justify-center bg-sma-purple/10">
-                <span className="text-[12px] leading-[14px] text-white font-inter">{tagText}</span>
+              <div key={idx} className="px-1.5 py-[1px] border border-sma-purple rounded flex items-center justify-center bg-sma-purple/10 flex-shrink-1 min-w-0" title={formattedTag}>
+                <span className="text-[10px] leading-tight text-white font-inter whitespace-nowrap overflow-hidden text-ellipsis block max-w-[50px]">{formattedTag}</span>
               </div>
             );
           })}
-          {/* +N Tag */}
           {tags && tags.length > 3 && (
-            <div className="px-[8px] py-[2px] border border-sma-purple rounded-[4px] flex items-center justify-center bg-sma-purple/10">
-              <span className="text-[12px] leading-[14px] text-white font-inter">+{tags.length - 3}</span>
+            <div className="px-1.5 py-[1px] border border-sma-purple rounded flex items-center justify-center bg-sma-purple/10 flex-shrink-0">
+              <span className="text-[10px] leading-tight text-white font-inter whitespace-nowrap">+{tags.length - 3}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
       {showConfirm && (
         <div className="absolute inset-0 bg-black/90 z-30 flex flex-col items-center justify-center p-4 no-navigate">
           <p className="text-white text-sm text-center mb-4">Bạn có chắc muốn xóa video này?</p>
           <div className="flex space-x-3">
-            <button 
+            <button
               onClick={(e) => { e.stopPropagation(); setShowConfirm(false); }}
               className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 text-xs"
               disabled={isDeleting}
             >
               Hủy
             </button>
-            <button 
+            <button
               onClick={handleDelete}
               className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-500 text-xs flex items-center"
               disabled={isDeleting}
