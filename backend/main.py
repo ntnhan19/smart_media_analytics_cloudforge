@@ -2,10 +2,15 @@ import logging
 import json
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from config import settings
+from core.limiter import limiter
 from api.routes import health, search, ingest, assets, scenes, media, clips
 
 class JSONFormatter(logging.Formatter):
@@ -16,6 +21,11 @@ class JSONFormatter(logging.Formatter):
             "name": record.name,
             "message": record.getMessage(),
         }
+        if hasattr(record, "client_ip"):
+            log_record["client_ip"] = record.client_ip
+        if hasattr(record, "endpoint"):
+            log_record["endpoint"] = record.endpoint
+            
         if record.exc_info:
             log_record["exception"] = self.formatException(record.exc_info)
         return json.dumps(log_record)
@@ -54,6 +64,20 @@ app = FastAPI(
     version=settings.APP_VERSION,
     lifespan=lifespan
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 
 app.add_middleware(
     CORSMiddleware,

@@ -5,6 +5,12 @@ from core.embeddings.factory import get_vector_store as get_factory_vector_store
 import logging
 import time
 from services.storage_service import storage_service
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from database import get_db
+from models.asset import Asset
+from typing import List
+from schemas.search import TagFrequency
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
 logger = logging.getLogger(__name__)
@@ -15,6 +21,24 @@ def get_embedder() -> TextEmbedder:
 
 def get_vector_store():
     return get_factory_vector_store()
+
+from collections import Counter
+
+@router.get("/tags", response_model=List[TagFrequency])
+async def get_popular_tags(db: AsyncSession = Depends(get_db)):
+    try:
+        result = await db.execute(select(Asset.tags).where(Asset.tags != None))
+        all_tags = []
+        for row in result.scalars():
+            if isinstance(row, list):
+                all_tags.extend(row)
+        
+        counts = Counter(all_tags)
+        tags = [{"tag": t, "count": c} for t, c in counts.most_common(20)]
+        return tags
+    except Exception as e:
+        logger.exception(f"Error fetching tags: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("", response_model=SearchResponse)
 async def search_media(
