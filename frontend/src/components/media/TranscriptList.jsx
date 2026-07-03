@@ -41,7 +41,7 @@ export default function TranscriptList({ transcript, currentTime, onSeek, search
   if (transcript.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center p-4">
-        <p className="text-[13px] text-white/50">
+        <p className="text-[13px] text-gray-500 dark:text-white/50">
           No transcripts found for "<span className="text-[#c4b5fd] font-bold">{searchQuery}</span>"
         </p>
       </div>
@@ -63,8 +63,8 @@ export default function TranscriptList({ transcript, currentTime, onSeek, search
             onClick={() => onSeek(line.start_sec)}
             className={`w-full min-h-[50px] py-[8px] px-[12px] box-border relative rounded-[6px] border cursor-pointer shrink-0 transition-all flex items-center gap-[12px] ${
               isActive 
-                ? 'bg-[#2a1f5a]/90 border-[#7B5CF5] shadow-[0_0_10px_rgba(123,92,245,0.4)]' 
-                : 'bg-[#0E0B1F] border-[#1e1b35] hover:border-[#7B5CF5]/40 hover:bg-[#16132A]'
+                ? 'bg-[#7B5CF5]/10 dark:bg-[#2a1f5a]/90 border-[#7B5CF5] shadow-[0_0_10px_rgba(123,92,245,0.2)] dark:shadow-[0_0_10px_rgba(123,92,245,0.4)]' 
+                : 'bg-white dark:bg-[#0E0B1F] border-gray-200 dark:border-[#1e1b35] hover:border-[#7B5CF5]/40 dark:hover:border-[#7B5CF5]/40 hover:bg-gray-50 dark:hover:bg-[#16132A]'
             }`}
           >
             {/* Active indicator line */}
@@ -74,7 +74,7 @@ export default function TranscriptList({ transcript, currentTime, onSeek, search
 
             {/* Play Button Icon */}
             <div className={`w-[24px] h-[24px] rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-              isActive ? 'bg-[#7B5CF5] text-white' : 'bg-gray-800 text-gray-400 group-hover:bg-gray-700'
+              isActive ? 'bg-[#7B5CF5] text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}>
               <Play size={10} fill="currentColor" className="ml-[1px]" />
             </div>
@@ -87,7 +87,7 @@ export default function TranscriptList({ transcript, currentTime, onSeek, search
             </div>
 
             {/* Transcript text */}
-            <p className={`flex-1 font-inter font-normal text-[12px] leading-[15px] ${isActive ? 'text-white' : 'text-gray-300'}`}>
+            <p className={`flex-1 font-inter font-normal text-[12px] leading-[15px] ${isActive ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-600 dark:text-gray-300'}`}>
               <HighlightText text={line.text} query={searchQuery} />
             </p>
           </div>

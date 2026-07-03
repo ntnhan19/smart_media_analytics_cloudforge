@@ -55,11 +55,11 @@ export default function HeaderBar({
           onClick={() => navigate(-1)}
           className="w-[40px] h-[40px] flex items-center justify-center hover:opacity-80 transition-opacity -ml-[8px]"
         >
-          <Icon icon="icons8:arrows-long-left" width="24" height="24" className="text-white" />
+          <Icon icon="icons8:arrows-long-left" width="24" height="24" className="text-gray-900 dark:text-white transition-colors" />
         </button>
 
         {/* Title */}
-        <h1 className="font-inter font-normal text-[14px] leading-[17px] text-white m-0 truncate max-w-[300px] ml-[3px]">
+        <h1 className="font-inter font-normal text-[14px] leading-[17px] text-gray-900 dark:text-white m-0 truncate max-w-[300px] ml-[3px] transition-colors">
           {title}
         </h1>
       </div>
@@ -88,7 +88,7 @@ export default function HeaderBar({
             className="w-[24px] h-[24px] flex items-center justify-center hover:opacity-80 transition-opacity" 
             title="Share"
           >
-            <Icon icon="material-symbols:share-outline" width="20" height="20" className="text-white" />
+            <Icon icon="material-symbols:share-outline" width="20" height="20" className="text-gray-700 dark:text-white transition-colors" />
           </button>
         )}
 
@@ -97,7 +97,7 @@ export default function HeaderBar({
           className="w-[24px] h-[24px] flex items-center justify-center hover:opacity-80 transition-opacity"
           title="Download video"
         >
-          <Icon icon="circum:circle-more" width="20" height="20" className="text-white -rotate-90" />
+          <Icon icon="circum:circle-more" width="20" height="20" className="text-gray-700 dark:text-white -rotate-90 transition-colors" />
         </button>
       </div>
     </div>

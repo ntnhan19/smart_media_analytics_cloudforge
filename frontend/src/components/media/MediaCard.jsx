@@ -93,11 +93,10 @@ export default function MediaCard({
 
   return (
     <div
-      // Thay đổi: H-[210px] thon gọn hơn, an toàn cho 2 dòng grid
-      className="w-full h-[210px] rounded-[6px] border border-sma-purple overflow-hidden cursor-pointer hover:border-sma-purple/80 bg-sma-surface flex flex-col relative group"
+      className="w-full h-[210px] rounded-[8px] border border-gray-200 dark:border-sma-purple overflow-hidden cursor-pointer hover:border-[#7B5CF5] dark:hover:border-sma-purple/80 hover:shadow-[0_8px_24px_rgba(123,92,245,0.12)] bg-white dark:bg-sma-surface flex flex-col relative group shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:shadow-none transition-all duration-300"
       onClick={handleCardClick}
     >
-      <div className="w-full flex-1 bg-gray-900 relative group overflow-hidden">
+      <div className="w-full flex-1 bg-gray-100 dark:bg-gray-900 relative group overflow-hidden">
         {thumbnail_url ? (
           <img
             src={thumbnail_url}
@@ -105,7 +104,7 @@ export default function MediaCard({
             className={`absolute inset-0 w-full h-full object-cover ${isProcessing ? 'opacity-50' : ''}`}
           />
         ) : (
-          <div className="absolute inset-0 w-full h-full flex items-center justify-center text-gray-500 text-xs">
+          <div className="absolute inset-0 w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs transition-colors">
             {media_type?.toUpperCase() || 'UNKNOWN'}
           </div>
         )}
@@ -140,7 +139,7 @@ export default function MediaCard({
             }}
             disabled={isProcessing}
             className={`p-1.5 rounded-full transition-colors shadow-md ${isProcessing
-              ? 'bg-gray-800/80 text-gray-500 cursor-not-allowed'
+              ? 'bg-gray-300 dark:bg-gray-800/80 text-gray-500 cursor-not-allowed'
               : 'bg-red-500/80 text-white hover:bg-red-500'
               }`}
           >
@@ -149,7 +148,7 @@ export default function MediaCard({
         </div>
 
         {isProcessing && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800 z-10">
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-800 z-10">
             <div
               className="h-full bg-sma-purple transition-all duration-300 ease-linear"
               style={{ width: `${displayProgress}%` }}
@@ -158,8 +157,8 @@ export default function MediaCard({
         )}
       </div>
 
-      <div className="px-3 py-1.5 shrink-0 flex flex-col justify-between items-center w-full gap-1 h-[56px] bg-sma-surface border-t border-[#2D2844]">
-        <h3 className="text-[12px] leading-tight text-white truncate font-inter w-full text-center shrink-0" title={file_name}>
+      <div className="px-3 py-1.5 shrink-0 flex flex-col justify-between items-center w-full gap-1 h-[56px] bg-white dark:bg-sma-surface border-t border-gray-200/60 dark:border-[#2D2844] transition-colors">
+        <h3 className="text-[12px] leading-tight text-gray-900 dark:text-white truncate font-inter w-full text-center shrink-0 transition-colors" title={file_name}>
           {file_name}
         </h3>
 
@@ -168,14 +167,14 @@ export default function MediaCard({
             const tagText = typeof tag === 'object' ? tag.name : tag;
             const formattedTag = tagText ? tagText.replace(/_/g, ' ') : '';
             return (
-              <div key={idx} className="px-1.5 py-[1px] border border-sma-purple rounded flex items-center justify-center bg-sma-purple/10 flex-shrink-1 min-w-0" title={formattedTag}>
-                <span className="text-[10px] leading-tight text-white font-inter whitespace-nowrap overflow-hidden text-ellipsis block max-w-[50px]">{formattedTag}</span>
+              <div key={idx} className="px-1.5 py-[1px] border border-sma-purple/20 dark:border-sma-purple rounded flex items-center justify-center bg-sma-purple/5 dark:bg-sma-purple/10 flex-shrink-1 min-w-0 transition-colors" title={formattedTag}>
+                <span className="text-[10px] leading-tight text-sma-purple dark:text-white font-inter whitespace-nowrap overflow-hidden text-ellipsis block max-w-[50px] transition-colors">{formattedTag}</span>
               </div>
             );
           })}
           {tags && tags.length > 3 && (
-            <div className="px-1.5 py-[1px] border border-sma-purple rounded flex items-center justify-center bg-sma-purple/10 flex-shrink-0">
-              <span className="text-[10px] leading-tight text-white font-inter whitespace-nowrap">+{tags.length - 3}</span>
+            <div className="px-1.5 py-[1px] border border-sma-purple/20 dark:border-sma-purple rounded flex items-center justify-center bg-sma-purple/5 dark:bg-sma-purple/10 flex-shrink-0 transition-colors">
+              <span className="text-[10px] leading-tight text-sma-purple dark:text-white font-inter whitespace-nowrap transition-colors">+{tags.length - 3}</span>
             </div>
           )}
         </div>

@@ -105,11 +105,11 @@ export default function WaveformSync({ streamUrl, currentTime, onSeek, isPlaying
   };
 
   return (
-    <div className="w-full h-[56px] bg-[#0E0B1F] border border-[#1e1b35] rounded-[6px] px-[12px] flex items-center gap-[12px] shrink-0">
+    <div className="w-full h-[56px] bg-white dark:bg-[#0E0B1F] border border-gray-200 dark:border-[#1e1b35] px-[12px] flex items-center gap-[12px] shrink-0 transition-colors">
       {/* Play/Pause button */}
       <button
         onClick={handleTogglePlay}
-        className="w-[30px] h-[30px] rounded-full bg-white text-[#0E0B1F] flex items-center justify-center hover:bg-gray-200 transition-colors shrink-0"
+        className="w-[30px] h-[30px] rounded-full bg-gray-100 dark:bg-white text-gray-800 dark:text-[#0E0B1F] flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-200 transition-colors shrink-0"
       >
         {isPlaying ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-[1px]" />}
       </button>
@@ -123,7 +123,7 @@ export default function WaveformSync({ streamUrl, currentTime, onSeek, isPlaying
               {[...Array(32)].map((_, i) => (
                 <div
                   key={i}
-                  className="bg-white/20 rounded-full animate-pulse"
+                  className="bg-gray-300 dark:bg-white/20 rounded-full animate-pulse"
                   style={{
                     width: 3,
                     height: `${20 + Math.sin(i * 0.8) * 14}px`,
@@ -137,7 +137,7 @@ export default function WaveformSync({ streamUrl, currentTime, onSeek, isPlaying
 
         {/* No stream URL fallback */}
         {!streamUrl && (
-          <div className="absolute inset-0 flex items-center gap-2 text-white/30">
+          <div className="absolute inset-0 flex items-center gap-2 text-gray-400 dark:text-white/30">
             <AudioLines size={14} />
             <span className="text-[11px] font-inter">No audio stream available</span>
           </div>
@@ -145,7 +145,7 @@ export default function WaveformSync({ streamUrl, currentTime, onSeek, isPlaying
 
         {/* Error fallback */}
         {hasError && (
-          <div className="absolute inset-0 flex items-center gap-2 text-white/30">
+          <div className="absolute inset-0 flex items-center gap-2 text-gray-400 dark:text-white/30">
             <AudioLines size={14} />
             <span className="text-[11px] font-inter">Waveform unavailable</span>
           </div>

@@ -249,7 +249,7 @@ export default function AssetDetail() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0E0B1F] overflow-hidden relative">
+    <div className="flex flex-col h-screen bg-[#F8F9FA] dark:bg-[#0E0B1F] text-gray-900 dark:text-white overflow-hidden relative transition-colors">
       {wsProgress && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
           <div className="bg-[#16132A] p-8 rounded-xl border border-sma-purple/30 shadow-2xl flex flex-col items-center max-w-sm w-full">
@@ -283,7 +283,7 @@ export default function AssetDetail() {
             </div>
             
             {/* Video Player Area */}
-            <div className="relative rounded-[6px] overflow-hidden bg-black flex-shrink-0 border border-gray-800 shadow-xl w-full mt-[12px]" style={{height: 'calc(100vh - 365px)', minHeight: '260px', maxHeight: '420px'}}>
+            <div className="relative rounded-[6px] overflow-hidden bg-black flex-shrink-0 border border-gray-200 dark:border-gray-800 shadow-xl w-full mt-[12px]" style={{height: 'calc(100vh - 365px)', minHeight: '260px', maxHeight: '420px'}}>
               <VideoPlayer 
                 src={streamUrl}
                 initialTimestamp={initialTimestamp}
@@ -307,13 +307,13 @@ export default function AssetDetail() {
                        onClick={() => setActiveTab(tab)}
                        className="w-[85px] h-[32px] flex items-center justify-center relative focus:outline-none group"
                     >
-                      <span className={`font-inter font-normal text-[11px] leading-[14px] ${
-                        activeTab === tab ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'
+                      <span className={`font-inter font-normal text-[11px] leading-[14px] transition-colors ${
+                        activeTab === tab ? 'text-gray-900 dark:text-white font-bold' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200'
                       }`}>
                         {tab.replace('_', ' ')}
                       </span>
                       {activeTab === tab && (
-                        <div className="absolute bottom-0 left-[8px] right-[8px] h-0 border border-[#7B5CF5]"></div>
+                        <div className="absolute bottom-0 left-[8px] right-[8px] h-[2px] bg-[#7B5CF5] rounded-full"></div>
                       )}
                     </button>
                   ))}
@@ -321,10 +321,10 @@ export default function AssetDetail() {
 
                 {/* SCENES Button on the right of tabs */}
                 <div className="absolute right-0 top-[2px]">
-                  <div className={`w-[80px] h-[30px] bg-[#4F8EF7]/70 border border-[#16132A] rounded-[2px] shadow-[0px_4px_4px_rgba(69,39,152,0.25)] flex items-center justify-center transition-all ${
+                  <div className={`w-[80px] h-[30px] bg-[#4F8EF7]/10 dark:bg-[#4F8EF7]/20 border border-[#4F8EF7]/30 dark:border-[#16132A] rounded-[2px] shadow-sm flex items-center justify-center transition-all ${
                     activeTab === 'TRANSCRIPT' ? 'opacity-30 pointer-events-none' : 'opacity-100'
                   }`}>
-                    <span className="font-inter font-bold text-[13px] text-[#DDDDDD] uppercase tracking-wide">
+                    <span className="font-inter font-bold text-[13px] text-[#4f8ef7] dark:text-[#DDDDDD] uppercase tracking-wide">
                       SCENES
                     </span>
                   </div>
@@ -358,18 +358,18 @@ export default function AssetDetail() {
                 {(activeTab === 'OVERVIEW' || activeTab === 'TRANSCRIPT') && (
                   <div className="relative w-full h-auto mt-[8px] flex gap-[12px]">
                     {/* AI Caption Box */}
-                    <div className="flex-1 min-h-[110px] border border-[#7B5CF5] rounded-[6px] box-border p-[10px] relative">
-                      <span className="font-inter font-bold text-[12px] leading-[15px] text-white block mb-1">
+                    <div className="flex-1 min-h-[110px] bg-white dark:bg-[#120F24] border border-[#7B5CF5]/30 dark:border-[#7B5CF5] rounded-[6px] box-border p-[10px] relative transition-all shadow-[0_4px_16px_rgba(123,92,245,0.06)] dark:shadow-none">
+                      <span className="font-inter font-bold text-[12px] leading-[15px] text-gray-900 dark:text-white block mb-1 transition-colors">
                         AI CAPTION
                       </span>
-                      <p className="font-inter font-normal text-[12px] leading-[15px] text-white">
+                      <p className="font-inter font-normal text-[12px] leading-[15px] text-gray-700 dark:text-gray-300 transition-colors">
                         {asset.ai_caption || 'No caption available'}
                       </p>
                     </div>
 
                     {/* Tags Box */}
-                    <div className="w-[240px] min-h-[110px] border border-[#7B5CF5] rounded-[6px] box-border p-[10px] relative flex-shrink-0">
-                      <span className="font-inter font-bold text-[12px] leading-[15px] text-white block mb-1">
+                    <div className="w-[240px] min-h-[110px] bg-white dark:bg-[#120F24] border border-[#7B5CF5]/30 dark:border-[#7B5CF5] rounded-[6px] box-border p-[10px] relative flex-shrink-0 transition-all shadow-[0_4px_16px_rgba(123,92,245,0.06)] dark:shadow-none">
+                      <span className="font-inter font-bold text-[12px] leading-[15px] text-gray-900 dark:text-white block mb-1 transition-colors">
                         TAGS
                       </span>
                       <div className="flex flex-wrap gap-[5px]">
@@ -387,28 +387,28 @@ export default function AssetDetail() {
                 )}
 
                 {activeTab === 'METADATA' && (
-                  <div>
-                    <h4 className="font-medium text-white mb-4">File Information</h4>
+                  <div className="bg-white dark:bg-[#120F24] border border-gray-200 dark:border-white/5 rounded-lg p-5 transition-all shadow-[0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-none w-full">
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-4 transition-colors">File Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                      <div className="flex justify-between border-b border-gray-800 pb-2">
+                      <div className="flex justify-between border-b border-gray-200 dark:border-gray-800 pb-2 transition-colors">
                         <span className="text-gray-500">File Name</span>
-                        <span className="text-gray-300">{asset.file_name}</span>
+                        <span className="text-gray-800 dark:text-gray-300 font-medium transition-colors">{asset.file_name}</span>
                       </div>
-                      <div className="flex justify-between border-b border-gray-800 pb-2">
+                      <div className="flex justify-between border-b border-gray-200 dark:border-gray-800 pb-2 transition-colors">
                         <span className="text-gray-500">File Size</span>
-                        <span className="text-gray-300">{asset.file_size}</span>
+                        <span className="text-gray-800 dark:text-gray-300 font-medium transition-colors">{asset.file_size}</span>
                       </div>
-                      <div className="flex justify-between border-b border-gray-800 pb-2">
+                      <div className="flex justify-between border-b border-gray-200 dark:border-gray-800 pb-2 transition-colors">
                         <span className="text-gray-500">Duration</span>
-                        <span className="text-gray-300">{asset.duration}s</span>
+                        <span className="text-gray-800 dark:text-gray-300 font-medium transition-colors">{asset.duration}s</span>
                       </div>
-                      <div className="flex justify-between border-b border-gray-800 pb-2">
+                      <div className="flex justify-between border-b border-gray-200 dark:border-gray-800 pb-2 transition-colors">
                         <span className="text-gray-500">Resolution</span>
-                        <span className="text-gray-300">{asset.resolution}</span>
+                        <span className="text-gray-800 dark:text-gray-300 font-medium transition-colors">{asset.resolution}</span>
                       </div>
-                      <div className="flex justify-between border-b border-gray-800 pb-2">
+                      <div className="flex justify-between border-b border-gray-200 dark:border-gray-800 pb-2 transition-colors">
                         <span className="text-gray-500">Created At</span>
-                        <span className="text-gray-300">{new Date(asset.created_at).toLocaleDateString()}</span>
+                        <span className="text-gray-800 dark:text-gray-300 font-medium transition-colors">{new Date(asset.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
@@ -420,13 +420,11 @@ export default function AssetDetail() {
 
           {/* Right Column */}
           {asset.mediaType !== 'image' && (
-            <div className="w-[380px] flex flex-col bg-[rgba(126,26,249,0.72)] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] rounded-[6px] flex-shrink-0 p-[8px] gap-[8px]">
+            <div className="w-[380px] flex flex-col bg-white dark:bg-[#120F24] border border-gray-200 dark:border-[#2D2844] shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-none rounded-[6px] flex-shrink-0 p-[8px] gap-[8px] transition-all">
               
               {/* Top Search */}
               <div className="flex-shrink-0">
                 <InVideoSearch 
-                  assetId={id} 
-                  onSeekVideo={handleSeek}
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
                   isSearching={searchMutation.isLoading}
@@ -434,7 +432,7 @@ export default function AssetDetail() {
               </div>
 
               {/* Showing Count and Sort Option */}
-              <div className="flex items-center justify-between text-[11px] text-white/70 px-[6px] py-[2px] border-b border-white/10 shrink-0 pb-[4px]">
+              <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-white/70 px-[6px] py-[2px] border-b border-gray-200 dark:border-white/10 shrink-0 pb-[4px] transition-colors">
                 <span>
                   {activeTab === 'TRANSCRIPT' 
                     ? `Showing ${filteredTranscript.length} lines`
@@ -448,8 +446,8 @@ export default function AssetDetail() {
                     onChange={(e) => setSortBy(e.target.value)}
                     className="bg-transparent border-none text-[#7B5CF5] font-bold focus:outline-none cursor-pointer text-[11px]"
                   >
-                    <option value="time" className="bg-[#0E0B1F]">Time</option>
-                    <option value="relevance" className="bg-[#0E0B1F]">Relevance</option>
+                    <option value="time" className="bg-white dark:bg-[#0E0B1F] text-gray-700 dark:text-white">Time</option>
+                    <option value="relevance" className="bg-white dark:bg-[#0E0B1F] text-gray-700 dark:text-white">Relevance</option>
                   </select>
                 </div>
               </div>
@@ -485,16 +483,16 @@ export default function AssetDetail() {
                     onTogglePlay={() => setIsPlaying(!isPlaying)}
                   />
                 ) : (
-                  <div className="w-full py-[8px] flex items-center justify-center border border-dashed border-[#7B5CF5]/30 rounded-[6px] bg-[#16132A]/20">
+                  <div className="w-full py-[8px] flex items-center justify-center border border-dashed border-[#7B5CF5]/30 dark:border-[#7B5CF5]/40 rounded-[6px] bg-[#7B5CF5]/5 dark:bg-[#16132A]/20 transition-colors">
                     <button 
                       onClick={handleDetectScenes}
                       disabled={reingestMutation.isLoading}
-                      className="text-[11px] font-inter font-medium text-gray-400 hover:text-white transition-colors flex items-center gap-1.5"
+                      className="text-[11px] font-inter font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1.5"
                     >
                       {reingestMutation.isLoading ? (
                         <span className="w-3 h-3 border-2 border-[#7B5CF5] border-t-transparent rounded-full animate-spin" />
                       ) : null}
-                      <span>Showing {sortedScenes.length} scenes · <span className="text-[#c4b5fd] hover:text-white font-bold hover:underline">Detect more</span></span>
+                      <span>Showing {sortedScenes.length} scenes · <span className="text-[#7B5CF5] dark:text-[#c4b5fd] hover:text-gray-900 dark:hover:text-white font-bold hover:underline transition-colors">Detect more</span></span>
                     </button>
                   </div>
                 )}
