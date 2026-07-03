@@ -77,6 +77,7 @@ export default function AIPipelineTimeline() {
 
   useEffect(() => {
     if (totalJobs === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSmoothStats({
         upload: { percent: 0, count: 0 },
         metadata: { percent: 0, count: 0 },
@@ -128,11 +129,11 @@ export default function AIPipelineTimeline() {
   }, [activeJobs, totalJobs]);
 
   return (
-    <div className="bg-[#120F1D] border border-white/5 rounded-lg p-4 h-full flex flex-col relative overflow-hidden min-h-0">
+    <div className="bg-white dark:bg-[#120F1D] border border-gray-200 dark:border-white/5 rounded-lg p-4 h-full flex flex-col relative overflow-hidden min-h-0 transition-colors shadow-sm dark:shadow-none">
       {/* Header */}
-      <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-6">
-        <h3 className="text-white text-[14px] font-bold">AI Processing Pipeline</h3>
-        <a href="#" className="text-gray-400 hover:text-white text-[11px] transition-colors">View Pipeline Docs</a>
+      <div className="flex justify-between items-center border-b border-gray-200 dark:border-white/5 pb-4 mb-6 transition-colors">
+        <h3 className="text-gray-900 dark:text-white text-[14px] font-bold transition-colors">AI Processing Pipeline</h3>
+        <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-[11px] transition-colors">View Pipeline Docs</a>
       </div>
 
       {/* Stepper */}
@@ -145,28 +146,28 @@ export default function AIPipelineTimeline() {
           const isLast = idx === PIPELINE_STAGES.length - 1;
 
           // Xác định trạng thái của node dot
-          let dotClass = "w-5 h-5 rounded-full flex items-center justify-center shrink-0 z-10 border-4 border-[#120F1D] ";
+          let dotClass = "w-5 h-5 rounded-full flex items-center justify-center shrink-0 z-10 border-4 border-white dark:border-[#120F1D] transition-colors ";
           if (isCompleted) dotClass += "bg-[#4ADE80]";
           else if (isProcessing) dotClass += "bg-[#7B5CF5] shadow-[0_0_10px_rgba(123,92,245,0.5)] ring-2 ring-[#7B5CF5]/50";
-          else dotClass += "bg-gray-600";
+          else dotClass += "bg-gray-300 dark:bg-gray-600";
 
           return (
             <div key={stage.id} className={`flex gap-4 relative z-10 group ${isLast ? '' : 'mb-6'}`}>
               <div className="mt-0.5 flex flex-col items-center relative">
                 <div className={dotClass}></div>
                 {!isLast && (
-                  <div className="absolute top-5 -bottom-6 w-[2px] bg-white/5 z-0 rounded-full"></div>
+                  <div className="absolute top-5 -bottom-6 w-[2px] bg-gray-200 dark:bg-white/5 z-0 rounded-full transition-colors"></div>
                 )}
               </div>
               
               <div className="flex-1">
-                <h4 className={`text-[13px] font-bold ${isProcessing ? 'text-white' : 'text-gray-300'}`}>{stage.name}</h4>
-                <p className="text-gray-500 text-[11px] mt-0.5">{stage.desc}</p>
+                <h4 className={`text-[13px] font-bold transition-colors ${isProcessing ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>{stage.name}</h4>
+                <p className="text-gray-500 text-[11px] mt-0.5 transition-colors">{stage.desc}</p>
                 
                 {/* Thanh Progress nếu đang chạy */}
                 {isProcessing && (
                   <div className="mt-3 flex items-center gap-3">
-                    <div className="w-full h-[3px] bg-[#D9D9D9]/10 rounded-full overflow-hidden">
+                    <div className="w-full h-[3px] bg-gray-200 dark:bg-[#D9D9D9]/10 rounded-full overflow-hidden transition-colors">
                       <div 
                         className="h-full bg-gradient-to-r from-[#4F8EF7] to-[#7B5CF5] transition-all duration-300"
                         style={{ width: `${stats.percent}%` }}
@@ -184,7 +185,7 @@ export default function AIPipelineTimeline() {
                       <span className="text-[#4ADE80] text-[10px] font-medium">Completed</span>
                       <CheckCircle2 className="w-5 h-5 text-[#4ADE80] fill-[#4ADE80]/20" />
                     </div>
-                    <span className="text-gray-500 text-[10px]">
+                    <span className="text-gray-500 text-[10px] transition-colors">
                       {stats.count} files{totalSizeMB > 0 ? `: ${totalSizeMB.toFixed(2)} MB` : ''}
                     </span>
                   </>
@@ -193,7 +194,7 @@ export default function AIPipelineTimeline() {
                 {isProcessing && (
                   <>
                      <div className="flex items-center gap-2 mb-1">
-                      <span className="text-white text-[12px] font-bold">{Math.floor(stats.percent)}%</span>
+                      <span className="text-gray-900 dark:text-white text-[12px] font-bold transition-colors">{Math.floor(stats.percent)}%</span>
                       <Loader2 className="w-5 h-5 text-[#7B5CF5] animate-spin" />
                     </div>
                     {/* <span className="text-gray-400 text-[10px]">ETA: 00:00:37</span> */}
@@ -203,12 +204,12 @@ export default function AIPipelineTimeline() {
                 {isQueued && (
                   <>
                      <div className="flex items-center gap-2 mb-1">
-                      <span className="text-gray-500 text-[10px] font-medium">Queued</span>
-                      <div className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center">
-                        <Clock className="w-3 h-3 text-white" />
+                      <span className="text-gray-500 dark:text-gray-500 text-[10px] font-medium transition-colors">Queued</span>
+                      <div className="w-5 h-5 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center transition-colors">
+                        <Clock className="w-3 h-3 text-gray-500 dark:text-white transition-colors" />
                       </div>
                     </div>
-                    <span className="text-gray-600 text-[10px]">Waiting to start</span>
+                    <span className="text-gray-400 dark:text-gray-600 text-[10px] transition-colors">Waiting to start</span>
                   </>
                 )}
               </div>

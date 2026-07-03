@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function TagChip({ tag, onClick, isActive }) {
   if (!tag) return null;

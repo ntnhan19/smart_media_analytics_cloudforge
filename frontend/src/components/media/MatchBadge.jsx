@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function MatchBadge({ score }) {
   let colorClass = 'bg-gray-800 text-gray-300 border-gray-700';

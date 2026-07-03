@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { ChevronDown } from 'lucide-react';
 
@@ -24,17 +24,17 @@ export default function CustomDropdown({ value, onChange, options, icon: Icon, d
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`flex items-center gap-2 rounded-lg px-3 py-1.5 border transition-colors ${
           disabled 
-            ? 'bg-gray-800/50 border-gray-800 text-gray-600 cursor-not-allowed' 
-            : 'bg-gray-800 border-gray-700 cursor-pointer hover:border-gray-500 text-gray-200'
+            ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+            : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-200'
         }`}
       >
-        {Icon && <Icon className={`w-4 h-4 ${disabled ? 'text-gray-600' : 'text-gray-400'}`} />}
+        {Icon && <Icon className={`w-4 h-4 ${disabled ? 'text-gray-400 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`} />}
         <span className="text-sm select-none whitespace-nowrap">{selectedOption.label}</span>
-        <ChevronDown className={`w-4 h-4 transition-transform ${disabled ? 'text-gray-600' : 'text-gray-400'} ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 transition-transform ${disabled ? 'text-gray-400 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'} ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 min-w-full w-max bg-[#16132A] border border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden origin-top animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full left-0 mt-2 min-w-full w-max bg-white dark:bg-[#16132A] border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg dark:shadow-xl z-50 overflow-hidden origin-top animate-in fade-in slide-in-from-top-2 duration-200 transition-colors">
           <div className="py-1">
             {options.map((opt) => (
               <div
@@ -45,8 +45,8 @@ export default function CustomDropdown({ value, onChange, options, icon: Icon, d
                 }}
                 className={`px-4 py-2.5 text-sm cursor-pointer transition-colors whitespace-nowrap ${
                   value === opt.value 
-                    ? 'bg-blue-600/20 text-blue-400 font-medium' 
-                    : 'text-gray-300 hover:bg-gray-800/80 hover:text-white'
+                    ? 'bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 font-medium' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 {opt.label}

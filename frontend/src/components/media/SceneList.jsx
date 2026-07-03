@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Scissors, Loader2 } from 'lucide-react';
 import { createClip } from '../../services/api';
 

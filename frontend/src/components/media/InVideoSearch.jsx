@@ -1,31 +1,6 @@
-import React, { useState, useCallback } from 'react';
 import { Search } from 'lucide-react';
-import { transcriptMock, sceneMock } from '../../mocks/assetDetail';
 
-// Helper: highlight matched text
-function HighlightText({ text, query }) {
-  if (!query.trim()) return <span>{text}</span>;
-  const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.toLowerCase() === query.toLowerCase() ? (
-          <mark key={i} className="bg-[#7B5CF5]/40 text-[#c4b5fd] px-0.5 rounded not-italic">{part}</mark>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
-  );
-}
-
-function formatTime(sec) {
-  const m = Math.floor(sec / 60).toString().padStart(2, '0');
-  const s = Math.floor(sec % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
-}
-
-export default function InVideoSearch({ assetId, onSeekVideo, searchQuery, onSearchChange, isSearching }) {
+export default function InVideoSearch({ searchQuery, onSearchChange, isSearching }) {
   return (
     <div className="flex flex-col">
       {/* Search Title */}

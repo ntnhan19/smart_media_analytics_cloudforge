@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { Play } from 'lucide-react';
 
 // Helper: highlight matched text

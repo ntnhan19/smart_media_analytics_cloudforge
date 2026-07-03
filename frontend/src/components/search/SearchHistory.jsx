@@ -1,6 +1,5 @@
-import React from 'react';
 import PropTypes from 'prop-types';
-import { History, X } from 'lucide-react';
+import { History } from 'lucide-react';
 
 export default function SearchHistory({ history, onSelectHistory, onClearHistory }) {
   if (!history || history.length === 0) return null;

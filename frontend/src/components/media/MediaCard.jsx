@@ -42,8 +42,6 @@ export default function MediaCard({
   duration,
   duration_sec,
   resolution,
-  file_size_bytes,
-  created_at,
   tags,
   status = 'ready',
   is_favorite = false,

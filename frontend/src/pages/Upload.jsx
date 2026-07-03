@@ -48,26 +48,26 @@ export default function Upload() {
   };
 
   return (
-    <div className="h-full overflow-hidden text-white font-inter flex flex-col gap-2">
+    <div className="h-full overflow-hidden text-gray-900 dark:text-white font-inter flex flex-col gap-2 transition-colors">
 
       {/* ── HEADER BAR ── */}
       <div className="shrink-0 flex items-center justify-between py-1">
         {/* Left: Title */}
         <div>
-          <h1 className="text-[15px] font-bold text-white leading-tight">Ingest &amp; Upload Media</h1>
-          <p className="text-[10px] text-gray-400 leading-tight">Add your media to your local library</p>
+          <h1 className="text-[15px] font-bold leading-tight">Ingest &amp; Upload Media</h1>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight transition-colors">Add your media to your local library</p>
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
           {/* Settings button */}
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-[#16132A] border border-[#4F8EF7] rounded-md text-white text-[11px] hover:bg-[#4F8EF7]/10 transition-colors">
+          <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-[#16132A] border border-gray-300 dark:border-[#4F8EF7] rounded-md text-gray-700 dark:text-white text-[11px] hover:bg-gray-100 dark:hover:bg-[#4F8EF7]/10 transition-colors shadow-sm dark:shadow-none">
             <Settings className="w-4 h-4" />
             <span className="font-light">Settings</span>
           </button>
 
           {/* Divider */}
-          <div className="h-5 w-px bg-white/20" />
+          <div className="h-5 w-px bg-gray-300 dark:bg-white/20 transition-colors" />
 
           {/* Add Assets button */}
           <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4F8EF7] hover:bg-[#4F8EF7]/90 rounded-md text-white text-[11px] font-bold transition-colors">
@@ -79,7 +79,7 @@ export default function Upload() {
       </div>
 
       {/* Divider line */}
-      <div className="shrink-0 h-px bg-white/5" />
+      <div className="shrink-0 h-px bg-gray-200 dark:bg-white/5 transition-colors" />
 
       {/* ── MAIN GRID WRAPPER ── */}
       <div 
@@ -118,8 +118,8 @@ export default function Upload() {
             <h2 className="text-[11px] font-bold shrink-0">
               3. {activeJobs?.length > 0 ? <span className="text-[#7B5CF5] underline underline-offset-4">Review {"&"} Complete</span> : "Review & Complete"}
             </h2>
-            <div className="flex-1 min-h-0 overflow-hidden bg-[#120F1D] border border-white/5 rounded-lg flex flex-col">
-              <div className="flex justify-between items-center px-4 pt-3 pb-2 shrink-0 border-b border-white/5">
+            <div className="flex-1 min-h-0 overflow-hidden bg-white dark:bg-[#120F1D] border border-gray-200 dark:border-white/5 rounded-lg flex flex-col transition-colors shadow-sm dark:shadow-none">
+              <div className="flex justify-between items-center px-4 pt-3 pb-2 shrink-0 border-b border-gray-200 dark:border-white/5 transition-colors">
                 <span className="text-[12px] font-bold">Ingest Queue</span>
                 <button onClick={clearAllJobs} className="text-[10px] text-[#EF4444] hover:text-[#F87171] transition-colors">
                   Clear Queue
@@ -128,8 +128,8 @@ export default function Upload() {
               <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 py-2">
                 <IngestQueue selectedJobId={selectedJobId} onSelectJob={handleSelectJob} />
               </div>
-              <div className="px-4 py-2 border-t border-white/5 shrink-0">
-                <button className="text-[10px] text-gray-400 hover:text-white flex items-center gap-1 transition-colors">
+              <div className="px-4 py-2 border-t border-gray-200 dark:border-white/5 shrink-0 transition-colors">
+                <button className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-1 transition-colors">
                   View all completed
                   <svg width="8" height="5" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
@@ -139,7 +139,7 @@ export default function Upload() {
         </div>
 
         {/* ── ROW 2: Generated Result Review ── */}
-        <div className="min-h-0 overflow-hidden border-t border-white/5 pt-2">
+        <div className="min-h-0 overflow-hidden border-t border-gray-200 dark:border-white/5 pt-2 transition-colors">
           <GeneratedResultReview 
             isOpen={isReviewOpen} 
             onToggle={() => setIsReviewOpen(!isReviewOpen)} 

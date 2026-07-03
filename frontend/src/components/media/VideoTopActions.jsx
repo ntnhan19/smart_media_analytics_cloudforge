@@ -1,7 +1,6 @@
-import React from 'react';
 import { Star, Share2, Info } from 'lucide-react';
 
-export default function VideoTopActions({ assetId, isFavourited, onFavourite, onShare, onInfo }) {
+export default function VideoTopActions({ isFavourited, onFavourite, onShare, onInfo }) {
   return (
     <div className="absolute top-4 right-4 flex gap-2 z-10">
       <button 

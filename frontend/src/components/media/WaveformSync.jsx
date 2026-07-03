@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { Play, Pause, AudioLines } from 'lucide-react';
 
@@ -67,6 +67,7 @@ export default function WaveformSync({ streamUrl, currentTime, onSeek, isPlaying
     } catch (err) {
       if (err?.name !== 'AbortError') {
         console.warn('WaveSurfer load error:', err);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setHasError(true);
       }
     }
@@ -78,6 +79,7 @@ export default function WaveformSync({ streamUrl, currentTime, onSeek, isPlaying
         wavesurfer.current = null;
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamUrl]);
 
   // Sync waveform playhead to video currentTime (without controlling audio)

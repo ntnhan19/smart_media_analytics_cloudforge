@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Loader2, RotateCw } from 'lucide-react';
 import TagChip from './TagChip';
 import ObjectChip from './ObjectChip';

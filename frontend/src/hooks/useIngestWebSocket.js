@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useJobs } from '../contexts/JobContext';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -26,7 +26,7 @@ export const useIngestWebSocket = (jobId) => {
             ws.close();
             return;
           }
-          console.log(`[WebSocket] Connected for job ${jobId}`);
+          // Connected successfully
         };
 
         ws.onmessage = (event) => {
@@ -54,7 +54,6 @@ export const useIngestWebSocket = (jobId) => {
 
         ws.onclose = () => {
           if (!isActive) return;
-          console.log(`[WebSocket] Disconnected for job ${jobId}. Attempting to reconnect in 5s...`);
           reconnectTimeout = setTimeout(connect, 5000);
         };
 

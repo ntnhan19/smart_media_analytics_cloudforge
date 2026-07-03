@@ -61,6 +61,11 @@ export const deleteAsset = async (assetId) => {
   return response.data;
 };
 
+export const getTags = async (signal) => {
+  const response = await api.get('/tags', { signal });
+  return response.data;
+};
+
 export const getAsset = async (assetId, signal) => {
   const response = await api.get(`/assets/${assetId}`, { signal });
   return response.data;

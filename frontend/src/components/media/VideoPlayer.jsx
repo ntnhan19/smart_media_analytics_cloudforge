@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Settings, Captions } from 'lucide-react';
 
 export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], mediaType = 'video', onTimeUpdate, duration = 120, activeMarkers = [], onPlayStateChange }) {
@@ -16,6 +16,7 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
   
   // Update local state if parent changes initialTimestamp (e.g. from seek clicks)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentTime(initialTimestamp);
     if (videoRef.current && videoRef.current.readyState >= 1) { // HAVE_METADATA or higher
       if (Math.abs(videoRef.current.currentTime - initialTimestamp) > 0.5) {
@@ -178,6 +179,7 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, currentTime, actualDuration, mediaType, onTimeUpdate]);
 
   if (mediaType === 'image') {

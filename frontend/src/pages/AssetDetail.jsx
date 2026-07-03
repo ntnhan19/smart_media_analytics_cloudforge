@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import HeaderBar from '../components/layout/HeaderBar';
@@ -18,8 +18,6 @@ import TagChip from '../components/media/TagChip';
 
 import WaveformSync from '../components/media/WaveformSync';
 
-// Mock Data fallbacks
-import { transcriptMock, insightMock } from '../mocks/assetDetail';
 
 export default function AssetDetail() {
   const { id } = useParams();
@@ -191,13 +189,13 @@ export default function AssetDetail() {
 
   // Ensure mock fallbacks if API structure differs during development
   const asset = assetData?.asset || assetData || {};
-  const scenes = scenesData?.scenes || scenesData || [];
+  const scenes = useMemo(() => scenesData?.scenes || scenesData || [], [scenesData]);
   const streamUrl = streamData?.stream_url || asset.file_path; // Fallback to file_path if stream API not ready
 
   // Use search results if searching, otherwise use all scenes
-  const searchResults = searchMutation.data?.results || [];
+  const searchResults = useMemo(() => searchMutation.data?.results || [], [searchMutation.data]);
   
-  const filteredScenes = React.useMemo(() => {
+  const filteredScenes = useMemo(() => {
     if (debouncedQuery.trim() && searchResults.length > 0) {
       // Map search results back to scene items based on timestamp/scene info
       return searchResults.map(r => r.scene).filter(Boolean).map(s => ({
@@ -228,7 +226,7 @@ export default function AssetDetail() {
     });
   }, [debouncedQuery, selectedTagName, scenes, searchResults]);
 
-  const sortedScenes = React.useMemo(() => {
+  const sortedScenes = useMemo(() => {
     return [...filteredScenes].sort((a, b) => {
       if (sortBy === 'relevance' && debouncedQuery.trim()) {
         const aDescMatch = a.description?.toLowerCase().includes(debouncedQuery.toLowerCase());
