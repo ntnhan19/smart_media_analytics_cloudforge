@@ -22,7 +22,7 @@ export default function Dashboard() {
 
   const navigate = useNavigate();
 
-  const { data: tagsData, isLoading: isLoadingTags } = useQuery({
+  const { data: tagsData, isLoading: isLoadingTags, isError: isErrorTags, refetch: refetchTags } = useQuery({
     queryKey: ['tags'],
     queryFn: ({ signal }) => getTags(signal),
     staleTime: 5 * 60 * 1000,
@@ -179,10 +179,12 @@ export default function Dashboard() {
                   onToggleTag={handleToggleTag}
                   mediaTypes={availableMediaTypes}
                   activeMediaTypes={activeMediaTypes}
-                  onToggleMediaType={handleToggleMediaType}
+                  onToggleMediaType={(type) => setActiveMediaTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
                   topK={topK}
                   onTopKChange={setTopK}
                   isLoadingTags={isLoadingTags}
+                  isErrorTags={isErrorTags}
+                  onRetryTags={refetchTags}
                 />
               </div>
 

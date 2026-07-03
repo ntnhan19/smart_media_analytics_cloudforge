@@ -29,7 +29,7 @@ export default function Search() {
 
   const [searchHistory, setSearchHistory] = useState(getSearchHistory());
 
-  const { data: tagsData, isLoading: isLoadingTags } = useQuery({
+  const { data: tagsData, isLoading: isLoadingTags, isError: isErrorTags, refetch: refetchTags } = useQuery({
     queryKey: ['tags'],
     queryFn: ({ signal }) => getTags(signal),
     staleTime: 5 * 60 * 1000,
@@ -192,6 +192,8 @@ export default function Search() {
           topK={topK} onTopKChange={onTopKChange}
           disabled={isDisabled}
           isLoadingTags={isLoadingTags}
+          isErrorTags={isErrorTags}
+          onRetryTags={refetchTags}
         />
       </div>
 

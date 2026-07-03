@@ -9,7 +9,9 @@ export default function SearchFilters({
   topK, onTopKChange,
   disabled = false,
   hideScoreAndTopK = false,
-  isLoadingTags = false
+  isLoadingTags = false,
+  isErrorTags = false,
+  onRetryTags = () => {}
 }) {
   return (
     <div className="flex flex-col gap-3 py-2 border-b border-gray-200 dark:border-[#2D2844] transition-colors">
@@ -72,7 +74,14 @@ export default function SearchFilters({
         )}
 
         {/* Tags Filter */}
-        {isLoadingTags ? (
+        {isErrorTags ? (
+          <div className="flex items-center gap-2 border-l border-gray-300 dark:border-gray-700 pl-3 ml-1 shrink-0 transition-colors">
+            <Tag className="w-3.5 h-3.5 text-red-500/70" />
+            <button type="button" onClick={onRetryTags} className="text-[11px] font-medium text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors flex items-center gap-1 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-md">
+              Failed to load tags. Click to retry.
+            </button>
+          </div>
+        ) : isLoadingTags ? (
           <div className="flex items-center gap-2 border-l border-gray-300 dark:border-gray-700 pl-3 ml-1 shrink-0 transition-colors">
             <Tag className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-700 transition-colors`} />
             <div className="flex items-center gap-1.5">
@@ -125,6 +134,8 @@ SearchFilters.propTypes = {
   disabled: PropTypes.bool,
   hideScoreAndTopK: PropTypes.bool,
   isLoadingTags: PropTypes.bool,
+  isErrorTags: PropTypes.bool,
+  onRetryTags: PropTypes.func,
 };
 
 SearchFilters.defaultProps = {
