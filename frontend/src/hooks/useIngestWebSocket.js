@@ -1,10 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useJobs } from '../contexts/JobContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/api/v1/ingest/ws';
 
 export const useIngestWebSocket = (jobId) => {
   const { updateJob } = useJobs();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!jobId) return;
@@ -40,6 +42,10 @@ export const useIngestWebSocket = (jobId) => {
                 ...(data.current_step && { current_step: data.current_step }),
                 ...(data.error_message && { error_message: data.error_message }),
               });
+              
+              if (data.status === 'completed') {
+                queryClient.invalidateQueries({ queryKey: ['assets'] });
+              }
             }
           } catch (err) {
             console.error(`[WebSocket] Failed to parse message for job ${jobId}`, err);
@@ -84,5 +90,5 @@ export const useIngestWebSocket = (jobId) => {
         }
       }
     };
-  }, [jobId, updateJob]);
+  }, [jobId, updateJob, queryClient]);
 };

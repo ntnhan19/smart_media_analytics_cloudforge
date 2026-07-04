@@ -15,6 +15,11 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://backend:8000',
+        changeOrigin: true,
+        ws: true
+      },
+      '/media': {
+        target: 'http://minio:9000',
         changeOrigin: true
       }
     }

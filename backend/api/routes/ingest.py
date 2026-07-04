@@ -1,11 +1,13 @@
 from typing import Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from schemas.ingest import IngestRequest, IngestResponse, IngestStatusResponse
 from models.ingest_job import IngestJob
 from database import get_db
 from core.websocket_manager import manager
+from core.limiter import limiter
+from config import settings
 from services.ingest_service import run_ingest_pipeline, run_ingest_pipeline_with_cleanup
 import uuid
 import logging
@@ -52,13 +54,22 @@ async def start_ingest_job(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/upload", response_model=IngestResponse, status_code=202)
+@limiter.limit(settings.UPLOAD_RATE_LIMIT)
 async def upload_ingest_job(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     options: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
     try:
+        import os
+        ext = os.path.splitext(file.filename)[1].lower() if file.filename else ""
+        if ext not in settings.ALLOWED_EXTENSIONS:
+            client_ip = request.client.host if request.client else "unknown"
+            logger.warning(f"File upload rejected due to invalid extension: {ext}", extra={"client_ip": client_ip, "endpoint": request.url.path})
+            raise HTTPException(status_code=400, detail=f"File extension {ext} not allowed.")
+            
         # Parse options
         from schemas.ingest import IngestOptions
         ingest_options = IngestOptions()
@@ -72,8 +83,6 @@ async def upload_ingest_job(
         # Create a new job in DB
         asset_id = uuid.uuid4()
         from models.asset import Asset
-        import os
-        ext = os.path.splitext(file.filename)[1].lower() if file.filename else ""
         media_type = "audio" if ext in {".wav", ".mp3"} else "video"
         
         new_asset = Asset(
@@ -101,7 +110,20 @@ async def upload_ingest_job(
         file_path = os.path.join(upload_dir, file.filename)
         
         with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            bytes_read = 0
+            CHUNK_SIZE = 1024 * 1024 # 1MB chunks
+            while True:
+                chunk = await file.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                bytes_read += len(chunk)
+                if bytes_read > settings.MAX_UPLOAD_SIZE_BYTES:
+                    buffer.close()
+                    os.remove(file_path)
+                    client_ip = request.client.host if request.client else "unknown"
+                    logger.warning(f"File upload rejected due to exceeding size limit", extra={"client_ip": client_ip, "endpoint": request.url.path})
+                    raise HTTPException(status_code=413, detail="Payload Too Large")
+                buffer.write(chunk)
             
         # Start background task with cleanup
         background_tasks.add_task(
@@ -118,6 +140,8 @@ async def upload_ingest_job(
             assets_queued=1,
             message="Ingestion pipeline started from uploaded file."
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to start ingest job from upload: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

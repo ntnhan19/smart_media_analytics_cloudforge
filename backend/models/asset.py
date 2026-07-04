@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import uuid
-from sqlalchemy import Column, String, Float, BigInteger, DateTime, Text, Index
+from sqlalchemy import Column, String, Float, BigInteger, DateTime, Text, Index, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -15,6 +15,7 @@ class Asset(Base):
     file_name = Column(String, nullable=False, index=True)
     file_path = Column(String, nullable=False, unique=True, index=True)
     media_type = Column(String(50), default="video")  # video, audio, image...
+    is_favorite = Column(Boolean, default=False, nullable=False, index=True)
 
     # ─── Technical Metadata ────────────────────────────────────────────────────
     duration_sec = Column(Float, nullable=True, index=True)

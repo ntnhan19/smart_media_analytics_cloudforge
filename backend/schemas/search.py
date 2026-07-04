@@ -1,6 +1,10 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+class TagFrequency(BaseModel):
+    tag: str
+    count: int
+
 class SearchRequestFilters(BaseModel):
     asset_id: Optional[str] = Field(None, description="Filter by a specific asset ID for in-video search.")
     media_type: List[str] = Field(default_factory=list, description="Filter by media type. Empty array = no filter.")

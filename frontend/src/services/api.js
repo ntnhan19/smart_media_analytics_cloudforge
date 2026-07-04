@@ -51,12 +51,54 @@ export const retryJob = async (jobId) => {
   return response.data;
 };
 
-export const getAssets = async (signal) => {
-  const response = await api.get('/assets?limit=100', { signal });
+export const getAssets = async (signal, limit = 50, offset = 0) => {
+  const response = await api.get(`/assets?limit=${limit}&offset=${offset}`, { signal });
+  return response.data;
+};
+
+export const deleteAsset = async (assetId) => {
+  const response = await api.delete(`/assets/${assetId}`);
   return response.data;
 };
 
 export const getAsset = async (assetId, signal) => {
   const response = await api.get(`/assets/${assetId}`, { signal });
+  return response.data;
+};
+
+export const getAssetScenes = async (assetId, signal) => {
+  const response = await api.get(`/assets/${assetId}/scenes`, { signal });
+  return response.data;
+};
+
+export const reingestAsset = async (assetId, options = {}) => {
+  const response = await api.post(`/assets/${assetId}/reingest`, options);
+  return response.data;
+};
+
+export const regenerateInsights = async (assetId) => {
+  const response = await api.post(`/assets/${assetId}/regenerate-insights`);
+  return response.data;
+};
+
+export const getAssetStream = async (assetId, signal) => {
+  const response = await api.get(`/media/stream/${assetId}`, { signal });
+  return response.data; // Expected to return { stream_url: "..." }
+};
+
+export const createClip = async (assetId, startTime, endTime, sceneId) => {
+  const response = await api.post(`/clips`, {
+    asset_id: assetId,
+    start_time_sec: startTime,
+    end_time_sec: endTime,
+    scene_id: sceneId
+  });
+  return response.data;
+};
+
+export const toggleFavorite = async (assetId, isFavorite) => {
+  const response = await api.patch(`/assets/${assetId}/favorite`, {
+    is_favorite: isFavorite
+  });
   return response.data;
 };

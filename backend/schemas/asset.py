@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 import uuid
 
@@ -18,9 +18,18 @@ class AssetResponse(BaseModel):
     objects: Optional[list] = None
     best_for: Optional[list] = None
     transcripts_json: Optional[list] = None
+    thumbnail_url: Optional[str] = None
+    is_favorite: bool = False
 
     class Config:
         from_attributes = True
+
+class PaginatedAssetResponse(BaseModel):
+    items: List[AssetResponse]
+    total: int
+
+class AssetFavoriteUpdate(BaseModel):
+    is_favorite: bool
 
 class SceneResponse(BaseModel):
     scene_id: str

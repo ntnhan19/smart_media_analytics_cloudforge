@@ -2,23 +2,15 @@ import React, { useState } from 'react';
 import { Loader2, RotateCw } from 'lucide-react';
 import TagChip from './TagChip';
 import ObjectChip from './ObjectChip';
-import { sceneMock } from '../../mocks/assetDetail';
-
-export default function AIInsightsPanel({ insight, onObjectClick, selectedObjectId, onTagClick, selectedTagName, currentTime = 0 }) {
-  const [isRegenerating, setIsRegenerating] = useState(false);
+export default function AIInsightsPanel({ insight, scenes = [], onObjectClick, selectedObjectId, onTagClick, selectedTagName, currentTime = 0, onRegenerate, isRegenerating = false }) {
   const [showAllObjects, setShowAllObjects] = useState(false);
-
-  const handleRegenerate = () => {
-    setIsRegenerating(true);
-    setTimeout(() => setIsRegenerating(false), 2000); // Mock 2s loading
-  };
 
   if (!insight) return null;
 
   // Find active scene based on currentTime
-  const activeScene = sceneMock.find(s => currentTime >= s.start_sec && currentTime < s.end_sec);
+  const activeScene = scenes.find(s => currentTime >= (s.start_sec || s.timestamp_start_sec) && currentTime < (s.end_sec || s.timestamp_end_sec));
   const sceneLabel = activeScene
-    ? `Analyzing scene ${activeScene.start_sec.toFixed(2)} – ${activeScene.end_sec.toFixed(2)}`
+    ? `Analyzing scene ${(activeScene.start_sec || activeScene.timestamp_start_sec).toFixed(2)} – ${(activeScene.end_sec || activeScene.timestamp_end_sec).toFixed(2)}`
     : `Analyzing scene 00.00 – 01.60`;
 
   // Filter objects based on confidence > 0.6
@@ -48,7 +40,7 @@ export default function AIInsightsPanel({ insight, onObjectClick, selectedObject
           </span>
         </div>
         <button
-          onClick={handleRegenerate}
+          onClick={onRegenerate}
           disabled={isRegenerating}
           className="bg-[#7B5CF5] hover:bg-[#6c4ee0] disabled:bg-[#7B5CF5]/50 text-white text-[10px] font-bold px-[10px] py-[4px] rounded-full flex items-center gap-[4px] transition-all"
         >

@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     EMBEDDING_DIM: int = 1024
     VECTOR_DB_TYPE: str = "pgvector"
+    UPLOAD_RATE_LIMIT: str = "3/minute"
+    MAX_UPLOAD_SIZE_BYTES: int = 500 * 1024 * 1024
+    ALLOWED_EXTENSIONS: list[str] = [".mp4", ".mov", ".avi", ".wav", ".mp3"]
 
     model_config = SettingsConfigDict(
             env_file=[

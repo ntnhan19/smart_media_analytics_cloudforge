@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { searchMedia } from '../services/api';
@@ -16,8 +16,8 @@ export default function Search() {
   
   const urlQ = searchParams.get('q') || '';
   const urlScore = searchParams.get('score') || 'all';
-  const urlTags = searchParams.get('tags') ? searchParams.get('tags').split(',') : [];
-  const urlMediaType = searchParams.get('media_type') ? searchParams.get('media_type').split(',') : ['video'];
+  const urlTags = useMemo(() => searchParams.get('tags') ? searchParams.get('tags').split(',') : [], [searchParams]);
+  const urlMediaType = useMemo(() => searchParams.get('media_type') ? searchParams.get('media_type').split(',') : ['video'], [searchParams]);
   const urlTopK = parseInt(searchParams.get('top_k')) || 20;
 
   const [searchQuery, setSearchQuery] = useState(urlQ);
@@ -53,7 +53,7 @@ export default function Search() {
     enabled: hasValidSearch,
     retry: 0,
     refetchOnWindowFocus: false,
-    onSuccess: (responseData) => {
+    onSuccess: () => {
        if (payload.query) {
          const newHist = addSearchHistory(payload.query);
          if (newHist) setSearchHistory(newHist);
@@ -121,11 +121,15 @@ export default function Search() {
   };
 
   useEffect(() => {
-    setSearchQuery(urlQ);
-    setScoreFilter(urlScore);
-    setActiveTags(urlTags);
-    setActiveMediaTypes(urlMediaType);
-    setTopK(urlTopK);
+    const handler = setTimeout(() => {
+      // Only update if URL param changed externally
+      if (searchQuery !== urlQ) setSearchQuery(urlQ);
+      if (scoreFilter !== urlScore) setScoreFilter(urlScore);
+      if (JSON.stringify(activeTags) !== JSON.stringify(urlTags)) setActiveTags(urlTags);
+      if (JSON.stringify(activeMediaTypes) !== JSON.stringify(urlMediaType)) setActiveMediaTypes(urlMediaType);
+      if (topK !== urlTopK) setTopK(urlTopK);
+    }, 0);
+    return () => clearTimeout(handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlQ, urlScore, searchParams.get('tags'), searchParams.get('media_type'), urlTopK]);
 
@@ -152,7 +156,7 @@ export default function Search() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 md:p-6 shadow-sm">
+      <div className="bg-[#16132A] border border-[#2D2844] rounded-xl p-4 md:p-6 shadow-sm mb-4">
         <SearchBar 
           variant="large"
           value={searchQuery}
