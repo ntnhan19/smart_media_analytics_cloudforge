@@ -31,7 +31,14 @@ async def get_popular_tags(db: AsyncSession = Depends(get_db)):
         all_tags = []
         for row in result.scalars():
             if isinstance(row, list):
-                all_tags.extend(row)
+                for item in row:
+                    if isinstance(item, str):
+                        all_tags.append(item.lower())
+                    elif isinstance(item, dict):
+                        # Trích xuất tag name nếu AI lưu dưới dạng object thay vì string
+                        tag_name = item.get("name") or item.get("tag") or item.get("label")
+                        if tag_name and isinstance(tag_name, str):
+                            all_tags.append(tag_name.lower())
         
         counts = Counter(all_tags)
         tags = [{"tag": t, "count": c} for t, c in counts.most_common(20)]
