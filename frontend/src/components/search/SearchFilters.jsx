@@ -93,22 +93,32 @@ export default function SearchFilters({
         ) : tags && tags.length > 0 && (
           <div className="flex items-center gap-2 border-l border-gray-300 dark:border-gray-700 pl-3 ml-1 shrink-0 transition-colors">
             <Tag className={`w-3.5 h-3.5 ${disabled ? 'text-gray-400 dark:text-gray-700' : 'text-gray-600 dark:text-gray-500'} transition-colors`} />
-            <div className="flex items-center gap-1.5">
-              {tags.map(tag => {
-                const isActive = activeTags.includes(tag);
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {tags.map((tagItem, index) => {
+                const tagValue = typeof tagItem === 'object' ? tagItem.tag : tagItem;
+                const count = typeof tagItem === 'object' ? tagItem.count : null;
+                // Fallback key nếu lỡ tagValue bị undefined
+                const key = tagValue || `tag-${index}`;
+                const isActive = activeTags.includes(tagValue);
+                
                 return (
                   <button
-                    key={tag}
+                    key={key}
                     disabled={disabled}
-                    onClick={() => onToggleTag(tag)}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors shrink-0 ${disabled
+                    onClick={() => onToggleTag(tagValue)}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors shrink-0 flex items-center gap-1 ${disabled
                         ? (isActive ? 'bg-[#7B5CF5]/50 text-white/50 cursor-not-allowed' : 'bg-gray-100 dark:bg-gray-800/20 text-gray-400 dark:text-gray-700 border border-gray-200 dark:border-gray-800 cursor-not-allowed')
                         : (isActive
                           ? 'bg-[#7B5CF5] text-white shadow-[0_0_10px_rgba(123,92,245,0.4)]'
                           : 'bg-white dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-900 dark:hover:text-gray-200')
                       }`}
                   >
-                    #{tag}
+                    <span>#{tagValue}</span>
+                    {count !== null && (
+                      <span className={`text-[9px] px-1 py-0.5 rounded-sm ${isActive ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
+                        {count}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -123,7 +133,15 @@ export default function SearchFilters({
 SearchFilters.propTypes = {
   scoreFilter: PropTypes.string,
   onScoreChange: PropTypes.func,
-  tags: PropTypes.arrayOf(PropTypes.string),
+  tags: PropTypes.arrayOf(
+    PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.shape({
+        tag: PropTypes.string,
+        count: PropTypes.number
+      })
+    ])
+  ),
   activeTags: PropTypes.arrayOf(PropTypes.string),
   onToggleTag: PropTypes.func,
   mediaTypes: PropTypes.arrayOf(PropTypes.string),
