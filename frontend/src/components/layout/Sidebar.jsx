@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Upload, Settings, Folder, Heart, Trash } from 'lucide-react';
+import { LayoutDashboard, Upload, Settings, Folder, Heart, Trash, User, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { getAssets } from '../../services/api';
 import AIProcessingPanel from './AIProcessingPanel';
 
-export default function Sidebar({ activeMenu, showLibraryCount = false }) {
+export default function Sidebar({ activeMenu, showLibraryCount = false, onClose, onOpen, isCollapsed = false }) {
   const { data: assets } = useQuery({
     queryKey: ['assets'],
     queryFn: ({ signal }) => getAssets(signal),
@@ -39,15 +39,24 @@ export default function Sidebar({ activeMenu, showLibraryCount = false }) {
   return (
     // Sửa h-screen thành h-full để Sidebar bám theo container cha
     // Sử dụng overflow-hidden để ngăn chặn thanh cuộn ngoài ý muốn
-    <aside className="w-[310px] h-full bg-white dark:bg-[#16132A] border-r border-gray-200 dark:border-transparent flex flex-col shrink-0 overflow-hidden transition-colors">
+    <aside className={`${isCollapsed ? 'w-[64px]' : 'w-[310px]'} h-full bg-white dark:bg-[#16132A] border-r border-gray-200 dark:border-transparent flex flex-col shrink-0 overflow-hidden transition-all duration-300`}>
 
       {/* Header - Cố định */}
-      <div className="pt-3 pb-3 pl-[20px] shrink-0">
-        <img src="/logo.png" alt="SMA Logo" className="w-[160px] h-auto object-contain dark:invert-0 invert" />
+      <div className={`pt-3 pb-3 shrink-0 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between pl-[20px] pr-[16px]'}`}>
+        {!isCollapsed && <img src="/logo.png" alt="SMA Logo" className="w-[160px] h-auto object-contain dark:invert-0 invert" />}
+        {(onClose || onOpen) && (
+          <button
+            onClick={isCollapsed ? onOpen : onClose}
+            className={`flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-[#2D2844] transition-all text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white ${isCollapsed ? 'w-10 h-10' : 'w-8 h-8'}`}
+            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            {isCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+          </button>
+        )}
       </div>
 
       {/* Nav - Cố định */}
-      <nav className="flex flex-col items-center space-y-4 w-full px-[31px] shrink-0 my-2">
+      <nav className={`flex flex-col items-center space-y-4 w-full shrink-0 my-2 ${isCollapsed ? 'px-2' : 'px-[31px]'}`}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeMenu === item.id;
@@ -55,10 +64,13 @@ export default function Sidebar({ activeMenu, showLibraryCount = false }) {
             <NavLink
               key={item.path}
               to={item.path}
-              className={`relative w-[240px] h-[36px] flex items-center rounded-[6px] transition-colors ${isActive ? 'bg-sma-purple border border-sma-purple' : 'bg-transparent border border-gray-300 dark:border-sma-blue hover:bg-gray-50 dark:hover:bg-[#1A1630]'}`}
+              title={isCollapsed ? item.name : undefined}
+              className={`flex items-center rounded-lg transition-colors ${isActive ? (isCollapsed ? 'bg-sma-purple/10 dark:bg-sma-purple/20 text-sma-purple' : 'bg-sma-purple text-white') : 'bg-transparent hover:bg-gray-100 dark:hover:bg-[#1A1630]'} ${isCollapsed ? 'w-10 h-10 justify-center' : 'w-[240px] h-10 px-3 gap-3'}`}
             >
-              <Icon className={`absolute left-[12px] w-[20px] h-[20px] ${isActive ? 'text-white' : 'text-gray-600 dark:text-white'}`} />
-              <span className={`w-full text-center font-bold text-[16px] ${isActive ? 'text-white' : 'text-gray-700 dark:text-white'}`}>{item.name}</span>
+              <Icon className={`w-5 h-5 shrink-0 ${isActive ? (isCollapsed ? 'text-sma-purple dark:text-[#9A7DFF]' : 'text-white') : 'text-gray-600 dark:text-gray-400'}`} />
+              {!isCollapsed && (
+                <span className={`font-medium text-[15px] ${isActive ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>{item.name}</span>
+              )}
             </NavLink>
           );
         })}
@@ -66,7 +78,7 @@ export default function Sidebar({ activeMenu, showLibraryCount = false }) {
 
       {/* Nội dung linh hoạt - Chỉ phần này mới được cuộn */}
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto scrollbar-hide">
-        {showLibraryCount && (
+        {!isCollapsed && showLibraryCount && (
           <div className="relative w-full px-[24px] py-3">
             <div className="relative flex items-center justify-center mb-4">
               <div className="absolute w-full h-px bg-gray-300 dark:bg-[#D9D9D9] transition-colors"></div>
@@ -92,17 +104,24 @@ export default function Sidebar({ activeMenu, showLibraryCount = false }) {
           </div>
         )}
 
-        {/* AI Processing Panel - Tự căn lề */}
-        <div className="flex justify-center w-full mt-auto py-4">
-          <AIProcessingPanel />
-        </div>
+        {!isCollapsed && (
+          <div className="flex justify-center w-full mt-auto py-4">
+            <AIProcessingPanel />
+          </div>
+        )}
       </div>
 
       {/* Footer - Cố định */}
-      <div className="pt-3 pb-4 flex justify-center shrink-0 border-t border-gray-200 dark:border-[#2D2844] transition-colors">
-        <button className="w-[250px] h-10 border border-gray-300 dark:border-sma-blue rounded-[8px] flex items-center justify-center text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-sma-blue/10 transition-colors text-[10px]">
-          Login / Signup
-        </button>
+      <div className={`pt-3 pb-4 flex justify-center shrink-0 border-t border-gray-200 dark:border-[#2D2844] transition-colors ${isCollapsed ? 'px-2' : ''}`}>
+        {!isCollapsed ? (
+          <button className="w-[250px] h-10 rounded-lg flex items-center justify-center text-gray-700 dark:text-white bg-gray-100 dark:bg-[#1A1630] hover:bg-gray-200 dark:hover:bg-[#2D2844] transition-colors font-bold text-[15px]">
+            Login
+          </button>
+        ) : (
+          <button title="Login" className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2D2844] hover:text-gray-900 dark:hover:text-white transition-colors">
+            <User className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </aside>
   );
