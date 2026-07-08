@@ -1,0 +1,16 @@
+# ── Core video processing ──────────────────────────────────────────────────────
+opencv-python-headless>=4.8.0  # cv2 không cần GUI (tiết kiệm ~200MB so với opencv-python)
+scenedetect[opencv]>=0.6.3     # PySceneDetect
+
+# ── Cloud storage ──────────────────────────────────────────────────────────────
+minio>=7.2.0                   # MinIO client (S3-compatible)
+boto3>=1.34.0                  # AWS S3 client
+
+# ── Core Python utilities ──────────────────────────────────────────────────────
+Pillow>=10.0.0                 # Image handling (PIL)
+
+# ── Test dependencies (chỉ cần trong dev/CI, không cần trong production image) ──
+# Tách ra requirements-dev.txt nếu muốn giảm image size:
+# pytest>=7.4.0
+# pytest-mock>=3.12.0
+# botocore>=1.34.0              # (đã đi kèm boto3)

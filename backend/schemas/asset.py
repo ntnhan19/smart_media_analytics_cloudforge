@@ -1,0 +1,53 @@
+from pydantic import BaseModel
+from typing import Optional, List
+from datetime import datetime
+import uuid
+
+class AssetResponse(BaseModel):
+    asset_id: str
+    file_name: str
+    file_size: Optional[int] = None
+    duration: Optional[float] = None
+    status: str
+    created_at: datetime
+    tags: Optional[list] = None
+    resolution: Optional[str] = None
+    media_type: Optional[str] = None
+    summary: Optional[str] = None
+    moods: Optional[list] = None
+    objects: Optional[list] = None
+    best_for: Optional[list] = None
+    transcripts_json: Optional[list] = None
+    thumbnail_url: Optional[str] = None
+    is_favorite: bool = False
+
+    class Config:
+        from_attributes = True
+
+class PaginatedAssetResponse(BaseModel):
+    items: List[AssetResponse]
+    total: int
+
+class AssetFavoriteUpdate(BaseModel):
+    is_favorite: bool
+
+class SceneResponse(BaseModel):
+    scene_id: str
+    asset_id: str
+    scene_index: int
+    timestamp_start_sec: float
+    timestamp_end_sec: float
+    caption: Optional[str] = None
+    transcript_snippet: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    tags: Optional[list] = None
+
+    class Config:
+        from_attributes = True
+
+class SceneUpdateRequest(BaseModel):
+    caption: Optional[str] = None
+    transcript: Optional[str] = None
+
+class MediaStreamResponse(BaseModel):
+    stream_url: str

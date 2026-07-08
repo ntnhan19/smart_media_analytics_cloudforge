@@ -50,6 +50,8 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000" # FastAPI -> http://localhost:8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - .env # Load environment variables from .env (copy from .env.example)
     environment:
@@ -58,9 +60,13 @@ services:
       CHROMA_HOST: chromadb
       CHROMA_PORT: "8000"
       DATABASE_URL: postgresql+psycopg://echoscene:echoscene_dev_password@postgres:5432/echoscene
+      REDIS_URL: redis://redis:6379/0
     volumes:
       # Bind-mount source code for hot-reload during development (no rebuild needed)
       - ./backend:/app
+      # AI pipeline modules used by the backend ingest worker
+      - ./ai_pipeline:/app/ai_pipeline
+      - ./utils:/app/utils
       # Media files — directory containing videos/images to ingest
       - ./data/media:/app/data/media
       # ChromaDB local persist path (used when not relying on the chromadb service)
@@ -73,9 +79,13 @@ services:
         condition: service_healthy # Wait for postgres to be ready before starting
       chromadb:
         condition: service_healthy # Wait for chromadb to be ready before starting
+      redis:
+        condition: service_healthy # Wait for redis to be ready before starting
+      minio:
+        condition: service_healthy # Wait for minio to be ready before starting
     healthcheck:
       # Calls /health endpoint — returns {"status": "ok"} when service is ready
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/v1/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -144,7 +154,7 @@ services:
   # Image: postgres:16-alpine
   # -------------------------------------------------------------------------
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: echoscene-postgres
     restart: unless-stopped
     environment:
@@ -190,3 +200,36 @@ services:
       retries: 8
     networks:
       - sma-network
+
+  # -------------------------------------------------------------------------
+  # REDIS — Broker for websocket and job progress notifications
+  # -------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: echoscene-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - sma-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # -------------------------------------------------------------------------
+  # ADMINER — Web-based database management tool for PostgreSQL
+  # Access: http://localhost:8080
+  # -------------------------------------------------------------------------
+  adminer:
+    image: adminer:latest
+    container_name: echoscene-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080" # Adminer Web Console -> http://localhost:8080
+    networks:
+      - sma-network
+    depends_on:
+      postgres:
+        condition: service_healthy

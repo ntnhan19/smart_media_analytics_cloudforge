@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from database import Base
 from models.asset import Asset
 from models.scene import Scene

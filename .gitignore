@@ -135,6 +135,9 @@ ai_pipeline/database/*
 data/media/*
 !data/media/.gitkeep
 
+backend/data/*
+!backend/data/.gitkeep
+
 # ChromaDB vector store
 data/chromadb/*
 !data/chromadb/.gitkeep
@@ -142,6 +145,7 @@ data/chromadb/*
 # Whisper model cache
 data/whisper_cache/*
 !data/whisper_cache/.gitkeep
+backend/models/whisper/
 
 # Storage directories
 storage/uploads/*
@@ -149,6 +153,12 @@ storage/uploads/*
 
 storage/processed/*
 !storage/processed/.gitkeep
+
+# Frontend test uploads
+public/uploads/*
+!public/uploads/.gitkeep
+frontend/public/uploads/*
+!frontend/public/uploads/.gitkeep
 
 # Mock data (large sample files only — keep metadata JSON)
 mock_data/media/*
@@ -205,10 +215,9 @@ hs_err_pid*
 # IDE & EDITORS
 # =============================================================================
 
-# VS Code — keep .vscode/extensions.json and .vscode/settings.json if shared
+# VS Code — ignore settings.json as it contains local paths
 .vscode/*
 !.vscode/extensions.json
-!.vscode/settings.json
 !.vscode/launch.json
 
 # JetBrains (PyCharm, WebStorm, etc.)

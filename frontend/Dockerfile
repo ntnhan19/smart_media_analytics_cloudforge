@@ -4,7 +4,7 @@
 # Owner: M3 (Frontend Engineer)
 # =============================================================================
 
-FROM node:20-alpine
+FROM node:20-slim
 
 # Metadata
 LABEL maintainer="EchoScene Team"
@@ -13,7 +13,9 @@ LABEL description="React/Vite frontend for EchoScene AI media management"
 # ---------------------------------------------------------------------------
 # System dependencies
 # ---------------------------------------------------------------------------
-RUN apk add --no-cache curl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory inside the container
 WORKDIR /app
@@ -23,8 +25,8 @@ WORKDIR /app
 # Copy only package files first — if source code changes but deps do not,
 # Docker skips the npm install step entirely
 # ---------------------------------------------------------------------------
-COPY package.json package-lock.json* ./
-RUN npm install --legacy-peer-deps --prefer-offline
+COPY package.json ./
+RUN npm install --legacy-peer-deps
 
 # Copy full source code into the container
 # (In dev mode, the bind-mount will override this directory)
