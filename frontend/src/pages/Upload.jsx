@@ -24,7 +24,7 @@ export default function Upload() {
   const handleUpload = async (files) => {
     // Prevent synthetic events from being treated as files
     if (!files || files.type === 'click' || files._reactName === 'onClick') return;
-    
+
     // Ensure files is an array (handles FileList if passed directly)
     const filesArray = Array.isArray(files) ? files : Array.from(files);
     if (filesArray.length === 0) return;
@@ -54,40 +54,22 @@ export default function Upload() {
       <div className="shrink-0 flex items-center justify-between py-1">
         {/* Left: Title */}
         <div>
-          <h1 className="text-[15px] font-bold leading-tight">Ingest &amp; Upload Media</h1>
+          <h1 className="text-[15px] font-bold leading-tight">Upload Media</h1>
           <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight transition-colors">Add your media to your local library</p>
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2">
-          {/* Settings button */}
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-[#16132A] border border-gray-300 dark:border-[#4F8EF7] rounded-md text-gray-700 dark:text-white text-[11px] hover:bg-gray-100 dark:hover:bg-[#4F8EF7]/10 transition-colors shadow-sm dark:shadow-none">
-            <Settings className="w-4 h-4" />
-            <span className="font-light">Settings</span>
-          </button>
-
-          {/* Divider */}
-          <div className="h-5 w-px bg-gray-300 dark:bg-white/20 transition-colors" />
-
-          {/* Add Assets button */}
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4F8EF7] hover:bg-[#4F8EF7]/90 rounded-md text-white text-[11px] font-bold transition-colors">
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Assets</span>
-            <ChevronDown className="w-3.5 h-3.5 ml-0.5" />
-          </button>
-        </div>
       </div>
 
       {/* Divider line */}
       <div className="shrink-0 h-px bg-gray-200 dark:bg-white/5 transition-colors" />
 
       {/* ── MAIN GRID WRAPPER ── */}
-      <div 
+      <div
         className="flex-1 min-h-0 overflow-hidden"
-        style={{ 
-          display: 'grid', 
-          gridTemplateRows: isReviewOpen ? '59.5fr 40.5fr' : '1fr auto', 
-          gap: '10px' 
+        style={{
+          display: 'grid',
+          gridTemplateRows: isReviewOpen ? '59.5fr 40.5fr' : '1fr auto',
+          gap: '10px'
         }}
       >
         {/* ROW 1: 3 CỘT CHÍNH */}
@@ -131,7 +113,7 @@ export default function Upload() {
               <div className="px-4 py-2 border-t border-gray-200 dark:border-white/5 shrink-0 transition-colors">
                 <button className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-1 transition-colors">
                   View all completed
-                  <svg width="8" height="5" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <svg width="8" height="5" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </button>
               </div>
             </div>
@@ -140,9 +122,9 @@ export default function Upload() {
 
         {/* ── ROW 2: Generated Result Review ── */}
         <div className="min-h-0 overflow-hidden border-t border-gray-200 dark:border-white/5 pt-2 transition-colors">
-          <GeneratedResultReview 
-            isOpen={isReviewOpen} 
-            onToggle={() => setIsReviewOpen(!isReviewOpen)} 
+          <GeneratedResultReview
+            isOpen={isReviewOpen}
+            onToggle={() => setIsReviewOpen(!isReviewOpen)}
             jobId={selectedJobId}
             assetId={selectedAssetId}
             fileName={selectedJob?.file_name}

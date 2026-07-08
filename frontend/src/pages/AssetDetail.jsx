@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import HeaderBar from '../components/layout/HeaderBar';
 
@@ -30,7 +30,8 @@ export default function AssetDetail() {
   // Local states
   const [currentTime, setCurrentTime] = useState(initialTimestamp);
   const [seekTimestamp, setSeekTimestamp] = useState(initialTimestamp);
-  const [activeTab, setActiveTab] = useState('OVERVIEW');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'OVERVIEW');
   const [rightSidebarMode, setRightSidebarMode] = useState('scenes'); // 'scenes' or 'transcript'
   const [showAllAssetTags, setShowAllAssetTags] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
