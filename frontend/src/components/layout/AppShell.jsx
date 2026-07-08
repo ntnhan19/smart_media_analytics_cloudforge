@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import TopBar from './TopBar';
 import { Menu, X } from 'lucide-react';
 
 export default function AppShell() {
@@ -14,10 +13,8 @@ export default function AppShell() {
     return 'dashboard';
   };
 
-  const isDashboard = location.pathname === '/';
-
   return (
-    <div className="flex h-screen overflow-hidden bg-sma-bg text-white">
+    <div className="flex h-screen overflow-hidden bg-[#F8F9FA] dark:bg-sma-bg text-gray-900 dark:text-white transition-colors">
 
       {/* Sidebar */}
       <div

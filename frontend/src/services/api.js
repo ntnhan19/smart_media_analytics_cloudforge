@@ -61,6 +61,11 @@ export const deleteAsset = async (assetId) => {
   return response.data;
 };
 
+export const getTags = async (signal) => {
+  const response = await api.get('/search/tags', { signal });
+  return response.data;
+};
+
 export const getAsset = async (assetId, signal) => {
   const response = await api.get(`/assets/${assetId}`, { signal });
   return response.data;
@@ -68,6 +73,14 @@ export const getAsset = async (assetId, signal) => {
 
 export const getAssetScenes = async (assetId, signal) => {
   const response = await api.get(`/assets/${assetId}/scenes`, { signal });
+  return response.data;
+};
+
+export const searchAssetScenes = async (assetId, query, topK = 10, signal) => {
+  const response = await api.get(`/assets/${assetId}/scenes/search`, {
+    params: { query, top_k: topK },
+    signal
+  });
   return response.data;
 };
 
@@ -86,12 +99,10 @@ export const getAssetStream = async (assetId, signal) => {
   return response.data; // Expected to return { stream_url: "..." }
 };
 
-export const createClip = async (assetId, startTime, endTime, sceneId) => {
-  const response = await api.post(`/clips`, {
-    asset_id: assetId,
-    start_time_sec: startTime,
-    end_time_sec: endTime,
-    scene_id: sceneId
+export const createClip = async (assetId, startTime, endTime) => {
+  const response = await api.post(`/assets/${assetId}/clip`, {
+    start_sec: startTime,
+    end_sec: endTime
   });
   return response.data;
 };

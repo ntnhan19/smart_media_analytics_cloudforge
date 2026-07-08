@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { searchMedia } from '../services/api';
+import { searchMedia, getTags } from '../services/api';
 import { getSearchHistory, addSearchHistory, clearSearchHistory } from '../utils/history';
 import SearchBar from '../components/search/SearchBar';
 import SearchFilters from '../components/search/SearchFilters';
@@ -29,7 +29,13 @@ export default function Search() {
 
   const [searchHistory, setSearchHistory] = useState(getSearchHistory());
 
-  const availableTags = ['beach', 'mountain', 'city', 'nature', 'indoor', 'snow'];
+  const { data: tagsData, isLoading: isLoadingTags, isError: isErrorTags, refetch: refetchTags } = useQuery({
+    queryKey: ['tags'],
+    queryFn: ({ signal }) => getTags(signal),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const availableTags = Array.isArray(tagsData) ? tagsData : (tagsData?.tags || []);
   const availableMediaTypes = ['video', 'image', 'audio'];
 
   const hasValidSearch = Boolean(urlQ.trim() && urlQ.length <= 500);
@@ -185,6 +191,9 @@ export default function Search() {
           mediaTypes={availableMediaTypes} activeMediaTypes={activeMediaTypes} onToggleMediaType={handleToggleMediaType}
           topK={topK} onTopKChange={onTopKChange}
           disabled={isDisabled}
+          isLoadingTags={isLoadingTags}
+          isErrorTags={isErrorTags}
+          onRetryTags={refetchTags}
         />
       </div>
 

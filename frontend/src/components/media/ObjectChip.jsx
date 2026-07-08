@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function ObjectChip({ obj, onClick, isActive }) {
   if (!obj) return null;

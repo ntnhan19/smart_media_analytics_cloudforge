@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
 const JobContext = createContext();
@@ -84,6 +84,7 @@ JobProvider.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- useJobs hook is tightly coupled with JobProvider context
 export const useJobs = () => {
   const context = useContext(JobContext);
   if (!context) {

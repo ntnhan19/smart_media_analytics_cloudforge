@@ -39,6 +39,7 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
         }
       }).catch(err => console.error("Failed to fetch asset metadata", err));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job.asset_id, job.current_step, job.status, job.duration, job.resolution, job.thumbnail_url, job.job_id, updateJob]);
 
   useEffect(() => {
@@ -85,23 +86,24 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
   return (
     <div 
       onClick={onClick}
-      className={`w-full ${isFailed ? 'bg-[#EF4444]/10 border-[#EF4444]' : (isSelected ? 'bg-[#7B5CF5]/10 border-[#7B5CF5]' : 'bg-[#16132A] border-[#2D2844] hover:bg-[#7B5CF5]/5')} border rounded-[8px] flex p-[12px] transition-colors relative cursor-pointer`}
+      className={`w-full ${isFailed ? 'bg-[#EF4444]/10 border-[#EF4444]' : (isSelected ? 'bg-blue-50 dark:bg-[#7B5CF5]/10 border-[#7B5CF5]' : 'bg-white dark:bg-[#16132A] border-gray-200 dark:border-[#2D2844] hover:bg-gray-50 dark:hover:bg-[#7B5CF5]/5')} border rounded-[8px] flex p-[12px] transition-colors relative cursor-pointer shadow-sm dark:shadow-none`}
     >
       {(isFailed || isCompleted) && (
         <button 
+          aria-label="Dismiss job"
           onClick={(e) => { e.stopPropagation(); onRemove(job.job_id); }} 
-          className="absolute top-[4px] right-[4px] text-gray-400 hover:text-white bg-[#1A162B] rounded-full p-[2px]"
+          className="absolute top-[4px] right-[4px] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-[#1A162B] rounded-full p-[2px] transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
       )}
 
       {/* Thumbnail */}
-      <div className="w-[100px] h-[60px] bg-[#2D2844] rounded-[4px] shrink-0 flex items-center justify-center mr-[16px] overflow-hidden relative">
+      <div className="w-[100px] h-[60px] bg-gray-100 dark:bg-[#2D2844] rounded-[4px] shrink-0 flex items-center justify-center mr-[16px] overflow-hidden relative transition-colors">
         {job.thumbnail_url ? (
           <img src={job.thumbnail_url} alt="thumbnail" className="w-full h-full object-cover" />
         ) : (
-          <ImageIcon className="w-6 h-6 text-gray-500" />
+          <ImageIcon className="w-6 h-6 text-gray-400 dark:text-gray-500 transition-colors" />
         )}
       </div>
 
@@ -110,24 +112,24 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
         
         {/* Row 1: Title & Step */}
         <div className="flex justify-between items-start mb-[4px]">
-          <h3 className="font-inter font-medium text-[12px] text-white truncate max-w-[150px]">
+          <h3 className="font-inter font-medium text-[12px] text-gray-900 dark:text-white truncate max-w-[150px] transition-colors">
             {displayTitle}
           </h3>
-          <span className="font-inter font-medium text-[11px] truncate" style={{ color: progressColor, maxWidth: '120px' }}>
+          <span className="font-inter font-medium text-[11px] truncate transition-colors" style={{ color: progressColor, maxWidth: '120px' }}>
             {stepText}
           </span>
         </div>
 
         {/* Row 2: Subtitle & ETA */}
         <div className="flex justify-between items-center mb-[8px]">
-          <span className="font-inter font-normal text-[10px] text-gray-400 truncate max-w-[180px]">
+          <span className="font-inter font-normal text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px] transition-colors">
             {[
               job.file_size ? `${(job.file_size / (1024*1024)).toFixed(1)}MB` : null, 
               job.duration ? `${Math.floor(job.duration)}s` : null, 
               job.resolution
             ].filter(Boolean).join(' - ') || 'Loading metadata...'}
           </span>
-          <span className="font-inter font-normal text-[10px] text-gray-400">
+          <span className="font-inter font-normal text-[10px] text-gray-500 dark:text-gray-400 transition-colors">
             {/* ETA hidden for now */}
           </span>
         </div>
@@ -139,6 +141,7 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
                {job.error_message || "Unknown error"}
              </span>
              <button 
+                aria-label="Retry job"
                 onClick={(e) => { e.stopPropagation(); handleRetry(); }}
                 disabled={isRetrying}
                 className="bg-[#EF4444] text-white p-[4px] rounded disabled:opacity-50 flex items-center justify-center"
@@ -148,18 +151,23 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
            </div>
         ) : (
           <div className="flex items-center gap-[12px]">
-            <div className="flex-1 h-[4px] bg-[#D9D9D9]/20 rounded-full overflow-hidden">
+            <div className="flex-1 h-[4px] bg-gray-200 dark:bg-[#D9D9D9]/20 rounded-full overflow-hidden transition-colors">
               <div 
                 className="h-full transition-all duration-300"
                 style={{ width: `${displayProgress}%`, backgroundColor: progressColor }}
               />
             </div>
-            <span className="font-inter font-medium text-[11px] text-white w-[28px] text-right">
+            <span className="font-inter font-medium text-[11px] text-gray-900 dark:text-white w-[28px] text-right transition-colors">
               {Math.floor(displayProgress)}%
             </span>
             {!isCompleted && (
-              <div className="w-[20px] h-[20px] bg-white rounded-full flex items-center justify-center shrink-0 cursor-pointer">
-                <Pause className="w-[10px] h-[10px] text-black fill-black" />
+              <div
+                role="button"
+                aria-label="Pause job"
+                tabIndex={0}
+                className="w-[20px] h-[20px] bg-gray-800 dark:bg-white rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+              >
+                <Pause className="w-[10px] h-[10px] text-white dark:text-black fill-white dark:fill-black transition-colors" />
               </div>
             )}
           </div>
@@ -170,7 +178,7 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
 }
 
 export default function IngestQueue({ selectedJobId, onSelectJob }) {
-  const { activeJobs, removeJob, clearCompletedJobs } = useJobs();
+  const { activeJobs, removeJob } = useJobs();
 
   if (!activeJobs || activeJobs.length === 0) {
     return (
