@@ -188,45 +188,41 @@ export default function Dashboard() {
                 />
               </div>
 
-              <div className="flex items-center space-x-2 pb-1.5 shrink-0">
-                <h2 className="text-[10px] leading-[12px] font-inter text-gray-900 dark:text-white uppercase tracking-wider transition-colors">RECENT ASSETS</h2>
-                <span className="text-[10px] leading-[12px] font-inter text-gray-500 dark:text-gray-400 transition-colors">{filteredAssets.length} items on this page</span>
+              <div className="flex items-center justify-between pb-2 mt-1 shrink-0">
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-[10px] leading-[12px] font-inter text-gray-900 dark:text-white uppercase tracking-wider transition-colors">RECENT ASSETS</h2>
+                  <span className="text-[10px] leading-[12px] font-inter text-gray-500 dark:text-gray-400 transition-colors">{filteredAssets.length} items on this page</span>
+                </div>
+                
+                {/* INLINE PAGINATION - Moved to top to save vertical space and prevent overlap */}
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-[11px] font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-[#16132A] border border-gray-200 dark:border-[#2D2844] rounded-md hover:bg-gray-50 dark:hover:bg-[#2D2844] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                    <span className="text-gray-900 dark:text-white">{currentPage}</span> / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={!hasNextPage}
+                    className="px-3 py-1.5 text-[11px] font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-[#16132A] border border-gray-200 dark:border-[#2D2844] rounded-md hover:bg-gray-50 dark:hover:bg-[#2D2844] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
 
-              {/* KHỐI 2: LƯỚI VIDEO (Trọng tâm) 
-                  Thay đổi: flex-1 flex flex-col justify-start để thẻ nằm gần title RECENT ASSETS 
-              */}
-              <div className="flex-1 min-h-0 flex flex-col justify-start w-full pb-4 pt-2">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5">
+              {/* KHỐI 2: LƯỚI VIDEO (Trọng tâm) */}
+              <div className="flex-1 min-h-0 w-full pb-4 pt-1">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5 h-full auto-rows-fr">
                   {filteredAssets.map(asset => (
                     <MediaCard key={asset.asset_id} {...asset} showToast={showToast} />
                   ))}
                 </div>
-              </div>
-
-              {/* KHỐI 3: PAGINATION FOOTER (Mỏ neo dưới)
-                  Thay đổi: mt-auto đẩy sát đáy, cộng thêm viền border-t để chia tách rõ ràng khu vực 
-              */}
-              <div className="shrink-0 mt-auto pt-3 pb-3 w-full border-t border-gray-200 dark:border-[#2D2844] flex items-center justify-center space-x-4 transition-colors">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 text-[12px] leading-[14px] font-inter text-gray-700 dark:text-white bg-transparent border border-gray-300 dark:border-sma-purple rounded-lg hover:bg-gray-100 dark:hover:bg-sma-purple/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Previous
-                </button>
-
-                <span className="text-[12px] leading-[14px] text-gray-500 dark:text-gray-400 px-4 font-inter transition-colors">
-                  Page <span className="text-gray-900 dark:text-white font-medium">{currentPage}</span> of <span className="text-gray-900 dark:text-white font-medium">{totalPages}</span>
-                </span>
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={!hasNextPage}
-                  className="px-4 py-2 text-[12px] leading-[14px] font-inter text-gray-700 dark:text-white bg-transparent border border-gray-300 dark:border-sma-purple rounded-lg hover:bg-gray-100 dark:hover:bg-sma-purple/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Next
-                </button>
               </div>
 
             </div>
