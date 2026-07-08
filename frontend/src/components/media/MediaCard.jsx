@@ -93,7 +93,7 @@ export default function MediaCard({
 
   return (
     <div
-      className="w-full h-[210px] rounded-[8px] border border-gray-200 dark:border-sma-purple overflow-hidden cursor-pointer hover:border-[#7B5CF5] dark:hover:border-sma-purple/80 hover:shadow-[0_8px_24px_rgba(123,92,245,0.12)] bg-white dark:bg-sma-surface flex flex-col relative group shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:shadow-none transition-all duration-300"
+      className="w-full h-full min-h-[160px] max-h-[280px] rounded-[8px] border border-gray-200 dark:border-sma-purple overflow-hidden cursor-pointer hover:border-[#7B5CF5] dark:hover:border-sma-purple/80 hover:shadow-[0_8px_24px_rgba(123,92,245,0.12)] bg-white dark:bg-sma-surface flex flex-col relative group shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:shadow-none transition-all duration-300"
       onClick={handleCardClick}
     >
       <div className="w-full flex-1 bg-gray-100 dark:bg-gray-900 relative group overflow-hidden">
