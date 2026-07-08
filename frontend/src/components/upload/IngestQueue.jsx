@@ -88,15 +88,7 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
       onClick={onClick}
       className={`w-full ${isFailed ? 'bg-[#EF4444]/10 border-[#EF4444]' : (isSelected ? 'bg-blue-50 dark:bg-[#7B5CF5]/10 border-[#7B5CF5]' : 'bg-white dark:bg-[#16132A] border-gray-200 dark:border-[#2D2844] hover:bg-gray-50 dark:hover:bg-[#7B5CF5]/5')} border rounded-[8px] flex p-[12px] transition-colors relative cursor-pointer shadow-sm dark:shadow-none`}
     >
-      {(isFailed || isCompleted) && (
-        <button 
-          aria-label="Dismiss job"
-          onClick={(e) => { e.stopPropagation(); onRemove(job.job_id); }} 
-          className="absolute top-[4px] right-[4px] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-[#1A162B] rounded-full p-[2px] transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      )}
+
 
       {/* Thumbnail */}
       <div className="w-[100px] h-[60px] bg-gray-100 dark:bg-[#2D2844] rounded-[4px] shrink-0 flex items-center justify-center mr-[16px] overflow-hidden relative transition-colors">
@@ -115,9 +107,20 @@ function JobQueueCard({ job, onRemove, isSelected, onClick }) {
           <h3 className="font-inter font-medium text-[12px] text-gray-900 dark:text-white truncate max-w-[150px] transition-colors">
             {displayTitle}
           </h3>
-          <span className="font-inter font-medium text-[11px] truncate transition-colors" style={{ color: progressColor, maxWidth: '120px' }}>
-            {stepText}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="font-inter font-medium text-[11px] truncate transition-colors" style={{ color: progressColor, maxWidth: '120px' }}>
+              {stepText}
+            </span>
+            {(isFailed || isCompleted) && (
+              <button 
+                aria-label="Dismiss job"
+                onClick={(e) => { e.stopPropagation(); onRemove(job.job_id); }} 
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-[#1A162B] rounded-full p-[2px] transition-colors shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Row 2: Subtitle & ETA */}

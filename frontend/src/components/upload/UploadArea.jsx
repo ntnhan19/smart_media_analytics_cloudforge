@@ -28,9 +28,9 @@ export default function UploadArea({ onStartIngest, isUploading }) {
   return (
     <div className="flex flex-col gap-3 h-full overflow-hidden">
       {/* Box Upload */}
-      <div className="border border-dashed border-[#4F8EF7]/50 rounded-lg bg-gray-50 dark:bg-[#120F1D] flex flex-col items-center justify-center p-6 relative transition-colors hover:bg-gray-100 dark:hover:bg-[#4F8EF7]/5 shrink-0" style={{ flex: '0 0 38%' }}>
-        <UploadCloud className="w-8 h-8 text-[#7B5CF5] mb-4 transition-colors" />
-        <p className="text-gray-900 dark:text-white text-[13px] mb-6 text-center transition-colors">Drag & Drop files and folders here</p>
+      <div className="border border-dashed border-[#4F8EF7]/50 rounded-lg bg-gray-50 dark:bg-[#120F1D] flex flex-col items-center justify-center p-4 relative transition-colors hover:bg-gray-100 dark:hover:bg-[#4F8EF7]/5 shrink-0">
+        <UploadCloud className="w-8 h-8 text-[#7B5CF5] mb-2 transition-colors" />
+        <p className="text-gray-900 dark:text-white text-[13px] mb-3 text-center transition-colors">Drag & Drop files and folders here</p>
         <button 
           onClick={() => fileInputRef.current?.click()}
           className="bg-[#7B5CF5] hover:bg-[#6A4BE4] text-white px-6 py-2 rounded text-[12px] font-bold transition-colors"
@@ -45,7 +45,7 @@ export default function UploadArea({ onStartIngest, isUploading }) {
           ref={fileInputRef} 
           onChange={handleFileChange} 
         />
-        <p className="text-gray-500 dark:text-gray-500 text-[11px] mt-4 absolute bottom-4 transition-colors">Support: MP4, MOV and more</p>
+        <p className="text-gray-500 dark:text-gray-500 text-[11px] mt-3 transition-colors">Support: MP4, MOV and more</p>
       </div>
 
       {/* Selected Assets */}

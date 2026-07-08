@@ -28,9 +28,17 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
     }
   };
 
+  const handleOpenAssetsTab = (tabName) => {
+    if (assetId) {
+      navigate(`/assets/${assetId}`, { state: { activeTab: tabName } });
+    } else {
+      alert("Asset is still processing or no asset ID available.");
+    }
+  };
+
   const getStatusBadge = () => {
     if (!status) return null;
-    
+
     let colorClass = "border-[#4F8EF7]/60 text-[#4F8EF7]";
     let dotClass = "bg-[#4F8EF7] animate-pulse";
     let text = "Processing";
@@ -60,7 +68,7 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
   const scenesList = scenesData || [];
   const transcriptsList = assetData?.transcripts_json || [];
   const tagsList = assetData?.tags || [];
-  
+
   // Calculate transcript completion
   const totalDuration = assetData?.duration || 1;
   const transcribedDuration = transcriptsList.reduce((acc, t) => acc + (t.end - t.start), 0);
@@ -72,23 +80,23 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
       <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           {/* Nút Toggle Panel */}
-          <button 
+          <button
             onClick={onToggle}
             className="w-6 h-6 rounded bg-white dark:bg-[#16132A] border border-gray-300 dark:border-[#7B5CF5]/50 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#7B5CF5]/20 transition-colors shadow-sm dark:shadow-none"
           >
             {isOpen ? <ChevronDown className="w-4 h-4 text-[#7B5CF5]" /> : <ChevronUp className="w-4 h-4 text-[#7B5CF5]" />}
           </button>
-          
+
           <h2 className="text-gray-900 dark:text-white text-[14px] font-bold cursor-pointer transition-colors" onClick={onToggle}>
             Generated Result Review{' '}
             {isOpen && <span className="text-gray-500 dark:text-gray-400 font-light text-[12px] transition-colors">{displayTitle}</span>}
           </h2>
-          
+
           {isOpen && getStatusBadge()}
         </div>
-        
+
         {isOpen && (
-          <button 
+          <button
             onClick={handleOpenAssets}
             disabled={!assetId}
             className="flex items-center gap-2 border border-[#4F8EF7] text-gray-700 dark:text-white text-[12px] font-light px-4 py-1.5 rounded-lg bg-white dark:bg-[#16132A] hover:bg-[#4F8EF7]/10 dark:hover:bg-[#4F8EF7]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm dark:shadow-none"
@@ -115,13 +123,13 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
       ) : isOpen && (
         <div className="grid grid-cols-4 gap-4 flex-1 min-h-[220px]">
 
-          {/* Col 1: Selected Assets */}
+          {/* Col 1: Scene List */}
           <div className="bg-gray-50 dark:bg-[#120F1D] border border-gray-200 dark:border-[#16132A] rounded-lg flex flex-col overflow-hidden transition-colors shadow-sm dark:shadow-none">
             <div className="flex justify-between items-center px-4 pt-4 pb-3 shrink-0 transition-colors">
-              <span className="text-gray-900 dark:text-white text-[12px] font-bold transition-colors">Selected Assets</span>
-              <button className="text-[#7B5CF5] text-[10px]">View All</button>
+              <span className="text-gray-900 dark:text-white text-[12px] font-bold transition-colors">Scenes List</span>
+              <button onClick={() => handleOpenAssetsTab('ACTIVE_SCENE')} className="text-[#7B5CF5] text-[10px] hover:underline">View All</button>
             </div>
-            
+
             <div className="flex-1 overflow-x-auto no-scrollbar px-4 pb-2 flex gap-2">
               {scenesList.length === 0 && <span className="text-gray-500 text-[10px]">No scenes detected yet</span>}
               {scenesList.map((scene) => (
@@ -145,7 +153,7 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
               ))}
             </div>
 
-            <div className="border-t border-gray-200 dark:border-white/5 px-4 py-3 shrink-0 flex items-center gap-2 transition-colors">
+            <div className="h-[46px] border-t border-gray-200 dark:border-white/5 px-4 shrink-0 flex items-center gap-2 transition-colors">
               <div className="flex items-center gap-1.5 border border-[#4ADE80]/20 bg-[#4ADE80]/5 px-2 py-1 rounded-full transition-colors">
                 <CheckCircle2 className="w-3 h-3 text-[#4ADE80] fill-[#4ADE80]/20" />
                 <span className="text-[#4ADE80] text-[9px] font-light">{scenesList.length} Scenes Detected</span>
@@ -164,7 +172,7 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
             </div>
             <div className="flex justify-between items-center px-4 pt-5 pb-3 shrink-0 transition-colors">
               <span className="text-gray-900 dark:text-white text-[12px] font-bold transition-colors">Transcript <span className="text-[#7B5CF5] font-normal">({transcriptPercentage}%)</span></span>
-              <button className="text-[#7B5CF5] text-[10px]">View All</button>
+              <button onClick={() => handleOpenAssetsTab('TRANSCRIPT')} className="text-[#7B5CF5] text-[10px] hover:underline">View All</button>
             </div>
             <div className="flex-1 overflow-y-auto no-scrollbar px-4 space-y-3 pb-2 transition-colors">
               {transcriptsList.length === 0 && <span className="text-gray-500 text-[10px] transition-colors">No transcripts available</span>}
@@ -177,10 +185,10 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
                 </div>
               ))}
             </div>
-            <div className="border-t border-gray-200 dark:border-white/5 px-4 py-2.5 shrink-0 flex items-center justify-between transition-colors">
-              <span className="text-[#7B5CF5] text-[8px] transition-colors">{transcriptPercentage}% Transcribed</span>
-              <span className="text-gray-500 dark:text-white/60 text-[8px] transition-colors">Languages: Auto</span>
-              <span className="text-gray-500 dark:text-white/60 text-[8px] transition-colors">Speaker: Auto</span>
+            <div className="h-[46px] border-t border-gray-200 dark:border-white/5 px-4 shrink-0 flex items-center justify-between transition-colors">
+              <span className="text-[#7B5CF5] text-[10px] font-medium transition-colors">{transcriptPercentage}% Transcribed</span>
+              <span className="text-gray-500 dark:text-white/60 text-[10px] transition-colors">Languages: Auto</span>
+              <span className="text-gray-500 dark:text-white/60 text-[10px] transition-colors">Speaker: Auto</span>
             </div>
           </div>
 
@@ -190,7 +198,7 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
               <span className="text-gray-900 dark:text-white text-[12px] font-bold transition-colors">
                 AI Captions <span className="text-gray-500 dark:text-gray-400 font-light text-[10px] transition-colors">({status === 'completed' ? 'Completed' : 'Processing'})</span>
               </span>
-              <button className="text-[#7B5CF5] text-[10px]">View All</button>
+              <button onClick={() => handleOpenAssetsTab('OVERVIEW')} className="text-[#7B5CF5] text-[10px] hover:underline">View All</button>
             </div>
             <div className="flex-1 overflow-y-auto no-scrollbar px-4 space-y-3 pb-2 transition-colors">
               {scenesList.length === 0 && <span className="text-gray-500 text-[10px] transition-colors">Waiting for scenes...</span>}
@@ -207,7 +215,7 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
                 </div>
               ))}
             </div>
-            <div className="border-t border-gray-200 dark:border-white/5 px-4 py-2.5 shrink-0 text-center transition-colors">
+            <div className="h-[46px] border-t border-gray-200 dark:border-white/5 px-4 shrink-0 flex items-center justify-center transition-colors">
               <span className="text-gray-500 dark:text-white/60 text-[10px] transition-colors">
                 {scenesList.filter(s => s.caption).length}/{scenesList.length || 0} Completed
               </span>
@@ -220,9 +228,9 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
               <span className="text-gray-900 dark:text-white text-[12px] font-bold transition-colors">
                 Tags <span className="text-gray-500 dark:text-gray-400 font-light text-[10px] transition-colors">(Auto generated)</span>
               </span>
-              <button className="text-[#7B5CF5] text-[10px]">View All</button>
+              <button onClick={() => handleOpenAssetsTab('OVERVIEW')} className="text-[#7B5CF5] text-[10px] hover:underline">View All</button>
             </div>
-            <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-4 transition-colors">
+            <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-2 transition-colors">
               {tagsList.length === 0 && <span className="text-gray-500 text-[10px] transition-colors">No tags generated</span>}
               <div className="flex flex-wrap gap-2 content-start transition-colors">
                 {tagsList.map((tag, i) => {
@@ -234,6 +242,11 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
                   );
                 })}
               </div>
+            </div>
+            <div className="h-[46px] border-t border-gray-200 dark:border-white/5 px-4 shrink-0 flex items-center justify-center transition-colors">
+              <span className="text-gray-500 dark:text-white/60 text-[10px] transition-colors">
+                {tagsList.length} Tags Generated
+              </span>
             </div>
           </div>
 
