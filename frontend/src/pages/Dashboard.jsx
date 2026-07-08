@@ -10,6 +10,11 @@ import { getSearchHistory, addSearchHistory, clearSearchHistory } from '../utils
 
 import { getAssets, getTags } from '../services/api';
 
+const removeAccents = (str) => {
+  if (!str) return '';
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+};
+
 export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,8 +22,8 @@ export default function Dashboard() {
   const [activeMediaTypes, setActiveMediaTypes] = useState(['video', 'image', 'audio']);
   const [searchHistory, setSearchHistoryState] = useState(getSearchHistory());
 
-  const [scoreFilter, setScoreFilter] = useState('all');
-  const [topK, setTopK] = useState(20);
+  const [sortBy, setSortBy] = useState('newest');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const navigate = useNavigate();
 
@@ -53,11 +58,52 @@ export default function Dashboard() {
     }
 
     if (activeTags.length > 0) {
-      result = result.filter(asset => asset.tags && Array.isArray(asset.tags) && asset.tags.some(tag => activeTags.includes(tag.toLowerCase())));
+      result = result.filter(asset => asset.tags && Array.isArray(asset.tags) && asset.tags.some(tag => {
+        const tagText = typeof tag === 'object' && tag !== null ? tag.name : tag;
+        return typeof tagText === 'string' && activeTags.includes(tagText.toLowerCase());
+      }));
     }
 
+    if (searchQuery.trim()) {
+      const q = removeAccents(searchQuery.trim().toLowerCase());
+      result = result.filter(asset => {
+        const nameStr = asset.file_name ? removeAccents(asset.file_name.toLowerCase()) : '';
+        const matchName = nameStr.includes(q);
+        
+        const matchTags = asset.tags && Array.isArray(asset.tags) && asset.tags.some(tag => {
+          const tagText = typeof tag === 'object' && tag !== null ? tag.name : tag;
+          if (typeof tagText !== 'string') return false;
+          const cleanTag = removeAccents(tagText.toLowerCase());
+          return cleanTag.includes(q);
+        });
+        return matchName || matchTags;
+      });
+    }
+
+    if (statusFilter !== 'all') {
+      result = result.filter(asset => {
+        const status = asset.status || 'ready';
+        if (statusFilter === 'ready') return status === 'ready' || status === 'completed';
+        return status === statusFilter;
+      });
+    }
+
+    // Local Sorting (for current page items)
+    result.sort((a, b) => {
+      if (sortBy === 'newest') {
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      }
+      if (sortBy === 'oldest') {
+        return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      }
+      if (sortBy === 'name_asc') {
+        return (a.file_name || '').localeCompare(b.file_name || '');
+      }
+      return 0;
+    });
+
     return result;
-  }, [assets, activeMediaTypes, activeTags]);
+  }, [assets, activeMediaTypes, activeTags, searchQuery, statusFilter, sortBy]);
 
   const hasNextPage = currentPage < totalPages;
 
@@ -80,8 +126,8 @@ export default function Dashboard() {
     if (q.trim()) {
       const newHist = addSearchHistory(q.trim());
       if (newHist) setSearchHistoryState(newHist);
-      navigate(`/search?q=${encodeURIComponent(q.trim())}`);
     }
+    setSearchQuery(q);
   };
 
   const handleSelectHistory = (term) => {
@@ -172,19 +218,19 @@ export default function Dashboard() {
                 </div>
 
                 <SearchFilters
-                  scoreFilter={scoreFilter}
-                  onScoreChange={setScoreFilter}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  statusFilter={statusFilter}
+                  onStatusChange={setStatusFilter}
                   tags={availableTags}
                   activeTags={activeTags}
                   onToggleTag={handleToggleTag}
                   mediaTypes={availableMediaTypes}
                   activeMediaTypes={activeMediaTypes}
                   onToggleMediaType={(type) => setActiveMediaTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
-                  topK={topK}
-                  onTopKChange={setTopK}
                   isLoadingTags={isLoadingTags}
                   isErrorTags={isErrorTags}
-                  onRetryTags={refetchTags}
+                  onRetryTags={() => refetchTags()}
                 />
               </div>
 
