@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your preferences and application configuration.",
+    "general": "General",
+    "generalDesc": "Basic application settings",
+    "aiPrefs": "AI Preferences",
+    "aiPrefsDesc": "Configure AI models and pipeline behavior",
+    "appearance": "Appearance",
+    "appearanceDesc": "Customize the look and feel",
+    "about": "About",
+    "aboutDesc": "System information and versions",
+    "language": "Language",
+    "languageDesc": "Choose your preferred language",
+    "autoSave": "Auto Save",
+    "autoSaveDesc": "Automatically save changes",
+    "theme": "Theme",
+    "themeDesc": "Select your color theme",
+    "light": "Light",
+    "dark": "Dark",
+    "aiProvider": "AI Provider",
+    "aiProviderDesc": "Select the default AI provider for processing",
+    "apiKey": "API Key",
+    "apiKeyDesc": "Enter your API key for the selected provider",
+    "localModel": "Local Model Path",
+    "localModelDesc": "Path to local LLM/Whisper models",
+    "save": "Save Settings",
+    "toastSuccess": "Settings saved successfully"
+  }
+}
