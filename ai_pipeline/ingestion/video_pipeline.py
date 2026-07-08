@@ -220,8 +220,10 @@ class VideoAnalysisPipeline:
             if keyframe_path:
                 try:
                     raw_caption = self.vision_provider.caption_keyframe(Path(keyframe_path))
+                    logger.info(f"DEBUG - Scene {scene.scene_index} Vision Caption: '{raw_caption}'")
                 except Exception as e:
                     logger.warning(f"Vision failed scene {scene.scene_index}: {e}")
+                    raw_caption = ""
 
             # 2. Transcript snippet
             transcript_snippet = self._get_transcript_for_scene(

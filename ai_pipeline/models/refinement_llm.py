@@ -180,15 +180,11 @@ class OllamaRefinementLLM(BaseRefinementLLM):
                 "stream": False,
                 "format": "json",
                 "options": {
-                    "temperature": 0.05,
-                    "num_predict": 480,
-                    "num_ctx": 2048,
-                    "repeat_penalty": 1.12,
-                    "stop": [
-                        "<|im_end|>", "</s>", "\n\n\n",
-                        "Main Subjects", "Visible Objects", "Scene Type",
-                        "Action:", "Location Cues", "Camera"
-                    ],
+                    "temperature": 0.1,
+                    "num_predict": 512,
+                    "num_ctx": 4096,
+                    "repeat_penalty": 1.1,
+                    "stop": ["<|im_end|>", "</s>"],
                 },
                 "keep_alive": -1,
             }
@@ -213,34 +209,22 @@ class OllamaRefinementLLM(BaseRefinementLLM):
         audio_text = _sanitize_whisper_text(transcript_snippet)
 
         system_prompt = (
-            "Bạn là AI tạo metadata video cho Editor dựng phim tại Việt Nam. "
-            "Đầu vào gồm mô tả hình ảnh và lời thoại của một phân cảnh. "
-            "Đầu ra phải là metadata TIẾNG VIỆT phục vụ tìm kiếm lại video bằng semantic search và keyword search.\n\n"
-
-            "Chỉ trả về DUY NHẤT JSON hợp lệ với 3 trường: summary, tags, searchable_text.\n\n"
-
-            "Quy tắc:\n"
-            "1. summary phải mô tả rõ: cỡ cảnh/góc máy + chủ thể chính + hành động chính + bối cảnh nếu có.\n"
-            "2. tags.scene_tags phải chứa từ 3-6 tag viết THƯỜNG, cách nhau bằng dấu gạch dưới (ví dụ: can_canh, mo_hop, laptop), mang giá trị tìm kiếm thực tế.\n"
-            "3. searchable_text phải là chuỗi tối ưu cho editor tìm kiếm, bao phủ cả phiên bản có dấu và không dấu, diễn đạt theo các cụm mà editor có thể gõ nhanh để tìm lại cảnh.\n"
-            "4. Ưu tiên thông tin nhìn thấy rõ và lời thoại thực sự liên quan. Không suy diễn quá mức.\n"
-            "5. Tuyệt đối không dùng tiếng Anh trong toàn bộ kết quả trả về."
+            "Bạn là AI tạo metadata video chuyên nghiệp. Hãy dựa vào thông tin 'Hình ảnh' và 'Lời thoại' để sinh dữ liệu.\n"
+            "BẮT BUỘC TRẢ VỀ ĐỊNH DẠNG JSON PHẲNG VỚI CÁC KEY SAU (TẤT CẢ PHẢI LÀ TIẾNG VIỆT):\n"
+            '- "summary": Viết 1 câu tiếng Việt ngắn gọn, mô tả chính xác hành động hoặc nội dung phân cảnh.\n'
+            '- "scene_tags": Mảng chứa từ 3 đến 5 từ khóa viết thường, có dấu, phân loại nội dung (ví dụ: ["xe hơi", "đường phố", "ban ngày"]).\n'
+            '- "searchable_text": Câu summary được viết lại bằng tiếng Việt không dấu (ví dụ: "phan canh co nguoi noi chuyen").\n\n'
+            "Chỉ trả về JSON hợp lệ. Không viết thêm lời thoại hay giải thích."
         )
 
- 
-# Sửa lại thành định dạng trống hoàn toàn để loại bỏ Bias text mẫu
-        json_example = (
-            '{"summary": "Toàn cảnh (Wide shot) góc nhìn từ trên cao xuống bờ biển sóng vỗ vào vách đá lúc hoàng hôn", '
-            '"tags": {"scene_tags": ["toan_canh", "bo_bien", "vach_da", "hoang_hon", "goc_tren_cao"]}, '
-            '"searchable_text": "toàn cảnh wide shot góc nhìn từ trên cao xuống bờ biển sóng vỗ vào vách đá lúc hoàng hôn toan canh wide shot goc nhin tu tren cao xuong bo bien song vo vao vach da luc hoang hon"}'
-        )
-        
+        audio_section = f"Lời thoại: {audio_text}\n" if audio_text else ""
+        vision_section = f"Hình ảnh: {vision_text}\n" if vision_text else "Hình ảnh: Không có thông tin\n"
 
         user_prompt = (
-            f"Phân cảnh {scene_id} | {timestamp:.1f} giây\n"
-            f"Lời thoại: {audio_text or 'không có'}\n"
-            f"Hình ảnh: {vision_text or 'không có'}\n\n"
-            f"Trả về đúng JSON theo mẫu sau:\n{json_example}"
+            f"--- DỮ LIỆU ĐẦU VÀO ---\n"
+            f"{vision_section}"
+            f"{audio_section}\n"
+            f"--- KẾT QUẢ JSON ---\n"
         )
 
         return (
@@ -266,15 +250,12 @@ class OllamaRefinementLLM(BaseRefinementLLM):
             return self._get_fallback_output(vision_outputs, timestamp, scene_id, transcript_snippet)
 
         summary = str(parsed.get("summary", "")).strip()
-
-        if _is_likely_english(summary) or _contains_english_rubbish(summary):
-            logger.warning(f"🔴 English detected in scene {scene_id} → fallback")
+        if not summary:
             return self._get_fallback_output(vision_outputs, timestamp, scene_id, transcript_snippet)
 
-        tags_obj = parsed.get("tags", {}) or {}
-        scene_tags = tags_obj.get("scene_tags", ["video"])
+        scene_tags = parsed.get("scene_tags", parsed.get("tags", {}).get("scene_tags", ["video"]))
         if isinstance(scene_tags, list):
-            scene_tags = [str(t).strip().replace(" ", "_").lower() for t in scene_tags if str(t).strip()][:8]
+            scene_tags = [str(t).strip().lower() for t in scene_tags if str(t).strip()][:6]
         else:
             scene_tags = ["video"]
 

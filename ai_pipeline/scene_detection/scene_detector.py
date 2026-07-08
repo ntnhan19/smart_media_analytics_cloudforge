@@ -319,11 +319,11 @@ class SceneDetector:
 
         raw_scenes = self._run_scene_detection(video_path)
 
-        # ── Fallback: < 3 raw scenes → treat whole video as 1 scene ──────────
-        if len(raw_scenes) < 3:
+        # ── Fallback: 0 raw scenes → treat whole video as 1 scene ──────────
+        if len(raw_scenes) == 0:
             duration = self._get_duration(video_path)
             logger.info(
-                f"Only {len(raw_scenes)} raw scene(s) found "
+                f"No scenes detected "
                 f"— applying full-video fallback (1 scene, {duration:.2f}s)"
             )
             raw_scenes = [(0.0, duration)]

@@ -41,11 +41,90 @@ async def list_scenes(
                 timestamp_end_sec=scene.timestamp_end_sec,
                 caption=scene.caption,
                 transcript_snippet=scene.transcript_snippet,
-                thumbnail_url=storage_service.get_stream_url(scene.keyframe_s3_key) if scene.keyframe_s3_key else None
+                thumbnail_url=storage_service.get_stream_url(scene.keyframe_s3_key) if scene.keyframe_s3_key else None,
+                tags=scene.tags
             ))
         return response
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid asset ID format")
+
+@router.get("/assets/{asset_id}/scenes/search", response_model=List[SceneResponse])
+async def search_scenes_in_asset(
+    asset_id: str,
+    query: str,
+    top_k: int = 5,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        asset_uuid = uuid.UUID(asset_id)
+        
+        # Tạo embedding cho câu query
+        query_embedding = await embedder.embed(query)
+        
+        # Tìm kiếm trong vector store với filter asset_id
+        vector_store = get_vector_store()
+        filters = {"asset_id": asset_id}
+        
+        if __import__("inspect").iscoroutinefunction(vector_store.search):
+            raw_results = await vector_store.search(
+                query_embedding=query_embedding,
+                n_results=top_k,
+                filters=filters
+            )
+        else:
+            raw_results = vector_store.search(
+                query_embedding=query_embedding,
+                top_k=top_k,
+                filters=filters
+            )
+            
+        # Lấy danh sách scene_id từ kết quả search
+        scene_ids = []
+        scores_by_id = {}
+        for res in raw_results:
+            metadata = res.get("metadata", res)
+            scene_id_str = res.get("id") or metadata.get("scene_id")
+            if scene_id_str:
+                try:
+                    scene_uuid_obj = uuid.UUID(scene_id_str)
+                    scene_ids.append(scene_uuid_obj)
+                    scores_by_id[scene_uuid_obj] = res.get("score", 0.0)
+                except ValueError:
+                    continue
+                    
+        if not scene_ids:
+            return []
+            
+        # Truy vấn DB để lấy thông tin chi tiết các Scene
+        result = await db.execute(
+            select(Scene)
+            .where(Scene.id.in_(scene_ids))
+        )
+        scenes = result.scalars().all()
+        
+        # Sắp xếp lại scenes theo thứ tự điểm số của Vector DB (thấp đến cao hoặc tuỳ thuật toán)
+        # Thông thường vector distance càng nhỏ càng giống nhau
+        scenes.sort(key=lambda s: scores_by_id.get(s.id, float('inf')))
+        
+        response = []
+        for scene in scenes:
+            response.append(SceneResponse(
+                scene_id=str(scene.id),
+                asset_id=str(scene.asset_id),
+                scene_index=scene.scene_index,
+                timestamp_start_sec=scene.timestamp_start_sec,
+                timestamp_end_sec=scene.timestamp_end_sec,
+                caption=scene.caption,
+                transcript_snippet=scene.transcript_snippet,
+                thumbnail_url=storage_service.get_stream_url(scene.keyframe_s3_key) if scene.keyframe_s3_key else None,
+                tags=scene.tags
+            ))
+        return response
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid asset ID format")
+    except Exception as e:
+        logger.error(f"Error searching scenes: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during search")
 
 @router.patch("/scenes/{scene_id}", response_model=SceneResponse)
 async def update_scene(
@@ -95,7 +174,8 @@ async def update_scene(
             timestamp_end_sec=scene.timestamp_end_sec,
             caption=scene.caption,
             transcript_snippet=scene.transcript_snippet,
-            thumbnail_url=storage_service.get_stream_url(scene.keyframe_s3_key) if scene.keyframe_s3_key else None
+            thumbnail_url=storage_service.get_stream_url(scene.keyframe_s3_key) if scene.keyframe_s3_key else None,
+            tags=scene.tags
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid scene ID format")

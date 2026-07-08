@@ -230,6 +230,44 @@ async def _process_single_file(
     await publish_job_progress(job_id_str, "processing", 95.0, "saving_to_database")
     await _persist_analysis(db, asset, analysis)
 
+    # Auto-generate asset insights
+    try:
+        from models.refinement_llm import create_refinement_llm
+        from sqlalchemy import select
+        from models.scene import Scene
+        
+        scenes_result = await db.execute(
+            select(Scene).where(Scene.asset_id == asset.id).order_by(Scene.scene_index)
+        )
+        scenes = scenes_result.scalars().all()
+        
+        aggregated_texts = []
+        if asset.full_transcript:
+            aggregated_texts.append(f"Full Transcript: {asset.full_transcript}")
+        for scene in scenes:
+            scene_text = f"Scene {scene.scene_index}: [{scene.timestamp_start_sec}s - {scene.timestamp_end_sec}s] "
+            if scene.caption:
+                scene_text += f"Caption: {scene.caption}. "
+            if scene.transcript_snippet:
+                scene_text += f"Dialogue: {scene.transcript_snippet}."
+            aggregated_texts.append(scene_text)
+        
+        full_text = "\n".join(aggregated_texts)
+        
+        llm = await loop.run_in_executor(None, create_refinement_llm)
+        if llm:
+            try:
+                insights = await loop.run_in_executor(None, llm.generate_asset_insights, full_text)
+                asset.summary = insights.get("summary")
+                asset.moods = insights.get("moods", [])
+                asset.objects = insights.get("objects", [])
+                asset.best_for = insights.get("best_for", [])
+                await db.commit()
+            finally:
+                llm.unload()
+    except Exception as e:
+        logger.error(f"Failed to generate auto-insights during ingest: {e}")
+
 
 # =============================================================================
 # Public Background Service Tasks (Entry Points)
