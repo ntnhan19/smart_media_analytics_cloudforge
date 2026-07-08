@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "title": "Cài đặt",
+    "subtitle": "Quản lý tùy chọn và cấu hình ứng dụng của bạn.",
+    "general": "Chung",
+    "generalDesc": "Cài đặt cơ bản của ứng dụng",
+    "aiPrefs": "Tùy chọn AI",
+    "aiPrefsDesc": "Cấu hình mô hình AI và luồng xử lý",
+    "appearance": "Giao diện",
+    "appearanceDesc": "Tùy chỉnh giao diện hiển thị",
+    "about": "Giới thiệu",
+    "aboutDesc": "Thông tin hệ thống và phiên bản",
+    "language": "Ngôn ngữ",
+    "languageDesc": "Chọn ngôn ngữ hiển thị",
+    "autoSave": "Tự động lưu",
+    "autoSaveDesc": "Tự động lưu các thay đổi",
+    "theme": "Giao diện màu",
+    "themeDesc": "Chọn giao diện sáng/tối",
+    "light": "Sáng",
+    "dark": "Tối",
+    "aiProvider": "Nhà cung cấp AI",
+    "aiProviderDesc": "Chọn nhà cung cấp AI mặc định",
+    "apiKey": "API Key",
+    "apiKeyDesc": "Nhập API key cho nhà cung cấp đã chọn",
+    "localModel": "Mô hình cục bộ",
+    "localModelDesc": "Đường dẫn tới mô hình LLM/Whisper cục bộ",
+    "save": "Lưu cài đặt",
+    "toastSuccess": "Đã lưu cài đặt thành công"
+  }
+}
