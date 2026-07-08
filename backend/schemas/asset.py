@@ -40,6 +40,7 @@ class SceneResponse(BaseModel):
     caption: Optional[str] = None
     transcript_snippet: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    tags: Optional[list] = None
 
     class Config:
         from_attributes = True

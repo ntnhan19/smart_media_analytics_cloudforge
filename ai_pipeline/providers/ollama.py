@@ -10,8 +10,8 @@ from PIL import Image
 from .base import TextEmbedder, VisionProvider
 
 
-DEFAULT_OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-DEFAULT_VISION_MODEL = os.getenv("QWEN_VL_MODEL") or os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
+DEFAULT_OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
+DEFAULT_VISION_MODEL = os.getenv("QWEN_VL_MODEL") or os.getenv("OLLAMA_MODEL", "qwen3-vl:2b")
 DEFAULT_EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "bge-m3:latest")
 DEFAULT_EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1024"))
 
@@ -53,22 +53,27 @@ class OllamaVisionProvider(VisionProvider):
         )
         payload = {
             "model": self.model_name,
-            "prompt": prompt,
-            "images": [_image_to_base64(Path(image_path))],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt,
+                    "images": [_image_to_base64(Path(image_path))]
+                }
+            ],
             "stream": False,
             "options": {
-                "temperature": 0.2,
-                "num_predict": 220,
+                "temperature": 0.1,
+                "num_predict": 256,
             },
             "keep_alive": -1,
         }
         response = requests.post(
-            f"{self.base_url}/api/generate",
+            f"{self.base_url}/api/chat",
             json=payload,
             timeout=self.timeout_sec,
         )
         response.raise_for_status()
-        return response.json().get("response", "").strip()
+        return response.json().get("message", {}).get("content", "").strip()
 
 
 class OllamaTextEmbedder(TextEmbedder):
@@ -96,7 +101,7 @@ class OllamaTextEmbedder(TextEmbedder):
             response = requests.post(
                 f"{self.base_url}/api/embed",
                 json={"model": self.model_name, "input": texts},
-                timeout=5.0, # Reduced timeout for testing fallback
+                timeout=self.timeout_sec,
             )
             response.raise_for_status()
             embeddings = response.json().get("embeddings", [])
