@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
+import { useTranslation } from 'react-i18next';
 
 // Modern Switch Component
 function ToggleSwitch({ checked, onChange }) {
@@ -20,7 +21,8 @@ function ToggleSwitch({ checked, onChange }) {
 }
 
 export default function Settings() {
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const { t, i18n } = useTranslation();
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('general');
   const [isAnimating, setIsAnimating] = useState(false);
@@ -50,14 +52,14 @@ export default function Settings() {
 
   const handleSave = (e) => {
     e.preventDefault();
-    showToast('Settings saved successfully!');
+    showToast(t('settings.toastSuccess'));
   };
 
   const tabs = [
-    { id: 'general', label: 'General', icon: 'lucide:settings' },
-    { id: 'ai', label: 'AI Preferences', icon: 'lucide:bot' },
-    { id: 'appearance', label: 'Appearance', icon: 'lucide:palette' },
-    { id: 'about', label: 'About', icon: 'lucide:info' }
+    { id: 'general', label: t('settings.general'), icon: 'lucide:settings' },
+    { id: 'ai', label: t('settings.aiPrefs'), icon: 'lucide:bot' },
+    { id: 'appearance', label: t('settings.appearance'), icon: 'lucide:palette' },
+    { id: 'about', label: t('settings.about'), icon: 'lucide:info' }
   ];
 
   return (
@@ -75,8 +77,8 @@ export default function Settings() {
 
       {/* Header */}
       <div className="mb-8 shrink-0 relative z-10">
-        <h1 className="text-3xl font-extrabold font-inter text-gray-900 dark:text-white tracking-tight">Settings</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 font-medium">Manage preferences for your SMA experience and configure your workflow environment.</p>
+        <h1 className="text-3xl font-extrabold font-inter text-gray-900 dark:text-white tracking-tight">{t('settings.title')}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 font-medium">{t('settings.subtitle')}</p>
       </div>
 
       <form onSubmit={handleSave} className="flex-1 flex flex-col min-h-0 relative z-10">
@@ -118,21 +120,25 @@ export default function Settings() {
               {activeTab === 'general' && (
                 <div className="space-y-8 pb-8">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">General</h2>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">Basic preferences for your SMA experience.</p>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{t('settings.general')}</h2>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">{t('settings.generalDesc')}</p>
                   </div>
 
                   <div className="bg-white dark:bg-[#16132A]/60 backdrop-blur-xl border border-gray-200 dark:border-white/5 rounded-2xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] dark:shadow-sm">
                     <div className="space-y-6">
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                         <div className="pr-4">
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Language</h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose your preferred language for the UI.</p>
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('settings.language')}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('settings.languageDesc')}</p>
                         </div>
                         <div className="relative shrink-0 w-full sm:w-48">
-                          <select className="w-full appearance-none bg-gray-50 dark:bg-[#0D0A1A] border border-gray-200 dark:border-[#3f3b60]/50 text-gray-900 dark:text-white text-sm rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:ring-2 focus:ring-sma-purple/50 focus:border-sma-purple transition-all duration-200 cursor-pointer shadow-sm">
+                          <select 
+                            className="w-full appearance-none bg-gray-50 dark:bg-[#0D0A1A] border border-gray-200 dark:border-[#3f3b60]/50 text-gray-900 dark:text-white text-sm rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:ring-2 focus:ring-sma-purple/50 focus:border-sma-purple transition-all duration-200 cursor-pointer shadow-sm"
+                            value={i18n.resolvedLanguage}
+                            onChange={(e) => i18n.changeLanguage(e.target.value)}
+                          >
                             <option value="en">English</option>
-                            <option value="vi">Vietnamese</option>
+                            <option value="vi">Tiếng Việt</option>
                           </select>
                           <Icon icon="lucide:globe" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" />
                           <Icon icon="lucide:chevron-down" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" />
@@ -143,8 +149,8 @@ export default function Settings() {
 
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                         <div className="pr-4">
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Auto Save Search History</h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Automatically save your recent search queries.</p>
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('settings.autoSave')}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('settings.autoSaveDesc')}</p>
                         </div>
                         <ToggleSwitch checked={true} onChange={() => { }} />
                       </div>
@@ -157,8 +163,8 @@ export default function Settings() {
                 <div className="space-y-8 pb-8">
                   <div className="flex justify-between items-end">
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">AI Preferences</h2>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">Configures AI features for media analysis.</p>
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{t('settings.aiPrefs')}</h2>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">{t('settings.aiPrefsDesc')}</p>
                     </div>
                     <span className="text-[10px] font-bold px-2.5 py-1 bg-sma-purple/10 text-sma-purple dark:bg-sma-purple/20 dark:text-[#A78BFA] rounded-md uppercase tracking-wider border border-sma-purple/20">
                       Placeholder UI Only
@@ -169,8 +175,8 @@ export default function Settings() {
                     <div className="space-y-6">
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                         <div className="pr-4 sm:w-1/2">
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">AI Provider</h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Select the AI engine used for semantic search and insights.</p>
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('settings.aiProvider')}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('settings.aiProviderDesc')}</p>
                         </div>
                         <div className="relative shrink-0 w-full sm:w-1/2">
                           <select className="w-full appearance-none bg-gray-50 dark:bg-[#0D0A1A] border border-gray-200 dark:border-[#3f3b60]/50 text-gray-900 dark:text-white text-sm rounded-xl pl-4 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-sma-purple/50 focus:border-sma-purple transition-all duration-200 cursor-pointer shadow-sm">
@@ -186,8 +192,8 @@ export default function Settings() {
 
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                         <div className="pr-4 sm:w-1/2">
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">API Key</h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Required if you choose Bedrock or OpenAI.</p>
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('settings.apiKey')}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('settings.apiKeyDesc')}</p>
                         </div>
                         <div className="w-full sm:w-1/2 relative">
                           <Icon icon="lucide:key" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" />
@@ -203,8 +209,8 @@ export default function Settings() {
 
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                         <div className="pr-4 sm:w-1/2">
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Local Model</h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Model name for Ollama.</p>
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('settings.localModel')}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('settings.localModelDesc')}</p>
                         </div>
                         <div className="w-full sm:w-1/2 relative">
                           <Icon icon="lucide:box" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" />
@@ -224,15 +230,15 @@ export default function Settings() {
               {activeTab === 'appearance' && (
                 <div className="space-y-8 pb-8">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Appearance</h2>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">Customize the look and feel of the application.</p>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{t('settings.appearance')}</h2>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">{t('settings.appearanceDesc')}</p>
                   </div>
 
                   <div className="bg-white dark:bg-[#16132A]/60 backdrop-blur-xl border border-gray-200 dark:border-white/5 rounded-2xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] dark:shadow-sm">
                     <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
                       <div className="pr-4 max-w-sm">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Interface Theme</h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Select or customize your UI theme. The dark theme is highly recommended for late-night viewing.</p>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('settings.theme')}</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('settings.themeDesc')}</p>
                       </div>
 
                       <div className="flex bg-gray-100 dark:bg-[#0D0A1A] border border-gray-200 dark:border-white/5 rounded-xl p-1 shrink-0">
@@ -271,8 +277,8 @@ export default function Settings() {
               {activeTab === 'about' && (
                 <div className="space-y-8 pb-8">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">About</h2>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">System information and resources.</p>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{t('settings.about')}</h2>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">{t('settings.aboutDesc')}</p>
                   </div>
 
                   <div className="bg-white dark:bg-[#16132A]/60 backdrop-blur-xl border border-gray-200 dark:border-white/5 rounded-2xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] dark:shadow-sm">
@@ -314,7 +320,7 @@ export default function Settings() {
         <div className="mt-auto pt-4 pb-6 flex justify-end shrink-0 border-t border-gray-200 dark:border-white/10 relative z-20">
           <button type="submit" className="bg-[#7B5CF5] hover:bg-[#684CDE] text-white px-8 py-3 rounded-xl font-bold text-sm tracking-wide transition-all duration-300 shadow-[0_4px_14px_0_rgba(123,92,245,0.39)] hover:shadow-[0_6px_20px_rgba(123,92,245,0.23)] hover:-translate-y-0.5 flex items-center space-x-2">
             <Icon icon="lucide:save" width="18" />
-            <span>Save Changes</span>
+            <span>{t('settings.save')}</span>
           </button>
         </div>
 
