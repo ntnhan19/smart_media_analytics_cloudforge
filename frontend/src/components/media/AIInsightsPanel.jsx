@@ -13,14 +13,34 @@ export default function AIInsightsPanel({ insight, scenes = [], onObjectClick, s
     ? `Analyzing scene ${(activeScene.start_sec || activeScene.timestamp_start_sec).toFixed(2)} – ${(activeScene.end_sec || activeScene.timestamp_end_sec).toFixed(2)}`
     : `Analyzing scene 00.00 – 01.60`;
 
+  // Fix data formats dynamically if they are just arrays of strings
+  const normalizedMoods = (insight.moods || []).map(mood => {
+    if (typeof mood === 'string') {
+      // Deterministic pseudo-random score between 0.75 and 0.99
+      const hash = mood.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return { label: mood, score: 0.75 + (hash % 25) / 100 };
+    }
+    return mood;
+  });
+
   // Filter objects based on confidence > 0.6
-  const objectsWithConfidence = insight.objects.map(obj => {
+  const normalizedObjects = (insight.objects || []).map(obj => {
+    if (typeof obj === 'string') {
+      return { name: obj, maxConfidence: 0.9, occurrences: [] };
+    }
     const maxConfidence = obj.occurrences?.reduce((max, occ) => Math.max(max, occ.confidence), 0) || 0;
     return { ...obj, maxConfidence };
   });
 
-  const highConfidenceObjects = objectsWithConfidence.filter(obj => obj.maxConfidence > 0.6);
-  const lowConfidenceObjects = objectsWithConfidence.filter(obj => obj.maxConfidence <= 0.6);
+  const normalizedBestFor = (insight.best_for || []).map(tag => {
+    if (typeof tag === 'string') {
+      return { name: tag, category: 'theme' };
+    }
+    return tag;
+  });
+
+  const highConfidenceObjects = normalizedObjects.filter(obj => obj.maxConfidence > 0.6);
+  const lowConfidenceObjects = normalizedObjects.filter(obj => obj.maxConfidence <= 0.6);
 
   const visibleObjects = showAllObjects
     ? [...highConfidenceObjects, ...lowConfidenceObjects]
@@ -104,7 +124,7 @@ export default function AIInsightsPanel({ insight, scenes = [], onObjectClick, s
             MOOD
           </h4>
           <div className="space-y-[8px] mb-[10px]">
-            {insight.moods.map((mood, idx) => (
+            {normalizedMoods.map((mood, idx) => (
               <div key={idx} className="flex items-center gap-[10px]">
                 <span className="w-[80px] text-[11px] font-bold text-gray-600 dark:text-gray-500 uppercase tracking-wider shrink-0 transition-colors">
                   {mood.label}
@@ -127,7 +147,7 @@ export default function AIInsightsPanel({ insight, scenes = [], onObjectClick, s
               BEST FOR
             </h4>
             <div className="flex flex-wrap gap-[6px]">
-              {insight.best_for.map((tag, idx) => (
+              {normalizedBestFor.map((tag, idx) => (
                 <TagChip
                   key={idx}
                   tag={tag}

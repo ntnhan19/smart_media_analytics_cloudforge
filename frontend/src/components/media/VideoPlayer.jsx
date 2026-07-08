@@ -1,29 +1,29 @@
 import { useRef, useState, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Settings, Captions } from 'lucide-react';
 
-export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], mediaType = 'video', onTimeUpdate, duration = 120, activeMarkers = [], onPlayStateChange }) {
+export default function VideoPlayer({ src, seekTimestamp = 0, scenes = [], mediaType = 'video', onTimeUpdate, duration = 120, activeMarkers = [], onPlayStateChange }) {
   const [isPlaying, setIsPlaying] = useState(false);
   
   useEffect(() => {
     if (onPlayStateChange) onPlayStateChange(isPlaying);
   }, [isPlaying, onPlayStateChange]);
-  const [currentTime, setCurrentTime] = useState(initialTimestamp);
+  const [currentTime, setCurrentTime] = useState(seekTimestamp);
   const [actualDuration, setActualDuration] = useState(duration);
   const [isMuted, setIsMuted] = useState(false);
   const [showCC, setShowCC] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1);
   const videoRef = useRef(null);
   
-  // Update local state if parent changes initialTimestamp (e.g. from seek clicks)
+  // Update local state if parent changes seekTimestamp (e.g. from seek clicks)
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCurrentTime(initialTimestamp);
+    setCurrentTime(seekTimestamp);
     if (videoRef.current && videoRef.current.readyState >= 1) { // HAVE_METADATA or higher
-      if (Math.abs(videoRef.current.currentTime - initialTimestamp) > 0.5) {
-        videoRef.current.currentTime = initialTimestamp;
+      if (Math.abs(videoRef.current.currentTime - seekTimestamp) > 0.5) {
+        videoRef.current.currentTime = seekTimestamp;
       }
     }
-  }, [initialTimestamp]);
+  }, [seekTimestamp]);
 
   const handleSeek = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -62,10 +62,10 @@ export default function VideoPlayer({ src, initialTimestamp = 0, scenes = [], me
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
       setActualDuration(videoRef.current.duration);
-      // Ensure we seek to initialTimestamp once metadata is loaded
-      if (initialTimestamp > 0) {
-        videoRef.current.currentTime = initialTimestamp;
-        setCurrentTime(initialTimestamp);
+      // Ensure we seek to seekTimestamp once metadata is loaded
+      if (seekTimestamp > 0) {
+        videoRef.current.currentTime = seekTimestamp;
+        setCurrentTime(seekTimestamp);
       }
       videoRef.current.playbackRate = playbackRate;
     }

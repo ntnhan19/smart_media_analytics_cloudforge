@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import HeaderBar from '../components/layout/HeaderBar';
 
 
 // Services
-import { getAsset, getAssetScenes, getAssetStream, searchMedia, reingestAsset, regenerateInsights, toggleFavorite } from '../services/api';
+import { getAsset, getAssetScenes, getAssetStream, searchAssetScenes, reingestAsset, regenerateInsights, toggleFavorite } from '../services/api';
 
 // Components
 import VideoPlayer from '../components/media/VideoPlayer';
@@ -29,17 +29,33 @@ export default function AssetDetail() {
 
   // Local states
   const [currentTime, setCurrentTime] = useState(initialTimestamp);
+  const [seekTimestamp, setSeekTimestamp] = useState(initialTimestamp);
   const [activeTab, setActiveTab] = useState('OVERVIEW');
+  const [rightSidebarMode, setRightSidebarMode] = useState('scenes'); // 'scenes' or 'transcript'
+  const [showAllAssetTags, setShowAllAssetTags] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [sortBy, setSortBy] = useState('time');
   const [isPlaying, setIsPlaying] = useState(false);
+  
+  const transcriptScrollRef = useRef(null);
+  const activeTranscriptLineRef = useRef(null);
   
   // Interaction states for AI Insights
   const [activeMarkers, setActiveMarkers] = useState([]);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
   const [selectedTagName, setSelectedTagName] = useState(null);
   const [wsProgress, setWsProgress] = useState(null);
+
+  // Sync transcript scrolling
+  useEffect(() => {
+    if (activeTab === 'TRANSCRIPT' && activeTranscriptLineRef.current && transcriptScrollRef.current) {
+      activeTranscriptLineRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [currentTime, activeTab]);
 
   // Queries
   const { data: assetData, isLoading: isLoadingAsset } = useQuery({
@@ -59,7 +75,7 @@ export default function AssetDetail() {
 
   // Search Mutation
   const searchMutation = useMutation({
-    mutationFn: (q) => searchMedia({ query: q, filters: { asset_id: id }, top_k: 10 })
+    mutationFn: (q) => searchAssetScenes(id, q, 10)
   });
 
   // Favorite Mutation
@@ -158,6 +174,7 @@ export default function AssetDetail() {
   // Handlers
   const handleSeek = (timeSec) => {
     setCurrentTime(timeSec);
+    setSeekTimestamp(timeSec);
   };
 
   const handleTimeUpdate = (timeSec) => {
@@ -193,18 +210,19 @@ export default function AssetDetail() {
   const streamUrl = streamData?.stream_url || asset.file_path; // Fallback to file_path if stream API not ready
 
   // Use search results if searching, otherwise use all scenes
-  const searchResults = useMemo(() => searchMutation.data?.results || [], [searchMutation.data]);
+  const searchResults = useMemo(() => Array.isArray(searchMutation.data) ? searchMutation.data : [], [searchMutation.data]);
   
   const filteredScenes = useMemo(() => {
     if (debouncedQuery.trim() && searchResults.length > 0) {
-      // Map search results back to scene items based on timestamp/scene info
-      return searchResults.map(r => r.scene).filter(Boolean).map(s => ({
+      // Map search results (List[SceneResponse]) directly to component format
+      return searchResults.map(s => ({
         id: s.scene_id,
         start_sec: s.timestamp_start_sec,
-        end_sec: s.timestamp_start_sec + 5, // Rough estimate if missing
+        end_sec: s.timestamp_end_sec || s.timestamp_start_sec + 5,
         thumbnail: s.thumbnail_url,
         description: s.caption,
-        subtitle: s.transcript_snippet
+        subtitle: s.transcript_snippet,
+        tags: s.tags
       }));
     }
 
@@ -214,7 +232,8 @@ export default function AssetDetail() {
       end_sec: s.timestamp_end_sec || s.timestamp_start_sec + 5,
       thumbnail: s.thumbnail_url,
       description: s.caption,
-      subtitle: s.transcript_snippet
+      subtitle: s.transcript_snippet,
+      tags: s.tags
     })).filter(scene => {
       if (selectedTagName) {
         const tagLower = selectedTagName.toLowerCase();
@@ -227,16 +246,11 @@ export default function AssetDetail() {
   }, [debouncedQuery, selectedTagName, scenes, searchResults]);
 
   const sortedScenes = useMemo(() => {
-    return [...filteredScenes].sort((a, b) => {
-      if (sortBy === 'relevance' && debouncedQuery.trim()) {
-        const aDescMatch = a.description?.toLowerCase().includes(debouncedQuery.toLowerCase());
-        const bDescMatch = b.description?.toLowerCase().includes(debouncedQuery.toLowerCase());
-        if (aDescMatch && !bDescMatch) return -1;
-        if (!aDescMatch && bDescMatch) return 1;
-      }
-      return a.start_sec - b.start_sec;
-    });
-  }, [filteredScenes, sortBy, debouncedQuery]);
+    if (sortBy === 'relevance' && debouncedQuery.trim() && searchResults.length > 0) {
+      return filteredScenes; // Backend already sorted by vector distance!
+    }
+    return [...filteredScenes].sort((a, b) => a.start_sec - b.start_sec);
+  }, [filteredScenes, sortBy, debouncedQuery, searchResults]);
 
   const filteredTranscript = (asset?.transcripts_json || []).map(line => ({
     ...line,
@@ -286,7 +300,7 @@ export default function AssetDetail() {
             <div className="relative rounded-[6px] overflow-hidden bg-black flex-shrink-0 border border-gray-200 dark:border-gray-800 shadow-xl w-full mt-[12px]" style={{height: 'calc(100vh - 365px)', minHeight: '260px', maxHeight: '420px'}}>
               <VideoPlayer 
                 src={streamUrl}
-                initialTimestamp={initialTimestamp}
+                seekTimestamp={seekTimestamp}
                 scenes={scenes}
                 mediaType={asset.mediaType || 'video'}
                 onTimeUpdate={handleTimeUpdate}
@@ -301,7 +315,7 @@ export default function AssetDetail() {
               {/* Tabs Header */}
               <div className="flex relative">
                 <div className="flex gap-2">
-                  {['OVERVIEW', 'TRANSCRIPT', 'METADATA', 'AI_INSIGHTS'].map((tab) => (
+                  {['OVERVIEW', 'ACTIVE_SCENE', 'TRANSCRIPT', 'METADATA', 'AI_INSIGHTS'].map((tab) => (
                     <button
                        key={tab}
                        onClick={() => setActiveTab(tab)}
@@ -319,20 +333,10 @@ export default function AssetDetail() {
                   ))}
                 </div>
 
-                {/* SCENES Button on the right of tabs */}
-                <div className="absolute right-0 top-[2px]">
-                  <div className={`w-[80px] h-[30px] bg-[#4F8EF7]/10 dark:bg-[#4F8EF7]/20 border border-[#4F8EF7]/30 dark:border-[#16132A] rounded-[2px] shadow-sm flex items-center justify-center transition-all ${
-                    activeTab === 'TRANSCRIPT' ? 'opacity-30 pointer-events-none' : 'opacity-100'
-                  }`}>
-                    <span className="font-inter font-bold text-[13px] text-[#4f8ef7] dark:text-[#DDDDDD] uppercase tracking-wide">
-                      SCENES
-                    </span>
-                  </div>
-                </div>
               </div>
 
               {/* Tabs Content */}
-              <div className="flex-1 overflow-y-auto py-2 px-4 custom-scrollbar">
+              <div className={`flex-1 py-2 px-4 custom-scrollbar ${activeTab === 'TRANSCRIPT' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}`}>
                 {activeTab === 'AI_INSIGHTS' && (
                   <div>
 
@@ -355,7 +359,65 @@ export default function AssetDetail() {
                   </div>
                 )}
 
-                {(activeTab === 'OVERVIEW' || activeTab === 'TRANSCRIPT') && (
+                {activeTab === 'ACTIVE_SCENE' && (() => {
+                  const activeScene = sortedScenes.find(s => currentTime >= s.start_sec && currentTime < s.end_sec) || sortedScenes[0];
+                  if (!activeScene) return <div className="p-4 text-gray-500 text-sm">No scene data available.</div>;
+                  return (
+                    <div className="w-full flex gap-[12px] mt-[8px]">
+                      {/* Left: Thumbnail & Time */}
+                      <div className="w-[180px] flex-shrink-0 flex flex-col gap-2">
+                        <div className="w-full aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
+                          <img src={activeScene.thumbnail} className="w-full h-full object-cover" alt="Scene Thumbnail" />
+                        </div>
+                        <div className="bg-[#7B5CF5]/10 text-[#7B5CF5] text-center py-1 rounded-[4px] text-[11px] font-bold font-mono">
+                          {activeScene.start_sec.toFixed(2)}s - {activeScene.end_sec.toFixed(2)}s
+                        </div>
+                      </div>
+
+                      {/* Right: Details */}
+                      <div className="flex-1 flex flex-col gap-3 min-h-[110px] bg-white dark:bg-[#120F24] border border-[#7B5CF5]/30 dark:border-[#7B5CF5] rounded-[6px] p-[12px] shadow-[0_4px_16px_rgba(123,92,245,0.06)] dark:shadow-none overflow-y-auto max-h-[220px] custom-scrollbar">
+                        <div>
+                          <span className="font-inter font-bold text-[11px] leading-[15px] text-gray-900 dark:text-white block mb-1 uppercase">AI Caption</span>
+                          <p className="font-inter font-normal text-[12px] leading-[18px] text-gray-700 dark:text-gray-300">
+                            {activeScene.description || 'No caption'}
+                          </p>
+                        </div>
+                        
+                        {activeScene.subtitle && (
+                          <div>
+                            <span className="font-inter font-bold text-[11px] leading-[15px] text-gray-900 dark:text-white block mb-1 uppercase">Transcript Snippet</span>
+                            <p className="font-inter font-normal text-[12px] leading-[18px] text-gray-500 dark:text-gray-400 italic">
+                              "{activeScene.subtitle}"
+                            </p>
+                          </div>
+                        )}
+
+                        <div>
+                          <span className="font-inter font-bold text-[11px] leading-[15px] text-gray-900 dark:text-white block mb-1 uppercase">Scene Tags</span>
+                          <div className="flex flex-wrap gap-[6px]">
+                            {(activeScene.tags || []).length > 0 ? (
+                              activeScene.tags.map((tag, idx) => {
+                                const tagObj = typeof tag === 'string' ? { name: tag, category: 'theme' } : tag;
+                                return (
+                                  <TagChip 
+                                    key={idx} 
+                                    tag={tagObj} 
+                                    onClick={handleTagClick} 
+                                    isActive={selectedTagName === tagObj.name} 
+                                  />
+                                );
+                              })
+                            ) : (
+                              <span className="text-[11px] text-gray-500">No tags</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {activeTab === 'OVERVIEW' && (
                   <div className="relative w-full h-auto mt-[8px] flex gap-[12px]">
                     {/* AI Caption Box */}
                     <div className="flex-1 min-h-[110px] bg-white dark:bg-[#120F24] border border-[#7B5CF5]/30 dark:border-[#7B5CF5] rounded-[6px] box-border p-[10px] relative transition-all shadow-[0_4px_16px_rgba(123,92,245,0.06)] dark:shadow-none">
@@ -363,25 +425,100 @@ export default function AssetDetail() {
                         AI CAPTION
                       </span>
                       <p className="font-inter font-normal text-[12px] leading-[15px] text-gray-700 dark:text-gray-300 transition-colors">
-                        {asset.ai_caption || 'No caption available'}
+                        {asset.summary || 'No caption available'}
                       </p>
                     </div>
 
                     {/* Tags Box */}
-                    <div className="w-[240px] min-h-[110px] bg-white dark:bg-[#120F24] border border-[#7B5CF5]/30 dark:border-[#7B5CF5] rounded-[6px] box-border p-[10px] relative flex-shrink-0 transition-all shadow-[0_4px_16px_rgba(123,92,245,0.06)] dark:shadow-none">
-                      <span className="font-inter font-bold text-[12px] leading-[15px] text-gray-900 dark:text-white block mb-1 transition-colors">
+                    <div className="w-[300px] min-h-[110px] max-h-[180px] overflow-y-auto custom-scrollbar bg-white dark:bg-[#120F24] border border-[#7B5CF5]/30 dark:border-[#7B5CF5] rounded-[6px] box-border p-[10px] relative flex-shrink-0 transition-all shadow-[0_4px_16px_rgba(123,92,245,0.06)] dark:shadow-none">
+                      <span className="font-inter font-bold text-[12px] leading-[15px] text-gray-900 dark:text-white block mb-2 transition-colors">
                         TAGS
                       </span>
                       <div className="flex flex-wrap gap-[5px]">
-                        {(asset.tags || []).map((tag, idx) => (
-                          <TagChip 
-                            key={idx} 
-                            tag={tag} 
-                            onClick={handleTagClick} 
-                            isActive={selectedTagName === tag.name} 
-                          />
-                        ))}
+                        {(() => {
+                          const allTags = asset.tags || [];
+                          const visibleTags = showAllAssetTags ? allTags : allTags.slice(0, 7);
+                          const hiddenCount = allTags.length - visibleTags.length;
+                          
+                          return (
+                            <>
+                              {visibleTags.map((tag, idx) => (
+                                <TagChip 
+                                  key={idx} 
+                                  tag={typeof tag === 'string' ? { name: tag, category: 'theme' } : tag} 
+                                  onClick={handleTagClick} 
+                                  isActive={selectedTagName === (typeof tag === 'string' ? tag : tag.name)} 
+                                />
+                              ))}
+                              
+                              {hiddenCount > 0 && !showAllAssetTags && (
+                                <button 
+                                  onClick={() => setShowAllAssetTags(true)}
+                                  className="text-[10px] text-[#7B5CF5] dark:text-[#c4b5fd] font-bold hover:underline ml-1 px-2 py-1 bg-[#7B5CF5]/10 rounded-[4px]"
+                                >
+                                  +{hiddenCount} MORE
+                                </button>
+                              )}
+                              {showAllAssetTags && allTags.length > 7 && (
+                                <button 
+                                  onClick={() => setShowAllAssetTags(false)}
+                                  className="text-[10px] text-gray-500 font-bold hover:underline ml-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-[4px]"
+                                >
+                                  SHOW LESS
+                                </button>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'TRANSCRIPT' && (
+                  <div className="w-full flex-1 min-h-0 bg-white dark:bg-[#120F24] border border-[#7B5CF5]/30 dark:border-[#7B5CF5] rounded-[6px] p-[16px] shadow-[0_4px_16px_rgba(123,92,245,0.06)] dark:shadow-none flex flex-col">
+                    <h4 className="font-inter font-bold text-[12px] leading-[15px] text-gray-900 dark:text-white mb-4 uppercase tracking-wide shrink-0">
+                      Transcript Viewer
+                    </h4>
+                    
+                    <div ref={transcriptScrollRef} className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-[12px]">
+                      {filteredTranscript && filteredTranscript.length > 0 ? (
+                        filteredTranscript.map((t, idx) => {
+                          const isActive = currentTime >= t.start_sec && currentTime < t.end_sec;
+                          
+                          return (
+                            <div 
+                              key={idx} 
+                              ref={isActive ? activeTranscriptLineRef : null}
+                              className="flex w-full justify-start group transition-all"
+                            >
+                              <div className="flex w-full max-w-[90%] gap-[12px] flex-row">
+                                
+                                {/* Time Marker */}
+                                <div className="w-[45px] shrink-0 pt-[8px] text-[10px] font-mono text-gray-400 group-hover:text-[#7B5CF5] transition-colors">
+                                  {t.start_sec.toFixed(1)}s
+                                </div>
+                                
+                                {/* Message Bubble */}
+                                <div className="flex-1 flex flex-col items-start">
+                                  <div 
+                                    className={`px-[12px] py-[8px] rounded-[6px] text-[13px] leading-[22px] transition-all cursor-pointer ${
+                                      isActive ? 'bg-[#7B5CF5]/10 border-l-[3px] border-[#7B5CF5]' : 'bg-transparent border-l-[3px] border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
+                                    }`}
+                                    onClick={() => handleSeek(t.start_sec)}
+                                  >
+                                    <span className={`${isActive ? 'text-[#7B5CF5] dark:text-[#c4b5fd] font-medium' : 'text-gray-700 dark:text-gray-300'}`}>
+                                      {t.text}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-gray-500 text-[12px]">No transcript data available for this media.</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -422,6 +559,30 @@ export default function AssetDetail() {
           {asset.mediaType !== 'image' && (
             <div className="w-[380px] flex flex-col bg-white dark:bg-[#120F24] border border-gray-200 dark:border-[#2D2844] shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-none rounded-[6px] flex-shrink-0 p-[8px] gap-[8px] transition-all">
               
+              {/* Sidebar Toggle Buttons */}
+              <div className="flex w-full rounded-[4px] overflow-hidden border border-[#7B5CF5]/30 dark:border-[#7B5CF5]/40 shadow-sm flex-shrink-0">
+                <button
+                  onClick={() => setRightSidebarMode('scenes')}
+                  className={`flex-1 py-1.5 font-inter font-bold text-[11px] uppercase tracking-wide transition-colors ${
+                    rightSidebarMode === 'scenes'
+                      ? 'bg-[#7B5CF5]/10 text-[#7B5CF5] dark:text-[#c4b5fd]'
+                      : 'bg-transparent text-gray-500 hover:bg-[#7B5CF5]/5 dark:hover:bg-[#7B5CF5]/10'
+                  }`}
+                >
+                  SCENES
+                </button>
+                <button
+                  onClick={() => setRightSidebarMode('transcript')}
+                  className={`flex-1 py-1.5 font-inter font-bold text-[11px] uppercase tracking-wide transition-colors ${
+                    rightSidebarMode === 'transcript'
+                      ? 'bg-[#7B5CF5]/10 text-[#7B5CF5] dark:text-[#c4b5fd]'
+                      : 'bg-transparent text-gray-500 hover:bg-[#7B5CF5]/5 dark:hover:bg-[#7B5CF5]/10'
+                  }`}
+                >
+                  TRANSCRIPT
+                </button>
+              </div>
+
               {/* Top Search */}
               <div className="flex-shrink-0">
                 <InVideoSearch 
@@ -434,7 +595,7 @@ export default function AssetDetail() {
               {/* Showing Count and Sort Option */}
               <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-white/70 px-[6px] py-[2px] border-b border-gray-200 dark:border-white/10 shrink-0 pb-[4px] transition-colors">
                 <span>
-                  {activeTab === 'TRANSCRIPT' 
+                  {rightSidebarMode === 'transcript' 
                     ? `Showing ${filteredTranscript.length} lines`
                     : `Showing ${sortedScenes.length} scenes`
                   }
@@ -454,7 +615,7 @@ export default function AssetDetail() {
 
               {/* Timeline/Scenes or Transcript List */}
               <div className="flex-1 overflow-hidden">
-                {activeTab === 'TRANSCRIPT' ? (
+                {rightSidebarMode === 'transcript' ? (
                   <TranscriptList 
                     transcript={filteredTranscript} 
                     currentTime={currentTime} 
@@ -474,7 +635,7 @@ export default function AssetDetail() {
               
               {/* Detect Button or Waveform Player */}
               <div className="flex-shrink-0">
-                {activeTab === 'TRANSCRIPT' ? (
+                {rightSidebarMode === 'transcript' ? (
                   <WaveformSync
                     streamUrl={streamUrl}
                     currentTime={currentTime}
