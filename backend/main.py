@@ -9,6 +9,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+# --- THÊM X-RAY: Import thư viện AWS X-Ray ---
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.ext.starlette.middleware import XRayMiddleware
+# ---------------------------------------------
+
 from config import settings
 from core.limiter import limiter
 from api.routes import health, search, ingest, assets, scenes, media, clips
@@ -64,6 +69,11 @@ app = FastAPI(
     version=settings.APP_VERSION,
     lifespan=lifespan
 )
+
+# --- THÊM X-RAY: Cấu hình Recorder và Middleware ---
+xray_recorder.configure(service='SmartMedia-BackendAPI')
+app.add_middleware(XRayMiddleware, app=app, recorder=xray_recorder)
+# ---------------------------------------------------
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
