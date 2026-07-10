@@ -12,12 +12,10 @@ import UiKitDemo from './pages/UiKitDemo';
 import { JobProvider } from './contexts/JobContext';
 import { useEffect } from 'react';
 
-// === BƯỚC 1: IMPORT AWS AMPLIFY ===
 import { Amplify } from 'aws-amplify';
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 
-// === BƯỚC 2: CẤU HÌNH KẾT NỐI COGNITO TỪ BIẾN MÔI TRƯỜNG ===
 Amplify.configure({
   Auth: {
     Cognito: {
@@ -26,6 +24,35 @@ Amplify.configure({
     }
   }
 });
+
+const formFields = {
+  signUp: {
+    name: {
+      order: 1,
+      placeholder: 'Nhập họ và tên của bạn',
+      label: 'Họ và tên *',
+      isRequired: true,
+    },
+    username: {
+      order: 2,
+      placeholder: 'Nhập tên đăng nhập',
+      label: 'Tên đăng nhập *',
+      isRequired: true,
+    },
+    password: {
+      order: 3,
+      placeholder: 'Nhập mật khẩu',
+      label: 'Mật khẩu *',
+      isRequired: true,
+    },
+    confirm_password: {
+      order: 4,
+      placeholder: 'Nhập lại mật khẩu',
+      label: 'Xác nhận mật khẩu *',
+      isRequired: true,
+    },
+  },
+};
 
 const queryClient = new QueryClient();
 
@@ -40,14 +67,14 @@ function App() {
   }, []);
 
   return (
-    // === BƯỚC 3: BỌC TOÀN BỘ APP VÀO AUTHENTICATOR ===
-    <Authenticator>
+    <Authenticator formFields={formFields}>
       {({ signOut, user }) => (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
           {/* Thanh Topbar Mini để test Đăng xuất */}
           <div style={{ padding: '8px 20px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', backgroundColor: '#111827', color: 'white', fontSize: '14px', zIndex: 9999 }}>
-            <span style={{ marginRight: '16px' }}>Xin chào, <b style={{ color: '#60a5fa' }}>{user?.username}</b>!</span>
+            {/* Hiển thị Họ và tên (nếu có), không thì hiển thị Username */}
+            <span style={{ marginRight: '16px' }}>Xin chào, <b style={{ color: '#60a5fa' }}>{user?.attributes?.name || user?.username}</b>!</span>
             <button
               onClick={signOut}
               style={{ padding: '4px 12px', cursor: 'pointer', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold' }}
