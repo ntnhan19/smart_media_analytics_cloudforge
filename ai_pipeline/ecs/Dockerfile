@@ -21,7 +21,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy và cài Python dependencies trước (layer cache hiệu quả)
-COPY requirements.txt /tmp/requirements.txt
+COPY ai_pipeline/Requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip wheel && \
     pip install --no-cache-dir -r /tmp/requirements.txt
 
