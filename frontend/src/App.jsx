@@ -33,7 +33,7 @@ const formFields = {
       label: 'Họ và tên *',
       isRequired: true,
     },
-    username: {
+    email: {
       order: 2,
       placeholder: 'Nhập địa chỉ email',
       label: 'Email *',
