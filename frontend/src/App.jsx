@@ -35,8 +35,8 @@ const formFields = {
     },
     username: {
       order: 2,
-      placeholder: 'Nhập tên đăng nhập',
-      label: 'Tên đăng nhập *',
+      placeholder: 'Nhập địa chỉ email',
+      label: 'Email *',
       isRequired: true,
     },
     password: {
@@ -49,6 +49,18 @@ const formFields = {
       order: 4,
       placeholder: 'Nhập lại mật khẩu',
       label: 'Xác nhận mật khẩu *',
+      isRequired: true,
+    },
+  },
+  signIn: {
+    username: {
+      placeholder: 'Nhập địa chỉ email',
+      label: 'Email *',
+      isRequired: true,
+    },
+    password: {
+      placeholder: 'Nhập mật khẩu',
+      label: 'Mật khẩu *',
       isRequired: true,
     },
   },
@@ -67,13 +79,10 @@ function App() {
   }, []);
 
   return (
-    <Authenticator formFields={formFields}>
+    <Authenticator loginMechanisms={['email']} formFields={formFields}>
       {({ signOut, user }) => (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-
-          {/* Thanh Topbar Mini để test Đăng xuất */}
           <div style={{ padding: '8px 20px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', backgroundColor: '#111827', color: 'white', fontSize: '14px', zIndex: 9999 }}>
-            {/* Hiển thị Họ và tên (nếu có), không thì hiển thị Username */}
             <span style={{ marginRight: '16px' }}>Xin chào, <b style={{ color: '#60a5fa' }}>{user?.attributes?.name || user?.username}</b>!</span>
             <button
               onClick={signOut}
@@ -83,7 +92,6 @@ function App() {
             </button>
           </div>
 
-          {/* CODE GỐC CỦA BẠN ĐƯỢC BẢO TOÀN DƯỚI ĐÂY */}
           <div style={{ flex: 1 }}>
             <QueryClientProvider client={queryClient}>
               <JobProvider>
