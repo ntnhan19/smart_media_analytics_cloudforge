@@ -44,6 +44,7 @@ COPY --from=builder /opt/venv /opt/venv
 WORKDIR /app
 
 COPY ai_pipeline/ ./ai_pipeline/
+COPY utils/ ./utils/
 
 RUN ln -s /app/ai_pipeline/ecs/entrypoint.py /app/entrypoint.py
 RUN mkdir -p /tmp/ecs_task /app/data/thumbnails /app/data/logs
