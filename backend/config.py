@@ -1,17 +1,19 @@
 # pyrefly: ignore [missing-import]
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
 
 class Settings(BaseSettings):
-    OLLAMA_BASE_URL: str
-    OLLAMA_MODEL: str
-    CHROMA_PERSIST_PATH: str
-    CHROMA_HOST: str
-    CHROMA_PORT: int
-    MEDIA_SOURCE_PATH: str
-    WHISPER_MODEL_SIZE: str
+    OLLAMA_BASE_URL: Optional[str] = None
+    OLLAMA_MODEL: Optional[str] = None
+    CHROMA_PERSIST_PATH: Optional[str] = None
+    CHROMA_HOST: Optional[str] = None
+    CHROMA_PORT: int = 8000
+    MEDIA_SOURCE_PATH: str = "/app/media"
+    WHISPER_MODEL_SIZE: str = "base"
+    APP_VERSION: str = "1.0.0"
     DATABASE_URL: str
-    APP_VERSION: str
+
     REDIS_URL: str = "redis://localhost:6379/0"
     EMBEDDING_DIM: int = 1024
     VECTOR_DB_TYPE: str = "pgvector"
@@ -27,4 +29,5 @@ class Settings(BaseSettings):
             env_file_encoding="utf-8",
             extra="ignore"
         )
+        
 settings = Settings()
