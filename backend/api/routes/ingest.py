@@ -9,7 +9,6 @@ from core.websocket_manager import manager
 from core.limiter import limiter
 from config import settings
 from services.ingest_service import run_ingest_pipeline, run_ingest_pipeline_with_cleanup
-from services.queue_publisher import publish_ingest_job
 import uuid
 import logging
 import json
@@ -36,13 +35,12 @@ async def start_ingest_job(
         
         job_id_str = str(new_job.job_id)
         
-        # Publish to SQS instead of local background task
-        await publish_ingest_job(
+        # Start background task
+        background_tasks.add_task(
+            run_ingest_pipeline,
             job_id_str=job_id_str,
             source_path=request.source_path,
-            options=request.options,
-            is_upload=False,
-            is_retry=False
+            options=request.options
         )
         
         return IngestResponse(
@@ -127,13 +125,12 @@ async def upload_ingest_job(
                     raise HTTPException(status_code=413, detail="Payload Too Large")
                 buffer.write(chunk)
             
-        # Publish to SQS instead of local background task
-        await publish_ingest_job(
+        # Start background task with cleanup
+        background_tasks.add_task(
+            run_ingest_pipeline_with_cleanup,
             job_id_str=job_id_str,
             source_path=upload_dir,
-            options=ingest_options,
-            is_upload=True,
-            is_retry=False
+            options=ingest_options
         )
         
         return IngestResponse(
@@ -169,14 +166,14 @@ async def retry_ingest_job(
         job.error_message = None
         await db.commit()
         
-        # Publish to SQS instead of local background task
+        # Start background task with dummy path and default options for retry logic
         from schemas.ingest import IngestOptions
         # In a real app we'd fetch previous options/paths from a DB or S3
-        await publish_ingest_job(
+        background_tasks.add_task(
+            run_ingest_pipeline,
             job_id_str=job_id,
             source_path="", # Re-uses existing assets if supported, or handled via DB
             options=IngestOptions(scene_detection=True, transcription=True, vision_caption=True),
-            is_upload=False,
             is_retry=True
         )
         
