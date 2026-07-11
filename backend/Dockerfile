@@ -1,3 +1,6 @@
+# ============================================================================
+# BACKEND DOCKERFILE (Build từ thư mục gốc của dự án)
+# ============================================================================
 FROM python:3.11-slim
 
 LABEL maintainer="EchoScene Team"
@@ -11,16 +14,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY requirements.txt .
+# Chỉ copy và cài requirements của Backend
+COPY backend/requirements.txt .
 
 RUN pip install --no-cache-dir "pip==23.3.2" "setuptools==70.3.0" "wheel"
-
-# Install all dependencies from requirements.txt
-# Note: torch is NOT needed — all AI models run via Ollama HTTP API,
-# and faster-whisper uses ctranslate2 (not torch).
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy code Backend
+COPY backend/ ./
+
+# COPY thư mục ai_pipeline ĐỂ BACKEND IMPORT SCHEMA/CONTRACT (Rất nhẹ, không cài thư viện AI)
+COPY ai_pipeline/ ./ai_pipeline/
 
 RUN mkdir -p /app/data/media
 
