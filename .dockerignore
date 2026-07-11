@@ -6,7 +6,6 @@ ai_pipeline/logs/
 ai_pipeline/.pytest_cache/
 
 # --- Backend ---
-backend/models/
 backend/.pytest_cache/
 
 # --- Frontend ---
