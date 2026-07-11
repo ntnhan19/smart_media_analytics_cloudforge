@@ -26,6 +26,8 @@ COPY backend/ ./
 # COPY thư mục ai_pipeline ĐỂ BACKEND IMPORT SCHEMA/CONTRACT (Rất nhẹ, không cài thư viện AI)
 COPY ai_pipeline/ ./ai_pipeline/
 
+COPY utils/ ./utils/
+
 RUN mkdir -p /app/data/media
 
 EXPOSE 8000
