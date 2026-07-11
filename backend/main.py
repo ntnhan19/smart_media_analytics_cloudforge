@@ -9,10 +9,31 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-# --- THÊM X-RAY: Import thư viện AWS X-Ray ---
 from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.ext.starlette.middleware import XRayMiddleware
-# ---------------------------------------------
+from aws_xray_sdk.core.async_context import AsyncContext
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+xray_recorder.configure(service='SmartMedia-BackendAPI', context=AsyncContext())
+
+class CustomXRayMiddleware:
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+            
+        segment = xray_recorder.begin_segment('SmartMedia-BackendAPI')
+        try:
+            segment.put_http_meta('url', scope.get('path'))
+            segment.put_http_meta('method', scope.get('method'))
+            await self.app(scope, receive, send)
+        except Exception as e:
+            segment.add_exception(e)
+            raise
+        finally:
+            xray_recorder.end_segment()
+# ------------------------------------------------------------------
 
 from config import settings
 from core.limiter import limiter
@@ -70,10 +91,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# --- THÊM X-RAY: Cấu hình Recorder và Middleware ---
-xray_recorder.configure(service='SmartMedia-BackendAPI')
-app.add_middleware(XRayMiddleware, app=app, recorder=xray_recorder)
-# ---------------------------------------------------
+app.add_middleware(CustomXRayMiddleware)
+# ----------------------------------------------
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
