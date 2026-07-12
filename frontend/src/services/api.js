@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: import.meta.env.VITE_API_ENDPOINT || '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -40,7 +40,7 @@ export const uploadMediaFile = async (file, options, signal) => {
   if (options) {
     formData.append('options', JSON.stringify(options));
   }
-  const response = await axios.post('/api/v1/ingest/upload', formData, {
+  const response = await api.post('/ingest/upload', formData, {
     signal,
   });
   return response.data;
