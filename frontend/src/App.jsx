@@ -80,17 +80,8 @@ function App() {
 
   return (
     <Authenticator loginMechanisms={['email']} formFields={formFields}>
-      {({ signOut, user }) => (
+      {() => (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-          <div style={{ padding: '8px 20px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', backgroundColor: '#111827', color: 'white', fontSize: '14px', zIndex: 9999 }}>
-            <span style={{ marginRight: '16px' }}>Xin chào, <b style={{ color: '#60a5fa' }}>{user?.attributes?.name || user?.username}</b>!</span>
-            <button
-              onClick={signOut}
-              style={{ padding: '4px 12px', cursor: 'pointer', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold' }}
-            >
-              Đăng xuất
-            </button>
-          </div>
 
           <div style={{ flex: 1 }}>
             <QueryClientProvider client={queryClient}>
