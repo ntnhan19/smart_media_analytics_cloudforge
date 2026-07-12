@@ -14,7 +14,9 @@ async def health_check():
 async def init_db():
     try:
         from database import engine, Base
-        from models import ingest, search, vector
+        import models.asset
+        import models.ingest_job
+        import models.scene
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         return {"status": "success", "message": "Tables created successfully!"}
