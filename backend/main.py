@@ -74,6 +74,18 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Auto-migrate database tables for the workshop
+    try:
+        from database import engine, Base
+        import models.asset
+        import models.ingest_job
+        import models.scene
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables initialized successfully via Auto-Migration.")
+    except Exception as e:
+        logger.error(f"Failed to auto-migrate database: {e}")
+
     # Mask secrets
     config_dict = settings.model_dump()
     if "DATABASE_URL" in config_dict:
