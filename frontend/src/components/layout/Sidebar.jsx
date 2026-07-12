@@ -1,11 +1,13 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Upload, Settings, Folder, Heart, Trash, User, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, Upload, Settings, Folder, Heart, Trash, User, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 import { getAssets } from '../../services/api';
 import AIProcessingPanel from './AIProcessingPanel';
 
 export default function Sidebar({ activeMenu, showLibraryCount = false, onClose, onOpen, isCollapsed = false }) {
+  const { user, signOut } = useAuthenticator((context) => [context.user]);
   const { data: assets } = useQuery({
     queryKey: ['assets'],
     queryFn: ({ signal }) => getAssets(signal),
@@ -112,14 +114,37 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
       </div>
 
       {/* Footer - Cố định */}
-      <div className={`pt-3 pb-4 flex justify-center shrink-0 border-t border-gray-200 dark:border-[#2D2844] transition-colors ${isCollapsed ? 'px-2' : ''}`}>
+      <div className={`pt-3 pb-4 flex flex-col justify-center shrink-0 border-t border-gray-200 dark:border-[#2D2844] transition-colors ${isCollapsed ? 'px-2 items-center' : 'px-4'}`}>
         {!isCollapsed ? (
-          <button className="w-[250px] h-10 rounded-lg flex items-center justify-center text-gray-700 dark:text-white bg-gray-100 dark:bg-[#1A1630] hover:bg-gray-200 dark:hover:bg-[#2D2844] transition-colors font-bold text-[15px]">
-            Login
-          </button>
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-[#1A1630] rounded-lg p-2">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-sma-purple text-white flex items-center justify-center font-bold text-sm shrink-0">
+                {(user?.attributes?.name || user?.username || 'U')[0].toUpperCase()}
+              </div>
+              <div className="flex flex-col truncate">
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">
+                  {user?.attributes?.name || user?.username || 'User'}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {user?.attributes?.email || ''}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={signOut}
+              title="Đăng xuất"
+              className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         ) : (
-          <button title="Login" className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2D2844] hover:text-gray-900 dark:hover:text-white transition-colors">
-            <User className="w-5 h-5" />
+          <button
+            onClick={signOut}
+            title="Đăng xuất"
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 dark:text-gray-400 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
           </button>
         )}
       </div>
