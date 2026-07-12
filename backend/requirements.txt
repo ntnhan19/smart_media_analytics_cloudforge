@@ -5,6 +5,7 @@
 # ── Web Framework & API ─────────────────────────────────────────────────────
 fastapi==0.115.6
 uvicorn==0.34.0
+websockets>=14.0
 slowapi==0.1.9
 pydantic==2.10.4
 pydantic-settings==2.7.0
