@@ -179,7 +179,10 @@ async def _process_single_file(
     await publish_job_progress(job_id_str, "processing", 5.0, "uploading_file")
 
     # Đẩy file media gốc vào MinIO/S3 Storage
-    if storage_service.client and os.path.exists(file_path):
+    if not storage_service.client:
+        raise RuntimeError("Storage client is not initialized. Cannot upload source media. Check STORAGE_BACKEND and AWS_S3_BUCKET environment variables.")
+        
+    if os.path.exists(file_path):
         loop = asyncio.get_running_loop()
         success = await loop.run_in_executor(
             None, storage_service.client.upload_file, file_path, video_s3_key
