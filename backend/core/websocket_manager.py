@@ -15,7 +15,6 @@ class ConnectionManager:
         self.redis_client = redis.from_url(
             settings.REDIS_URL, 
             decode_responses=True,
-            socket_timeout=5,
             socket_connect_timeout=5
         )
         self.pubsub_tasks: Dict[str, asyncio.Task] = {}
