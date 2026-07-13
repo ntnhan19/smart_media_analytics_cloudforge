@@ -203,35 +203,8 @@ async def _process_single_file(
         asset.file_size_bytes = os.path.getsize(file_path) if os.path.exists(file_path) else 0
         await db.commit()
 
-    # Xử lý AI Pipeline cục bộ tại Backend (Monolithic mode)
-    await publish_job_progress(job_id_str, "processing", 15.0, "running_pipeline")
-
-    loop = asyncio.get_running_loop()
-    
-    def progress_callback(current_step: str, progress: float) -> None:
-        mapped_progress = 15.0 + (progress * 0.75)
-        asyncio.run_coroutine_threadsafe(
-            publish_job_progress(job_id_str, "processing", mapped_progress, current_step, update_db=False),
-            loop,
-        )
-
-    def run_pipeline() -> VideoAnalysisContract:
-        mode = getattr(options, "processing_mode", "fast") if options else "fast"
-        pipeline = VideoAnalysisPipeline(
-            processing_mode=mode,
-            storage_client=storage_service.client,
-            progress_callback=progress_callback,
-        )
-        return pipeline.analyze_video(
-            video_path=Path(file_path),
-            asset_id=str(asset.id),
-            source_storage_key=video_s3_key,
-        )
-
-    analysis = await loop.run_in_executor(None, run_pipeline)
-
-    await publish_job_progress(job_id_str, "processing", 95.0, "saving_results")
-    await _persist_analysis(db, asset, analysis)
+    # Bàn giao việc xử lý AI cho Step Functions (AI Worker) qua EventBridge
+    await publish_job_progress(job_id_str, "processing", 10.0, "waiting_for_ai_worker")
 
 
 # =============================================================================
@@ -277,13 +250,11 @@ async def run_ingest_pipeline(
             for idx, file_path in enumerate(files, 1):
                 await _process_single_file(file_path, db, options, job_id_str)
                 job.assets_processed = idx
-                job.progress = 100.0 if idx == len(files) else (idx / len(files)) * 100
+                job.progress = 10.0
                 await db.commit()
 
-            job.status = "completed"
-            job.progress = 100.0
-            await db.commit()
-            await publish_job_progress(job_id_str, "completed", 100.0, "completed")
+            # Không set status = "completed" ở đây vì Step Functions AI Worker sẽ lo phần này!
+            # Backend chỉ upload S3 và giữ trạng thái processing.
 
         except Exception as exc:
             logger.exception(f"Pipeline failed for job {job_id_str}")
