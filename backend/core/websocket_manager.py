@@ -12,7 +12,12 @@ class ConnectionManager:
     def __init__(self):
         # Maps job_id to a list of active websocket connections
         self.active_connections: Dict[str, List[WebSocket]] = {}
-        self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        self.redis_client = redis.from_url(
+            settings.REDIS_URL, 
+            decode_responses=True,
+            socket_timeout=5,
+            socket_connect_timeout=5
+        )
         self.pubsub_tasks: Dict[str, asyncio.Task] = {}
 
     async def connect(self, websocket: WebSocket, job_id: str):
