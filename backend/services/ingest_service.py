@@ -203,70 +203,8 @@ async def _process_single_file(
         asset.file_size_bytes = os.path.getsize(file_path) if os.path.exists(file_path) else 0
         await db.commit()
 
-    loop = asyncio.get_running_loop()
-
-    # Callback tối ưu: Đẩy tiến độ dạng threadsafe, ngắt tuyệt đối luồng ghi DB tránh deadlock
-    def progress_callback(current_step: str, progress: float) -> None:
-        asyncio.run_coroutine_threadsafe(
-            publish_job_progress(job_id_str, "processing", progress, current_step, update_db=False, asset_id=str(asset.id)),
-            loop,
-        )
-
-    def run_pipeline() -> VideoAnalysisContract:
-        mode = getattr(options, "processing_mode", "fast") if options else "fast"
-        pipeline = VideoAnalysisPipeline(
-            processing_mode=mode,
-            storage_client=storage_service.client,
-            progress_callback=progress_callback,
-        )
-        return pipeline.analyze_video(
-            video_path=Path(file_path),
-            asset_id=str(asset.id),
-            source_storage_key=video_s3_key,
-        )
-
-    analysis = await loop.run_in_executor(None, run_pipeline)
-
-    await publish_job_progress(job_id_str, "processing", 95.0, "saving_to_database")
-    await _persist_analysis(db, asset, analysis)
-
-    # Auto-generate asset insights
-    try:
-        from models.refinement_llm import create_refinement_llm
-        from sqlalchemy import select
-        from models.scene import Scene
-        
-        scenes_result = await db.execute(
-            select(Scene).where(Scene.asset_id == asset.id).order_by(Scene.scene_index)
-        )
-        scenes = scenes_result.scalars().all()
-        
-        aggregated_texts = []
-        if asset.full_transcript:
-            aggregated_texts.append(f"Full Transcript: {asset.full_transcript}")
-        for scene in scenes:
-            scene_text = f"Scene {scene.scene_index}: [{scene.timestamp_start_sec}s - {scene.timestamp_end_sec}s] "
-            if scene.caption:
-                scene_text += f"Caption: {scene.caption}. "
-            if scene.transcript_snippet:
-                scene_text += f"Dialogue: {scene.transcript_snippet}."
-            aggregated_texts.append(scene_text)
-        
-        full_text = "\n".join(aggregated_texts)
-        
-        llm = await loop.run_in_executor(None, create_refinement_llm)
-        if llm:
-            try:
-                insights = await loop.run_in_executor(None, llm.generate_asset_insights, full_text)
-                asset.summary = insights.get("summary")
-                asset.moods = insights.get("moods", [])
-                asset.objects = insights.get("objects", [])
-                asset.best_for = insights.get("best_for", [])
-                await db.commit()
-            finally:
-                llm.unload()
-    except Exception as e:
-        logger.error(f"Failed to generate auto-insights during ingest: {e}")
+    # Bàn giao việc xử lý AI cho Step Functions (AI Worker) qua EventBridge
+    await publish_job_progress(job_id_str, "processing", 10.0, "waiting_for_ai_worker")
 
 
 # =============================================================================
@@ -312,13 +250,11 @@ async def run_ingest_pipeline(
             for idx, file_path in enumerate(files, 1):
                 await _process_single_file(file_path, db, options, job_id_str)
                 job.assets_processed = idx
-                job.progress = min(99.0, (idx / len(files)) * 100.0)
+                job.progress = 10.0
                 await db.commit()
 
-            job.status = "completed"
-            job.progress = 100.0
-            await db.commit()
-            await publish_job_progress(job_id_str, "completed", 100.0, "completed")
+            # Không set status = "completed" ở đây vì Step Functions AI Worker sẽ lo phần này!
+            # Backend chỉ upload S3 và giữ trạng thái processing.
 
         except Exception as exc:
             logger.exception(f"Pipeline failed for job {job_id_str}")
