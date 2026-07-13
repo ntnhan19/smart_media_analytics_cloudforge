@@ -41,10 +41,7 @@ export const uploadMediaFile = async (file, options, signal) => {
     formData.append('options', JSON.stringify(options));
   }
   const response = await api.post('/ingest/upload', formData, {
-    signal,
-    headers: {
-        'Content-Type': undefined
-    }
+    signal
   });
   return response.data;
 };
