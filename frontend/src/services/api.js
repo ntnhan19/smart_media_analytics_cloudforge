@@ -43,7 +43,7 @@ export const uploadMediaFile = async (file, options, signal) => {
   const response = await api.post('/ingest/upload', formData, {
     signal,
     headers: {
-      'Content-Type': 'multipart/form-data'
+      'Content-Type': undefined
     }
   });
   return response.data;
