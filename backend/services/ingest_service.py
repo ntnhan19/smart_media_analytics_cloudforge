@@ -264,10 +264,17 @@ async def run_ingest_pipeline(
             job.status = "failed"
             job.progress = getattr(job, "progress", 0.0) or 0.0
             job.error_message = str(exc)[:500]
-            await db.commit()
-            await publish_job_progress(
-                job_id_str, "failed", job.progress, "failed", error_message=str(exc)
-            )
+            try:
+                await db.commit()
+            except Exception as db_err:
+                logger.error(f"Failed to commit error status to DB: {db_err}")
+                
+            try:
+                await publish_job_progress(
+                    job_id_str, "failed", job.progress, "failed", error_message=str(exc)
+                )
+            except Exception as pub_err:
+                logger.error(f"Failed to publish error status: {pub_err}")
 
 async def run_ingest_pipeline_with_cleanup(
     job_id_str: str,
