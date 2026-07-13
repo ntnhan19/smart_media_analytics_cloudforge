@@ -42,9 +42,7 @@ export const uploadMediaFile = async (file, options, signal) => {
   }
   const response = await api.post('/ingest/upload', formData, {
     signal,
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    // Để Axios tự động quản lý Content-Type và boundary cho FormData
   });
   return response.data;
 };
