@@ -9,10 +9,22 @@ const getStepName = (step) => {
   if (!step) return "Queued / Waiting to start";
   const stepMap = {
     'uploading_to_s3': "Uploading files...",
+    'metadata': "Extracting metadata...",
+    'proxy': "Creating proxy...",
     'scene_detection': "Extracting scenes...",
     'audio_transcription': "Transcribing audio...",
+    'transcription': "Transcribing audio...",
     'frame_analysis': "Generating captions...",
-    'embedding': "Generating embeddings..."
+    'vision_caption': "Generating captions...",
+    'keyframe_extraction': "Extracting keyframes...",
+    'keyframe_upload': "Uploading keyframes...",
+    'embedding': "Generating embeddings...",
+    'persisting_results': "Saving results...",
+    'atomic_swap': "Finalizing data...",
+    'fetching_data': "Fetching data...",
+    'aggregating_text': "Aggregating text...",
+    'generating_insights': "Generating insights...",
+    'saving_results': "Saving results..."
   };
   return stepMap[step] || "Processing...";
 };
