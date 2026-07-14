@@ -225,22 +225,42 @@ class BedrockTextEmbedder(TextEmbedder):
 
         @_bedrock_retry
         def _invoke_single(text: str) -> List[float]:
-            try:
-                body = json.dumps({
-                    "inputText": text,
-                    "dimensions": self.embedding_dim,
-                    "normalize": True,
-                })
+            def _try_invoke(model_id: str) -> List[float]:
+                if "v1" in model_id:
+                    body = json.dumps({
+                        "inputText": text
+                    })
+                else:
+                    body = json.dumps({
+                        "inputText": text,
+                        "dimensions": self.embedding_dim,
+                        "normalize": True,
+                    })
                 response = self.client.invoke_model(
                     body=body,
-                    modelId=self.model_id,
+                    modelId=model_id,
                 )
                 response_body = json.loads(response["body"].read())
-                return response_body["embedding"]
+                embedding = response_body["embedding"]
+                
+                # Safely truncate if model returns higher dimension than database supports
+                if len(embedding) > self.embedding_dim:
+                    embedding = embedding[:self.embedding_dim]
+                return embedding
+
+            try:
+                return _try_invoke(self.model_id)
             except ClientError as e:
                 error_code = e.response["Error"]["Code"]
+                error_msg = e.response["Error"].get("Message", "")
+                
+                # Automatic fallback if V2 is not available/invalid in the region
+                if error_code == "ValidationException" and "invalid" in error_msg.lower():
+                    logger.warning(f"Model {self.model_id} invalid. Falling back to amazon.titan-embed-text-v1")
+                    return _try_invoke("amazon.titan-embed-text-v1")
+                    
                 logger.error(
-                    f"Bedrock Embedding failed (request_id: {req_id}, code: {error_code})"
+                    f"Bedrock Embedding failed (request_id: {req_id}, code: {error_code}, msg: {error_msg})"
                 )
                 raise
 
