@@ -11,8 +11,14 @@ import json
 import os
 import re
 import requests
+import uuid
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
+
+try:
+    import boto3
+except ImportError:
+    pass
 
 from ai_pipeline.config import config
 from utils.logger import logger, log_model_loading, log_exception
@@ -354,28 +360,106 @@ class OllamaRefinementLLM(BaseRefinementLLM):
 
 
 # =============================================================================
-# Bedrock Stub
+# Bedrock Implementation
 # =============================================================================
 
 class BedrockRefinementLLM(BaseRefinementLLM):
-    def __init__(self, model_name: str = "amazon.titan-text-express-v1"):
+    def __init__(self, model_name: str = "anthropic.claude-3-5-sonnet-20240620-v1:0"):
         self.model_name = model_name
-        logger.info("☁️ BedrockRefinementLLM stub initialized")
+        from botocore.config import Config
+        config = Config(retries={"max_attempts": 1, "mode": "standard"})
+        self.client = boto3.client("bedrock-runtime", config=config)
+        logger.info(f"☁️ BedrockRefinementLLM initialized with {model_name}")
 
     def refine_analysis(self, vision_outputs, timestamp, scene_id, transcript_snippet=""):
-        return {
-            "summary": f"Phân cảnh {scene_id} tại {timestamp:.1f} giây",
-            "tags": {"scene_tags": ["video"]},
-            "searchable_text": f"phân cảnh video {scene_id}",
-        }
+        vision_text = str(vision_outputs.get("qwen_vl", "")).strip()
+        audio_text = str(transcript_snippet).strip()
+
+        prompt = (
+            "Bạn là AI tạo metadata video chuyên nghiệp. Hãy dựa vào thông tin 'Hình ảnh' và 'Lời thoại' để sinh dữ liệu.\n"
+            f"Hình ảnh: {vision_text}\n"
+            f"Lời thoại: {audio_text}\n\n"
+            "BẮT BUỘC TRẢ VỀ ĐỊNH DẠNG JSON PHẲNG VỚI CÁC KEY SAU (TẤT CẢ PHẢI LÀ TIẾNG VIỆT):\n"
+            '- "summary": Viết 1 câu tiếng Việt ngắn gọn mô tả phân cảnh.\n'
+            '- "scene_tags": Mảng chứa từ 3 đến 5 từ khóa (ví dụ: ["xe hơi", "đường phố"]).\n'
+            '- "searchable_text": Câu summary viết lại tiếng Việt không dấu.\n'
+            "Chỉ trả về JSON hợp lệ."
+        )
+
+        try:
+            response = self.client.invoke_model(
+                modelId=self.model_name,
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": 512,
+                    "messages": [{"role": "user", "content": prompt}]
+                }),
+                contentType="application/json",
+                accept="application/json"
+            )
+            result = json.loads(response['body'].read().decode('utf-8'))
+            text = result.get('content', [{}])[0].get('text', '')
+            parsed = json.loads(_repair_json(text))
+            
+            summary = str(parsed.get("summary", "")).strip()
+            scene_tags = parsed.get("scene_tags", ["video"])
+            if not isinstance(scene_tags, list): scene_tags = ["video"]
+            searchable_text = str(parsed.get("searchable_text", summary)).strip()
+            return {
+                "summary": summary[:420] if summary else f"Phân cảnh {scene_id}",
+                "tags": {"scene_tags": [str(t) for t in scene_tags[:6]]},
+                "searchable_text": searchable_text[:750],
+            }
+        except Exception as e:
+            logger.error(f"Bedrock refine error scene {scene_id}: {e}")
+            return {
+                "summary": f"Phân cảnh {scene_id} tại {timestamp:.1f} giây",
+                "tags": {"scene_tags": ["video"]},
+                "searchable_text": f"phan canh video {scene_id}",
+            }
 
     def generate_asset_insights(self, aggregated_text: str) -> Dict[str, Any]:
-        return {
-            "summary": "[AWS Stub] Video tổng hợp từ các phân cảnh.",
-            "moods": ["aws-stub-mood"],
-            "objects": ["aws-object-1"],
-            "best_for": ["aws-stub-tag"]
-        }
+        prompt = (
+            "Dựa trên các phân cảnh và lời thoại sau đây của một video, hãy tổng hợp thông tin chung "
+            "về toàn bộ video này và xuất ra chuẩn JSON (không kèm markdown block).\n\n"
+            f"Nội dung:\n{aggregated_text[:3000]}\n\n"
+            "Yêu cầu định dạng JSON:\n"
+            "{\n"
+            '  "summary": "Tóm tắt ngắn gọn 2-3 câu về nội dung chính của video",\n'
+            '  "moods": ["Vui vẻ", "Hồi hộp", ...],\n'
+            '  "objects": ["Xe hơi", "Biển", "Điện thoại", ...],\n'
+            '  "best_for": ["Vlog", "Quảng cáo", "Tiktok", ...]\n'
+            "}"
+        )
+        try:
+            response = self.client.invoke_model(
+                modelId=self.model_name,
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": 1000,
+                    "messages": [{"role": "user", "content": prompt}]
+                }),
+                contentType="application/json",
+                accept="application/json"
+            )
+            result = json.loads(response['body'].read().decode('utf-8'))
+            text = result.get('content', [{}])[0].get('text', '')
+            parsed = json.loads(_repair_json(text))
+            
+            return {
+                "summary": parsed.get("summary", "Tổng hợp nội dung video."),
+                "moods": parsed.get("moods", ["unknown"]),
+                "objects": parsed.get("objects", ["video"]),
+                "best_for": parsed.get("best_for", ["general"])
+            }
+        except Exception as e:
+            logger.error(f"Bedrock asset insights error: {e}")
+            return {
+                "summary": "Video tổng hợp từ các phân cảnh.",
+                "moods": ["general"],
+                "objects": ["video"],
+                "best_for": ["general"]
+            }
 
     def unload(self):
         pass
