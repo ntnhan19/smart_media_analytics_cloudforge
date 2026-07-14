@@ -50,7 +50,10 @@ export default function MediaCard({
   score,
   caption,
   transcript_snippet,
-  timestamp_start_sec
+  timestamp_start_sec,
+  selected = false,
+  onSelectToggle,
+  isSelectMode = false
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
