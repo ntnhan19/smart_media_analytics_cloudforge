@@ -14,6 +14,13 @@ import logging
 import json
 import os
 import shutil
+from pydantic import BaseModel
+
+class WebhookRequest(BaseModel):
+    job_id: str
+    status: str
+    asset_id: Optional[str] = None
+    error: Optional[str] = None
 
 router = APIRouter(prefix="/api/v1/ingest", tags=["ingest"])
 logger = logging.getLogger(__name__)
@@ -182,6 +189,70 @@ async def retry_ingest_job(
             status="queued",
             assets_queued=job.assets_queued,
             message="Ingestion pipeline restarted."
+        )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid job ID format")
+
+@router.post("/webhook", response_model=IngestResponse, status_code=202)
+async def ingest_webhook(
+    request: WebhookRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Webhook endpoint cho Step Functions gọi lại sau khi AI Worker (ECS) chạy xong.
+    Sẽ tiếp tục chạy Full AI Pipeline trên backend với cùng một job_id.
+    """
+    try:
+        job_uuid = uuid.UUID(request.job_id)
+        result = await db.execute(select(IngestJob).where(IngestJob.job_id == job_uuid))
+        job = result.scalar_one_or_none()
+        
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        if request.status == "failed":
+            job.status = "failed"
+            job.error_message = request.error
+            await db.commit()
+            
+            from core.websocket_manager import manager
+            await manager.publish_progress(request.job_id, {
+                "event": "failed",
+                "job_id": request.job_id,
+                "error": request.error or "Unknown Step Functions error",
+                "status": "failed"
+            })
+            return IngestResponse(
+                job_id=request.job_id,
+                status="failed",
+                assets_queued=job.assets_queued,
+                message="Pipeline failed in Step Functions."
+            )
+
+        if not job.asset_id:
+            raise HTTPException(status_code=400, detail="Job has no associated asset_id")
+            
+        # Start the rest of the pipeline in the background using the original Job ID
+        from schemas.ingest import IngestOptions
+        from services.ingest_service import run_reingest_pipeline
+        
+        # Use default options or fetch from DB if needed
+        options = IngestOptions(scene_detection=True, transcription=True, vision_caption=True)
+        
+        background_tasks.add_task(
+            run_reingest_pipeline,
+            job_id_str=request.job_id,
+            asset_id_str=str(job.asset_id),
+            options=options
+        )
+        
+        return IngestResponse(
+            job_id=request.job_id,
+            asset_id=str(job.asset_id),
+            status="processing",
+            assets_queued=job.assets_queued,
+            message="Webhook received. Continuing ingestion pipeline."
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid job ID format")
