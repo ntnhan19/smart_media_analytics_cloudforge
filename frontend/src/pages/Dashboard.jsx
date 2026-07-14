@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import MediaCard from '../components/media/MediaCard';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
