@@ -60,6 +60,15 @@ export default function MediaCard({
   const [isReingesting, setIsReingesting] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  
+  // Selection Props
+  const selectable = !!onSelectToggle;
+  const handleCheckboxClick = (e) => {
+    e.stopPropagation();
+    if (onSelectToggle) {
+      onSelectToggle(asset_id, !selected);
+    }
+  };
 
   const actualDuration = duration !== undefined ? duration : duration_sec;
   const timeToShow = timestamp_start_sec !== undefined ? timestamp_start_sec : actualDuration;
@@ -83,7 +92,7 @@ export default function MediaCard({
     setErrorMsg('');
     try {
       await deleteAsset(asset_id);
-      if (showToast) showToast('Xóa video thành công', 'success');
+      if (showToast) showToast('Video deleted successfully', 'success');
 
       // Update local storage deleted count for UI display
       const currentCount = parseInt(localStorage.getItem('deletedAssetsCount') || '0', 10);
@@ -92,7 +101,7 @@ export default function MediaCard({
 
       queryClient.invalidateQueries({ queryKey: ['assets'] });
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Xóa video thất bại';
+      const msg = err.response?.data?.detail || 'Failed to delete video';
       setErrorMsg(msg);
       if (showToast) showToast(msg, 'error');
     } finally {
@@ -106,11 +115,11 @@ export default function MediaCard({
     setIsReingesting(true);
     try {
       await reingestAsset(asset_id);
-      if (showToast) showToast('Đã gửi yêu cầu xử lý lại video', 'success');
+      if (showToast) showToast('Reingestion requested', 'success');
       // Trigger a refresh
       queryClient.invalidateQueries({ queryKey: ['assets'] });
     } catch (err) {
-      if (showToast) showToast('Không thể xử lý lại video', 'error');
+      if (showToast) showToast('Failed to reingest video', 'error');
     } finally {
       setIsReingesting(false);
     }
@@ -120,10 +129,20 @@ export default function MediaCard({
 
   return (
     <div
-      className="w-full h-full min-h-[160px] max-h-[280px] rounded-[8px] border border-gray-200 dark:border-sma-purple overflow-hidden cursor-pointer hover:border-[#7B5CF5] dark:hover:border-sma-purple/80 hover:shadow-[0_8px_24px_rgba(123,92,245,0.12)] bg-white dark:bg-sma-surface flex flex-col relative group shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:shadow-none transition-all duration-300"
+      className={`w-full h-full min-h-[160px] max-h-[280px] rounded-[8px] border overflow-hidden cursor-pointer flex flex-col relative group transition-all duration-300 ${selected ? 'border-sma-purple shadow-[0_8px_24px_rgba(123,92,245,0.2)] bg-sma-purple/5' : 'border-gray-200 dark:border-sma-purple hover:border-[#7B5CF5] dark:hover:border-sma-purple/80 hover:shadow-[0_8px_24px_rgba(123,92,245,0.12)] bg-white dark:bg-sma-surface shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:shadow-none'}`}
       onClick={handleCardClick}
     >
       <div className="w-full flex-1 bg-gray-100 dark:bg-gray-900 relative group overflow-hidden">
+        {selectable && (
+          <div 
+            className={`absolute top-[8px] left-[12px] z-20 no-navigate transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            onClick={handleCheckboxClick}
+          >
+            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors shadow-sm ${selected ? 'bg-sma-purple border-sma-purple' : 'bg-white/80 border-gray-300 hover:border-sma-purple'}`}>
+              {selected && <Icon icon="lucide:check" className="text-white w-3.5 h-3.5" />}
+            </div>
+          </div>
+        )}
         {thumbnail_url ? (
           <img
             src={thumbnail_url}
@@ -150,10 +169,12 @@ export default function MediaCard({
           </div>
         )}
 
-        <div className="absolute top-[8px] left-[12px] text-white font-inter text-[13px] drop-shadow-md z-10 flex flex-row items-center gap-1.5 font-medium shadow-black">
-          {resolution && <span style={{ textShadow: "1px 1px 2px black" }}>{resolution}</span>}
-          <span style={{ textShadow: "1px 1px 2px black" }}>{media_type === 'video' ? 'MP4' : media_type === 'image' ? 'JPG' : 'MP3'}</span>
-        </div>
+        {!selectable && (
+          <div className="absolute top-[8px] left-[12px] text-white font-inter text-[13px] drop-shadow-md z-10 flex flex-row items-center gap-1.5 font-medium shadow-black">
+            {resolution && <span style={{ textShadow: "1px 1px 2px black" }}>{resolution}</span>}
+            <span style={{ textShadow: "1px 1px 2px black" }}>{media_type === 'video' ? 'MP4' : media_type === 'image' ? 'JPG' : 'MP3'}</span>
+          </div>
+        )}
 
         {timeToShow !== undefined && timeToShow !== null && (
           <div className="absolute bottom-[8px] right-[12px] bg-black/60 px-1.5 py-0.5 rounded text-white text-[11px] font-inter z-10">
@@ -176,41 +197,43 @@ export default function MediaCard({
               <Icon icon="lucide:more-vertical" width="14" height="14" />
             </button>
             {showMenu && (
-              <div className="absolute bottom-full left-0 mb-1 w-32 bg-white dark:bg-[#2D2844] rounded-md shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-30">
-                <button
-                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMenu(false);
-                    navigate(`/assets/${asset_id}`);
-                  }}
-                >
-                  <Icon icon="lucide:info" width="14" height="14" /> Chi tiết
-                </button>
-                {isProcessing && (
+              <div className="absolute bottom-full left-0 pb-1 z-30">
+                <div className="w-32 bg-white dark:bg-[#2D2844] rounded-md shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                   <button
-                    className="w-full text-left px-3 py-2 text-xs text-sma-purple dark:text-[#A78BFA] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowMenu(false);
-                      handleReingest(e);
+                      navigate(`/assets/${asset_id}`);
                     }}
-                    disabled={isReingesting}
                   >
-                    {isReingesting ? <Icon icon="lucide:loader-2" className="animate-spin" width="14" height="14" /> : <Icon icon="lucide:refresh-cw" width="14" height="14" />}
-                    Thử lại
+                    <Icon icon="lucide:info" width="14" height="14" /> View Details
                   </button>
-                )}
-                <button
-                  className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMenu(false);
-                    setShowConfirm(true);
-                  }}
-                >
-                  <Icon icon="lucide:trash-2" width="14" height="14" /> Xóa
-                </button>
+                  {isProcessing && (
+                    <button
+                      className="w-full text-left px-3 py-2 text-xs text-sma-purple dark:text-[#A78BFA] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMenu(false);
+                        handleReingest(e);
+                      }}
+                      disabled={isReingesting}
+                    >
+                      {isReingesting ? <Icon icon="lucide:loader-2" className="animate-spin" width="14" height="14" /> : <Icon icon="lucide:refresh-cw" width="14" height="14" />}
+                      Retry
+                    </button>
+                  )}
+                  <button
+                    className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      setShowConfirm(true);
+                    }}
+                  >
+                    <Icon icon="lucide:trash-2" width="14" height="14" /> Delete
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -267,22 +290,22 @@ export default function MediaCard({
 
       {showConfirm && (
         <div className="absolute inset-0 bg-black/90 z-30 flex flex-col items-center justify-center p-4 no-navigate">
-          <p className="text-white text-sm text-center mb-4">Bạn có chắc muốn xóa video này?</p>
+          <p className="text-white text-sm text-center mb-4 font-inter">Are you sure you want to delete this video?</p>
           <div className="flex space-x-3">
             <button
               onClick={(e) => { e.stopPropagation(); setShowConfirm(false); }}
-              className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 text-xs"
+              className="px-3 py-1.5 bg-gray-700 text-white rounded hover:bg-gray-600 text-xs font-medium"
               disabled={isDeleting}
             >
-              Hủy
+              Cancel
             </button>
             <button
               onClick={handleDelete}
-              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-500 text-xs flex items-center"
+              className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-500 text-xs font-medium flex items-center"
               disabled={isDeleting}
             >
-              {isDeleting ? <Icon icon="lucide:loader-2" className="animate-spin mr-1" /> : null}
-              Xóa
+              {isDeleting ? <Icon icon="lucide:loader-2" className="animate-spin mr-1.5" /> : null}
+              Delete
             </button>
           </div>
           {errorMsg && <p className="text-red-400 text-[10px] mt-2 text-center">{errorMsg}</p>}
@@ -303,5 +326,7 @@ MediaCard.propTypes = {
   file_size_bytes: PropTypes.number,
   created_at: PropTypes.string,
   tags: PropTypes.arrayOf(PropTypes.any),
-  status: PropTypes.string
+  status: PropTypes.string,
+  selected: PropTypes.bool,
+  onSelectToggle: PropTypes.func
 };

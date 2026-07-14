@@ -24,8 +24,14 @@ export default function Dashboard() {
 
   const [sortBy, setSortBy] = useState('newest');
   const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Bulk selection state
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedAssetIds, setSelectedAssetIds] = useState([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: tagsData, isLoading: isLoadingTags, isError: isErrorTags, refetch: refetchTags } = useQuery({
     queryKey: ['tags'],
@@ -144,6 +150,46 @@ export default function Dashboard() {
     setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   };
 
+  const handleSelectToggle = (id, selected) => {
+    if (selected) {
+      setSelectedAssetIds(prev => [...prev, id]);
+    } else {
+      setSelectedAssetIds(prev => prev.filter(item => item !== id));
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedAssetIds.length === filteredAssets.length) {
+      setSelectedAssetIds([]);
+    } else {
+      setSelectedAssetIds(filteredAssets.map(a => a.asset_id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedAssetIds.length} selected videos?`)) return;
+    
+    setIsBulkDeleting(true);
+    try {
+      const { deleteAsset } = await import('../services/api');
+      await Promise.all(selectedAssetIds.map(id => deleteAsset(id)));
+      
+      const currentCount = parseInt(localStorage.getItem('deletedAssetsCount') || '0', 10);
+      localStorage.setItem('deletedAssetsCount', (currentCount + selectedAssetIds.length).toString());
+      window.dispatchEvent(new Event('assetDeleted'));
+      
+      showToast(`${selectedAssetIds.length} videos deleted successfully`, 'success');
+      setSelectedAssetIds([]);
+      setIsSelectMode(false);
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+    } catch (err) {
+      console.error('Bulk delete error:', err);
+      showToast('Failed to delete some videos', 'error');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const handleToggleMediaType = (type) => {
     setActiveMediaTypes(prev => {
       const next = prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type];
@@ -236,29 +282,75 @@ export default function Dashboard() {
 
               <div className="flex items-center justify-between pb-2 mt-1 shrink-0">
                 <div className="flex items-center space-x-2">
-                  <h2 className="text-[10px] leading-[12px] font-inter text-gray-900 dark:text-white uppercase tracking-wider transition-colors">RECENT ASSETS</h2>
-                  <span className="text-[10px] leading-[12px] font-inter text-gray-500 dark:text-gray-400 transition-colors">{filteredAssets.length} items on this page</span>
+                  {!isSelectMode ? (
+                    <>
+                      <h2 className="text-[10px] leading-[12px] font-inter text-gray-900 dark:text-white uppercase tracking-wider transition-colors">RECENT ASSETS</h2>
+                      <span className="text-[10px] leading-[12px] font-inter text-gray-500 dark:text-gray-400 transition-colors">{filteredAssets.length} items on this page</span>
+                    </>
+                  ) : (
+                    <div className="flex items-center space-x-2 bg-sma-purple/10 dark:bg-sma-purple/20 px-3 py-1 rounded-md border border-sma-purple/20">
+                      <span className="text-xs text-sma-purple dark:text-[#A78BFA] font-medium mr-1">{selectedAssetIds.length} selected</span>
+                      <button
+                        onClick={handleSelectAll}
+                        className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white px-2 transition-colors border-r border-sma-purple/20"
+                        disabled={isBulkDeleting}
+                      >
+                        {selectedAssetIds.length === filteredAssets.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                      <button
+                        onClick={handleBulkDelete}
+                        className="flex items-center px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded transition-colors disabled:opacity-50 ml-2"
+                        disabled={isBulkDeleting || selectedAssetIds.length === 0}
+                      >
+                        {isBulkDeleting ? <Icon icon="lucide:loader-2" className="animate-spin mr-1 w-3 h-3" /> : <Icon icon="lucide:trash-2" className="mr-1 w-3 h-3" />}
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
                 
-                {/* INLINE PAGINATION - Moved to top to save vertical space and prevent overlap */}
                 <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1.5 text-[11px] font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-[#16132A] border border-gray-200 dark:border-[#2D2844] rounded-md hover:bg-gray-50 dark:hover:bg-[#2D2844] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
-                    <span className="text-gray-900 dark:text-white">{currentPage}</span> / {totalPages}
-                  </span>
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={!hasNextPage}
-                    className="px-3 py-1.5 text-[11px] font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-[#16132A] border border-gray-200 dark:border-[#2D2844] rounded-md hover:bg-gray-50 dark:hover:bg-[#2D2844] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Next
-                  </button>
+                  {!isSelectMode ? (
+                    <button
+                      onClick={() => setIsSelectMode(true)}
+                      className="px-3 py-1.5 text-[11px] font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-[#16132A] border border-gray-200 dark:border-[#2D2844] rounded-md hover:bg-gray-50 dark:hover:bg-[#2D2844] transition-colors flex items-center gap-1.5"
+                    >
+                      <Icon icon="lucide:check-square" width="14" height="14" />
+                      Select
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setIsSelectMode(false);
+                        setSelectedAssetIds([]);
+                      }}
+                      className="px-3 py-1.5 text-[11px] font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-[#16132A] border border-gray-200 dark:border-[#2D2844] rounded-md hover:bg-gray-50 dark:hover:bg-[#2D2844] transition-colors"
+                      disabled={isBulkDeleting}
+                    >
+                      Cancel
+                    </button>
+                  )}
+
+                  {/* INLINE PAGINATION */}
+                  <div className="flex items-center space-x-3 border-l border-gray-200 dark:border-gray-700 pl-3">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1.5 text-[11px] font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-[#16132A] border border-gray-200 dark:border-[#2D2844] rounded-md hover:bg-gray-50 dark:hover:bg-[#2D2844] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                      <span className="text-gray-900 dark:text-white">{currentPage}</span> / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={!hasNextPage}
+                      className="px-3 py-1.5 text-[11px] font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-[#16132A] border border-gray-200 dark:border-[#2D2844] rounded-md hover:bg-gray-50 dark:hover:bg-[#2D2844] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -266,7 +358,14 @@ export default function Dashboard() {
               <div className="flex-1 min-h-0 w-full pb-4 pt-1">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5 h-full auto-rows-fr">
                   {filteredAssets.map(asset => (
-                    <MediaCard key={asset.asset_id} {...asset} showToast={showToast} />
+                    <MediaCard 
+                      key={asset.asset_id} 
+                      {...asset} 
+                      showToast={showToast} 
+                      selected={selectedAssetIds.includes(asset.asset_id)}
+                      onSelectToggle={isSelectMode ? handleSelectToggle : undefined}
+                      isSelectMode={isSelectMode}
+                    />
                   ))}
                 </div>
               </div>
