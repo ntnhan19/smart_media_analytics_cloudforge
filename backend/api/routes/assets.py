@@ -100,14 +100,15 @@ async def delete_asset(
             raise HTTPException(status_code=404, detail="Asset not found")
 
         from models.ingest_job import IngestJob
+        # Allow deleting processing assets for cleanup purposes
         active_job = await db.execute(
             select(IngestJob).where(
-                IngestJob.asset_id == asset_uuid,
-                IngestJob.status.in_(["queued", "processing", "pending"])
+                IngestJob.asset_id == asset_uuid
             )
         )
-        if active_job.scalars().first():
-            raise HTTPException(status_code=400, detail="Cannot delete asset while it is being processed")
+        jobs = active_job.scalars().all()
+        for j in jobs:
+            await db.delete(j)
 
         vector_store = get_vector_store()
         if hasattr(vector_store, "delete_by_asset"):

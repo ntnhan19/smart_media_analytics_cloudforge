@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '@iconify/react';
 import { useJobs } from '../../contexts/JobContext';
-import { deleteAsset } from '../../services/api';
+import { deleteAsset, reingestAsset } from '../../services/api';
 
 const formatDuration = (seconds) => {
   if (!seconds) return '00:00';
@@ -57,6 +57,8 @@ export default function MediaCard({
   const { activeJobs } = useJobs();
   const [showConfirm, setShowConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isReingesting, setIsReingesting] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const actualDuration = duration !== undefined ? duration : duration_sec;
@@ -96,6 +98,21 @@ export default function MediaCard({
     } finally {
       setIsDeleting(false);
       setShowConfirm(false);
+    }
+  };
+
+  const handleReingest = async (e) => {
+    e.stopPropagation();
+    setIsReingesting(true);
+    try {
+      await reingestAsset(asset_id);
+      if (showToast) showToast('Đã gửi yêu cầu xử lý lại video', 'success');
+      // Trigger a refresh
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+    } catch (err) {
+      if (showToast) showToast('Không thể xử lý lại video', 'error');
+    } finally {
+      setIsReingesting(false);
     }
   };
 
@@ -146,21 +163,57 @@ export default function MediaCard({
 
         <div
           className="absolute bottom-[8px] left-[12px] z-20 no-navigate opacity-0 group-hover:opacity-100 transition-opacity"
-          title={isProcessing ? "Không thể xóa Asset khi đang xử lý." : "Xóa Asset"}
         >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isProcessing) setShowConfirm(true);
-            }}
-            disabled={isProcessing}
-            className={`p-1.5 rounded-full transition-colors shadow-md ${isProcessing
-              ? 'bg-gray-300 dark:bg-gray-800/80 text-gray-500 cursor-not-allowed'
-              : 'bg-red-500/80 text-white hover:bg-red-500'
-              }`}
-          >
-            <Icon icon="lucide:trash-2" width="14" height="14" />
-          </button>
+          <div className="relative" onMouseLeave={() => setShowMenu(false)}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              title="Menu"
+              className="p-1.5 rounded-full transition-colors shadow-md bg-white/90 dark:bg-black/60 text-gray-800 dark:text-white hover:bg-white"
+            >
+              <Icon icon="lucide:more-vertical" width="14" height="14" />
+            </button>
+            {showMenu && (
+              <div className="absolute bottom-full left-0 mb-1 w-32 bg-white dark:bg-[#2D2844] rounded-md shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-30">
+                <button
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    navigate(`/assets/${asset_id}`);
+                  }}
+                >
+                  <Icon icon="lucide:info" width="14" height="14" /> Chi tiết
+                </button>
+                {isProcessing && (
+                  <button
+                    className="w-full text-left px-3 py-2 text-xs text-sma-purple dark:text-[#A78BFA] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      handleReingest(e);
+                    }}
+                    disabled={isReingesting}
+                  >
+                    {isReingesting ? <Icon icon="lucide:loader-2" className="animate-spin" width="14" height="14" /> : <Icon icon="lucide:refresh-cw" width="14" height="14" />}
+                    Thử lại
+                  </button>
+                )}
+                <button
+                  className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    setShowConfirm(true);
+                  }}
+                >
+                  <Icon icon="lucide:trash-2" width="14" height="14" /> Xóa
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {isProcessing && (
