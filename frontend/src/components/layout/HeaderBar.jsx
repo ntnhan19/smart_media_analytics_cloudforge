@@ -10,7 +10,12 @@ export default function HeaderBar({
   isFavorite = undefined,
   onToggleFavorite = undefined,
   downloadUrl = "/uploads/sweden_trip_2024.mp4",
-  currentTime = 0
+  currentTime = 0,
+  showDelete = false,
+  onDelete = undefined,
+  showRetry = false,
+  onRetry = undefined,
+  isRetrying = false
 }) {
   const navigate = useNavigate();
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -99,6 +104,31 @@ export default function HeaderBar({
         >
           <Icon icon="circum:circle-more" width="20" height="20" className="text-gray-700 dark:text-white -rotate-90 transition-colors" />
         </button>
+
+        {showRetry && (
+          <button 
+            onClick={onRetry}
+            disabled={isRetrying}
+            className="w-[24px] h-[24px] flex items-center justify-center hover:opacity-80 transition-opacity text-[#7B5CF5] dark:text-[#A78BFA] disabled:opacity-50"
+            title="Thử lại (Retry)"
+          >
+            {isRetrying ? (
+              <Icon icon="lucide:loader-2" className="animate-spin" width="20" height="20" />
+            ) : (
+              <Icon icon="lucide:refresh-cw" width="20" height="20" />
+            )}
+          </button>
+        )}
+
+        {showDelete && (
+          <button 
+            onClick={onDelete}
+            className="w-[24px] h-[24px] flex items-center justify-center hover:opacity-80 transition-opacity text-red-500 hover:text-red-600"
+            title="Xóa video"
+          >
+            <Icon icon="lucide:trash-2" width="20" height="20" />
+          </button>
+        )}
       </div>
     </div>
   );

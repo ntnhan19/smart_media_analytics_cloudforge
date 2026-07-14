@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { useParams, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import HeaderBar from '../components/layout/HeaderBar';
+import { Icon } from '@iconify/react';
 
 
 // Services
-import { getAsset, getAssetScenes, getAssetStream, searchAssetScenes, reingestAsset, regenerateInsights, toggleFavorite } from '../services/api';
+import { getAsset, getAssetScenes, getAssetStream, searchAssetScenes, reingestAsset, regenerateInsights, toggleFavorite, deleteAsset } from '../services/api';
 
 // Components
 import VideoPlayer from '../components/media/VideoPlayer';
@@ -38,6 +39,9 @@ export default function AssetDetail() {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [sortBy, setSortBy] = useState('time');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const navigate = useNavigate();
   
   const transcriptScrollRef = useRef(null);
   const activeTranscriptLineRef = useRef(null);
@@ -203,6 +207,26 @@ export default function AssetDetail() {
     reingestMutation.mutate();
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteAsset(id);
+      
+      const currentCount = parseInt(localStorage.getItem('deletedAssetsCount') || '0', 10);
+      localStorage.setItem('deletedAssetsCount', (currentCount + 1).toString());
+      window.dispatchEvent(new Event('assetDeleted'));
+      
+      queryClient.invalidateQueries(['assets']);
+      navigate('/');
+    } catch (err) {
+      console.error(err);
+      alert('Xóa video thất bại');
+    } finally {
+      setIsDeleting(false);
+      setShowConfirmDelete(false);
+    }
+  };
+
 
 
   // Ensure mock fallbacks if API structure differs during development
@@ -294,21 +318,68 @@ export default function AssetDetail() {
                 currentTime={currentTime}
                 isFavorite={asset.is_favorite}
                 onToggleFavorite={(isFav) => favoriteMutation.mutate(isFav)}
+                downloadUrl={streamUrl || asset.file_path}
+                showDelete={true}
+                onDelete={() => setShowConfirmDelete(true)}
+                showRetry={asset.status === 'processing' || asset.status === 'failed' || asset.status === 'queued'}
+                onRetry={() => handleDetectScenes()}
+                isRetrying={reingestMutation.isLoading}
               />
             </div>
             
+            {/* Confirm Delete Overlay */}
+            {showConfirmDelete && (
+              <div className="absolute inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-4">
+                <div className="bg-white dark:bg-[#16132A] p-6 rounded-lg max-w-sm w-full text-center border border-gray-200 dark:border-gray-800 shadow-2xl">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Bạn có chắc muốn xóa video này?</h3>
+                  <p className="text-gray-500 text-sm mb-6">Hành động này không thể hoàn tác.</p>
+                  <div className="flex justify-center space-x-3">
+                    <button
+                      onClick={() => setShowConfirmDelete(false)}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-700 text-sm font-medium transition-colors"
+                      disabled={isDeleting}
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500 text-sm font-medium flex items-center transition-colors"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? <Icon icon="lucide:loader-2" className="animate-spin mr-2" /> : null}
+                      Xóa Video
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Video Player Area */}
             <div className="relative rounded-[6px] overflow-hidden bg-black flex-shrink-0 border border-gray-200 dark:border-gray-800 shadow-xl w-full mt-[12px]" style={{height: 'calc(100vh - 365px)', minHeight: '260px', maxHeight: '420px'}}>
-              <VideoPlayer 
-                src={streamUrl}
-                seekTimestamp={seekTimestamp}
-                scenes={scenes}
-                mediaType={asset.mediaType || 'video'}
-                onTimeUpdate={handleTimeUpdate}
-                duration={asset.duration || 120}
-                activeMarkers={activeMarkers}
-                onPlayStateChange={setIsPlaying}
-              />
+              {asset.status === 'processing' || asset.status === 'queued' ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-white bg-gray-900">
+                  <Icon icon="lucide:loader-2" width="48" height="48" className="animate-spin text-[#7B5CF5] mb-4" />
+                  <p className="font-medium text-lg">Video đang được xử lý...</p>
+                  <p className="text-sm text-gray-400 mt-2">Vui lòng đợi trong giây lát</p>
+                </div>
+              ) : asset.status === 'failed' ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-white bg-gray-900">
+                  <Icon icon="lucide:alert-triangle" width="48" height="48" className="text-red-500 mb-4" />
+                  <p className="font-medium text-lg text-red-400">Xử lý video thất bại</p>
+                  <p className="text-sm text-gray-400 mt-2 max-w-md text-center">{asset.error_message || "Đã có lỗi xảy ra trong quá trình xử lý AI."}</p>
+                </div>
+              ) : (
+                <VideoPlayer 
+                  src={streamUrl}
+                  seekTimestamp={seekTimestamp}
+                  scenes={scenes}
+                  mediaType={asset.mediaType || 'video'}
+                  onTimeUpdate={handleTimeUpdate}
+                  duration={asset.duration_sec || asset.duration || 120}
+                  activeMarkers={activeMarkers}
+                  onPlayStateChange={setIsPlaying}
+                />
+              )}
             </div>
 
             {/* Tabs Area */}
@@ -534,11 +605,19 @@ export default function AssetDetail() {
                       </div>
                       <div className="flex justify-between border-b border-gray-200 dark:border-gray-800 pb-2 transition-colors">
                         <span className="text-gray-500">File Size</span>
-                        <span className="text-gray-800 dark:text-gray-300 font-medium transition-colors">{asset.file_size}</span>
+                        <span className="text-gray-800 dark:text-gray-300 font-medium transition-colors">
+                          {asset.file_size_bytes 
+                            ? (asset.file_size_bytes / (1024 * 1024)).toFixed(2) + ' MB' 
+                            : (asset.file_size || 'Unknown')}
+                        </span>
                       </div>
                       <div className="flex justify-between border-b border-gray-200 dark:border-gray-800 pb-2 transition-colors">
                         <span className="text-gray-500">Duration</span>
-                        <span className="text-gray-800 dark:text-gray-300 font-medium transition-colors">{asset.duration}s</span>
+                        <span className="text-gray-800 dark:text-gray-300 font-medium transition-colors">
+                          {asset.duration_sec 
+                            ? asset.duration_sec.toFixed(2) 
+                            : (asset.duration || 0)}s
+                        </span>
                       </div>
                       <div className="flex justify-between border-b border-gray-200 dark:border-gray-800 pb-2 transition-colors">
                         <span className="text-gray-500">Resolution</span>
