@@ -18,8 +18,8 @@ from pydantic import BaseModel
 
 class WebhookRequest(BaseModel):
     job_id: str
-    asset_id: str
     status: str
+    asset_id: Optional[str] = None
     error: Optional[str] = None
 
 router = APIRouter(prefix="/api/v1/ingest", tags=["ingest"])
@@ -230,6 +230,9 @@ async def ingest_webhook(
                 message="Pipeline failed in Step Functions."
             )
 
+        if not job.asset_id:
+            raise HTTPException(status_code=400, detail="Job has no associated asset_id")
+            
         # Start the rest of the pipeline in the background using the original Job ID
         from schemas.ingest import IngestOptions
         from services.ingest_service import run_reingest_pipeline
@@ -240,13 +243,13 @@ async def ingest_webhook(
         background_tasks.add_task(
             run_reingest_pipeline,
             job_id_str=request.job_id,
-            asset_id_str=request.asset_id,
+            asset_id_str=str(job.asset_id),
             options=options
         )
         
         return IngestResponse(
             job_id=request.job_id,
-            asset_id=request.asset_id,
+            asset_id=str(job.asset_id),
             status="processing",
             assets_queued=job.assets_queued,
             message="Webhook received. Continuing ingestion pipeline."
