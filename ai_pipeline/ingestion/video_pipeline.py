@@ -112,23 +112,28 @@ class VideoAnalysisPipeline:
         progress = ProgressTracker(8, "Video Processing")
 
         # 1. Video Info
+        if self.progress_callback: self.progress_callback("metadata", 5.0)
         progress.step("Extracting video information")
         video_info = VideoInfo(video_path)
 
         # 2. Proxy video
+        if self.progress_callback: self.progress_callback("proxy", 15.0)
         progress.step("Creating proxy video")
         proxy_path = self._create_proxy(video_path, file_manager.proxy_path)
         working_video = proxy_path or video_path
 
         # 3. Audio + Transcription
+        if self.progress_callback: self.progress_callback("transcription", 30.0)
         progress.step("Extracting and transcribing audio")
         transcript_data = self._process_audio(video_path, file_manager.audio_path)
 
         # 4. Scene Detection
+        if self.progress_callback: self.progress_callback("scene_detection", 45.0)
         progress.step("Detecting scenes")
         scene_data = self.scene_detector.detect_scenes(working_video)
 
         # 5. Keyframe Extraction
+        if self.progress_callback: self.progress_callback("keyframe_extraction", 60.0)
         progress.step("Extracting keyframes")
         keyframes = self.keyframe_extractor.extract_keyframes_from_scenes(
             working_video,
@@ -139,6 +144,7 @@ class VideoAnalysisPipeline:
         keyframes_by_scene = {int(kf["scene_id"]): kf for kf in keyframes}
 
         # 6. Captioning + Refinement
+        if self.progress_callback: self.progress_callback("vision_caption", 75.0)
         progress.step("Captioning & Refining scenes")
         scene_contracts = self._process_scenes(
             asset_id=asset_id,
@@ -148,10 +154,12 @@ class VideoAnalysisPipeline:
         )
 
         # 7. Upload keyframes
+        if self.progress_callback: self.progress_callback("keyframe_upload", 85.0)
         progress.step("Uploading keyframes")
         self._upload_keyframes(asset_id, scene_contracts)
 
         # 8. Embedding
+        if self.progress_callback: self.progress_callback("embedding", 95.0)
         progress.step("Generating embeddings")
         self._embed_scenes(scene_contracts)
 

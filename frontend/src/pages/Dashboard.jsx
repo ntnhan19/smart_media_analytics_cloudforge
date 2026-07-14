@@ -24,7 +24,7 @@ export default function Dashboard() {
 
   const [sortBy, setSortBy] = useState('newest');
   const [statusFilter, setStatusFilter] = useState('all');
-  
+
   // Bulk selection state
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState([]);
@@ -75,7 +75,7 @@ export default function Dashboard() {
       result = result.filter(asset => {
         const nameStr = asset.file_name ? removeAccents(asset.file_name.toLowerCase()) : '';
         const matchName = nameStr.includes(q);
-        
+
         const matchTags = asset.tags && Array.isArray(asset.tags) && asset.tags.some(tag => {
           const tagText = typeof tag === 'object' && tag !== null ? tag.name : tag;
           if (typeof tagText !== 'string') return false;
@@ -168,16 +168,16 @@ export default function Dashboard() {
 
   const handleBulkDelete = async () => {
     if (!window.confirm(`Are you sure you want to delete ${selectedAssetIds.length} selected videos?`)) return;
-    
+
     setIsBulkDeleting(true);
     try {
       const { deleteAsset } = await import('../services/api');
       await Promise.all(selectedAssetIds.map(id => deleteAsset(id)));
-      
+
       const currentCount = parseInt(localStorage.getItem('deletedAssetsCount') || '0', 10);
       localStorage.setItem('deletedAssetsCount', (currentCount + selectedAssetIds.length).toString());
       window.dispatchEvent(new Event('assetDeleted'));
-      
+
       showToast(`${selectedAssetIds.length} videos deleted successfully`, 'success');
       setSelectedAssetIds([]);
       setIsSelectMode(false);
@@ -308,7 +308,7 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex items-center space-x-3">
                   {!isSelectMode ? (
                     <button
@@ -358,10 +358,10 @@ export default function Dashboard() {
               <div className="flex-1 min-h-0 w-full pb-4 pt-1">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5 h-full auto-rows-fr">
                   {filteredAssets.map(asset => (
-                    <MediaCard 
-                      key={asset.asset_id} 
-                      {...asset} 
-                      showToast={showToast} 
+                    <MediaCard
+                      key={asset.asset_id}
+                      {...asset}
+                      showToast={showToast}
                       selected={selectedAssetIds.includes(asset.asset_id)}
                       onSelectToggle={isSelectMode ? handleSelectToggle : undefined}
                       isSelectMode={isSelectMode}
@@ -372,41 +372,62 @@ export default function Dashboard() {
 
             </div>
           ) : (
-            // Empty State Box
-            <div className="w-full max-w-[834px] min-h-[526px] mx-auto border-2 border-dashed border-gray-300 dark:border-sma-purple rounded-lg flex flex-col items-center relative mt-4 pt-12 pb-8 px-12 bg-white dark:bg-sma-surface/30 transition-colors shadow-sm dark:shadow-none">
-              <div className="mt-[20px] mb-[40px]">
-                <Icon icon="lucide:book" width="40" height="40" className="text-gray-700 dark:text-white transition-colors" />
-              </div>
+            // Premium Empty State Box
+            <div className="w-full max-w-[800px] mx-auto min-h-[460px] relative mt-10 rounded-2xl overflow-hidden flex flex-col items-center justify-center p-10 group">
+              {/* Glassmorphic Background */}
+              <div className="absolute inset-0 bg-white/40 dark:bg-[#1a1b26]/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-2xl transition-all duration-500 group-hover:bg-white/60 dark:group-hover:bg-[#1a1b26]/60"></div>
 
-              <div className="text-center mb-10">
-                <h2 className="text-[36px] leading-[44px] font-bold text-gray-900 dark:text-white font-inter transition-colors">YOUR LIBRARY IS EMPTY</h2>
-                <p className="text-[18px] text-gray-500 dark:text-[#A1A1AA] mt-2 font-inter transition-colors">Upload your first video to start using AI-powered search.</p>
-              </div>
+              {/* Decorative Gradient Orbs */}
+              <div className="absolute -top-24 -left-24 w-64 h-64 bg-sma-purple/20 rounded-full blur-3xl opacity-50 transition-opacity duration-700 group-hover:opacity-70"></div>
+              <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl opacity-50 transition-opacity duration-700 group-hover:opacity-70"></div>
 
-              <div className="flex flex-col items-center space-y-[57px] w-full h-40">
-                <button
-                  onClick={handleUploadClick}
-                  className="flex items-center justify-center space-x-3 w-[426px] h-[70px] bg-sma-purple/10 dark:bg-sma-purple/20 hover:bg-sma-purple/20 dark:hover:bg-sma-purple/30 transition-colors rounded-lg group relative"
-                >
-                  <div className="absolute inset-0 rounded-lg border border-sma-purple/0 group-hover:border-sma-purple/50 transition-colors"></div>
-                  <Icon icon="lucide:upload" width="44" height="44" className="text-sma-purple dark:text-white transition-colors" />
-                  <span className="text-[30px] leading-[44px] font-bold text-sma-purple dark:text-white font-inter transition-colors">Upload for the 1st</span>
-                </button>
+              {/* Content Container */}
+              <div className="relative z-10 flex flex-col items-center w-full">
 
-                <button className="flex items-center justify-center w-[426px] h-[70px] bg-sma-purple/10 dark:bg-sma-purple/20 hover:bg-sma-purple/20 dark:hover:bg-sma-purple/30 transition-colors rounded-[6px] group relative">
-                  <div className="absolute inset-0 rounded-[6px] border border-sma-purple/0 group-hover:border-sma-purple/50 transition-colors"></div>
-                  <span className="text-[30px] leading-[44px] font-bold text-sma-purple dark:text-white font-inter transition-colors">Watch demo</span>
-                </button>
-              </div>
-
-              <div className="absolute bottom-[6px] w-full flex justify-between px-[45px] text-gray-600 dark:text-white transition-colors">
-                <div className="flex items-center space-x-2">
-                  <Icon icon="lucide:shield" width="41" height="41" className="text-gray-400 dark:text-white transition-colors" />
-                  <span className="text-[20px] leading-[24px] font-bold font-inter whitespace-nowrap">Local first, private</span>
+                {/* Floating Icon */}
+                <div className="mb-8 relative animate-float">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-sma-purple to-indigo-500 rounded-full blur-xl opacity-30"></div>
+                  <div className="relative bg-white dark:bg-sma-surface p-4 rounded-2xl border border-gray-100 dark:border-white/10 shadow-xl shadow-sma-purple/10">
+                    <Icon icon="lucide:film" width="48" height="48" className="text-sma-purple dark:text-indigo-400" />
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Icon icon="lucide:zap" width="41" height="41" className="text-gray-400 dark:text-white transition-colors" />
-                  <span className="text-[20px] leading-[24px] font-bold font-inter whitespace-nowrap">AI runs on your machine</span>
+
+                <div className="text-center mb-10">
+                  <h2 className="text-[32px] md:text-[40px] leading-tight font-extrabold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 text-transparent bg-clip-text font-inter transition-all">
+                    Your Library is Empty
+                  </h2>
+                  <p className="text-[16px] md:text-[18px] text-gray-500 dark:text-gray-400 mt-3 font-inter max-w-[480px] mx-auto leading-relaxed">
+                    Upload your first video to unleash the power of AWS serverless AI and semantic search.
+                  </p>
+                </div>
+
+                {/* Interactive Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-[500px]">
+                  <button
+                    onClick={handleUploadClick}
+                    className="flex-1 flex items-center justify-center gap-3 w-full h-[56px] bg-gradient-to-r from-sma-purple to-indigo-600 hover:from-sma-purple/90 hover:to-indigo-600/90 text-white rounded-xl font-semibold text-[16px] transition-all duration-300 shadow-lg shadow-sma-purple/25 hover:shadow-sma-purple/40 hover:-translate-y-0.5"
+                  >
+                    <Icon icon="lucide:upload-cloud" width="24" height="24" />
+                    <span>Upload First Video</span>
+                  </button>
+
+                  <button className="flex-1 flex items-center justify-center gap-3 w-full h-[56px] bg-white/50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-[16px] transition-all duration-300 hover:-translate-y-0.5 backdrop-blur-sm">
+                    <Icon icon="lucide:play-circle" width="24" height="24" />
+                    <span>Watch Demo</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Bottom Feature Badges */}
+              <div className="relative z-10 w-full flex flex-col sm:flex-row justify-center items-center gap-6 mt-14 pt-8 border-t border-gray-200/50 dark:border-white/10">
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                  <Icon icon="lucide:cloud" width="20" height="20" className="text-blue-500/70" />
+                  <span className="text-[14px] font-medium font-inter">100% Serverless</span>
+                </div>
+                <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                  <Icon icon="lucide:brain-circuit" width="20" height="20" className="text-sma-purple/70" />
+                  <span className="text-[14px] font-medium font-inter">Powered by CloudForge</span>
                 </div>
               </div>
             </div>

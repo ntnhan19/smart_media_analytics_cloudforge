@@ -17,3 +17,62 @@
     scrollbar-width: none;
   }
 }
+
+/* Amplify Authenticator Premium Overrides */
+[data-amplify-authenticator] {
+  --amplify-colors-background-primary: rgba(22, 19, 42, 0.7);
+  --amplify-colors-background-secondary: rgba(255, 255, 255, 0.05);
+  --amplify-colors-brand-primary-10: #4a3699;
+  --amplify-colors-brand-primary-80: #7B5CF5;
+  --amplify-colors-brand-primary-90: #6344d4;
+  --amplify-colors-brand-primary-100: #4a3699;
+  --amplify-colors-font-interactive: #fff;
+  --amplify-colors-border-primary: rgba(255, 255, 255, 0.1);
+  --amplify-colors-border-secondary: rgba(255, 255, 255, 0.05);
+  --amplify-colors-font-primary: #fff;
+  --amplify-colors-font-secondary: #a1a1aa;
+  
+  --amplify-components-authenticator-router-box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(123, 92, 245, 0.2);
+  --amplify-components-authenticator-router-border-width: 1px;
+  --amplify-components-authenticator-router-border-color: rgba(255, 255, 255, 0.1);
+  --amplify-components-authenticator-router-border-radius: 1.5rem;
+  --amplify-components-authenticator-router-background-color: rgba(14, 11, 31, 0.7);
+  --amplify-components-tabs-item-active-border-color: #7B5CF5;
+  --amplify-components-tabs-item-color: #a1a1aa;
+  --amplify-components-tabs-item-active-color: #fff;
+  --amplify-components-button-primary-background-color: #7B5CF5;
+  --amplify-components-button-link-color: #7B5CF5;
+  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  position: relative;
+  background-color: #0E0B1F;
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(123, 92, 245, 0.15), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(79, 142, 247, 0.15), transparent 25%);
+}
+
+[data-amplify-authenticator] [data-amplify-router] {
+  backdrop-filter: blur(24px);
+  z-index: 10;
+}
+
+/* Form Inputs Styling */
+[data-amplify-authenticator] .amplify-input {
+  background-color: rgba(0, 0, 0, 0.2);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+}
+
+[data-amplify-authenticator] .amplify-input:focus {
+  border-color: #7B5CF5;
+  box-shadow: 0 0 0 1px #7B5CF5;
+}
+
+[data-amplify-authenticator] .amplify-button {
+  border-radius: 0.75rem;
+  font-weight: 600;
+}

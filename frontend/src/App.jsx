@@ -13,7 +13,7 @@ import { JobProvider } from './contexts/JobContext';
 import { useEffect } from 'react';
 
 import { Amplify } from 'aws-amplify';
-import { Authenticator } from '@aws-amplify/ui-react';
+import { Authenticator, View } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 
 Amplify.configure({
@@ -66,6 +66,29 @@ const formFields = {
   },
 };
 
+const components = {
+  Header() {
+    return (
+      <View textAlign="center" padding="2.5rem 0 1.5rem 0" className="flex flex-col items-center">
+        <div className="relative animate-float mb-6">
+           <div className="absolute inset-0 bg-sma-purple blur-xl opacity-40 rounded-full"></div>
+           <div className="relative bg-[#16132A] p-4 rounded-2xl border border-white/10 shadow-xl flex items-center justify-center">
+             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sma-purple">
+               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+               <polyline points="17 8 12 3 7 8"></polyline>
+               <line x1="12" y1="3" x2="12" y2="15"></line>
+             </svg>
+           </div>
+        </div>
+        <h1 className="text-3xl font-extrabold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent font-inter tracking-tight">
+          Smart Media Analytics
+        </h1>
+        <p className="text-gray-400 mt-2 font-inter text-sm">Sign in to access your AI library</p>
+      </View>
+    );
+  }
+};
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -79,9 +102,9 @@ function App() {
   }, []);
 
   return (
-    <Authenticator loginMechanisms={['email']} formFields={formFields}>
+    <Authenticator loginMechanisms={['email']} formFields={formFields} components={components}>
       {() => (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%' }}>
 
           <div style={{ flex: 1 }}>
             <QueryClientProvider client={queryClient}>
