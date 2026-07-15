@@ -371,6 +371,27 @@ class BedrockRefinementLLM(BaseRefinementLLM):
         self.client = boto3.client("bedrock-runtime", config=config)
         logger.info(f"☁️ BedrockRefinementLLM initialized with {model_name}")
 
+    def _invoke_with_fallback(self, body: str, scene_id: str = "asset") -> dict:
+        def _try_invoke(model_id: str) -> dict:
+            from botocore.exceptions import ClientError
+            try:
+                response = self.client.invoke_model(
+                    modelId=model_id,
+                    body=body,
+                    contentType="application/json",
+                    accept="application/json"
+                )
+                result = json.loads(response['body'].read().decode('utf-8'))
+                return result
+            except ClientError as e:
+                error_code = e.response["Error"]["Code"]
+                if error_code in ("ThrottlingException", "ValidationException") and "sonnet" in model_id.lower():
+                    fallback_id = "anthropic.claude-3-haiku-20240307-v1:0"
+                    logger.warning(f"Refinement model {model_id} failed ({error_code}). Falling back to Haiku: {fallback_id}")
+                    return _try_invoke(fallback_id)
+                raise
+        return _try_invoke(self.model_name)
+
     def refine_analysis(self, vision_outputs, timestamp, scene_id, transcript_snippet=""):
         vision_text = str(vision_outputs.get("qwen_vl", "")).strip()
         audio_text = str(transcript_snippet).strip()
@@ -387,17 +408,12 @@ class BedrockRefinementLLM(BaseRefinementLLM):
         )
 
         try:
-            response = self.client.invoke_model(
-                modelId=self.model_name,
-                body=json.dumps({
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 512,
-                    "messages": [{"role": "user", "content": prompt}]
-                }),
-                contentType="application/json",
-                accept="application/json"
-            )
-            result = json.loads(response['body'].read().decode('utf-8'))
+            body = json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 512,
+                "messages": [{"role": "user", "content": prompt}]
+            })
+            result = self._invoke_with_fallback(body, str(scene_id))
             text = result.get('content', [{}])[0].get('text', '')
             parsed = json.loads(_repair_json(text))
             
@@ -432,17 +448,12 @@ class BedrockRefinementLLM(BaseRefinementLLM):
             "}"
         )
         try:
-            response = self.client.invoke_model(
-                modelId=self.model_name,
-                body=json.dumps({
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 1000,
-                    "messages": [{"role": "user", "content": prompt}]
-                }),
-                contentType="application/json",
-                accept="application/json"
-            )
-            result = json.loads(response['body'].read().decode('utf-8'))
+            body = json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 1000,
+                "messages": [{"role": "user", "content": prompt}]
+            })
+            result = self._invoke_with_fallback(body, "asset")
             text = result.get('content', [{}])[0].get('text', '')
             parsed = json.loads(_repair_json(text))
             
