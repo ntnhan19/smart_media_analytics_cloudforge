@@ -256,8 +256,8 @@ class BedrockTextEmbedder(TextEmbedder):
                 
                 # Automatic fallback if V2 is not available/invalid in the region
                 if error_code == "ValidationException" and "invalid" in error_msg.lower():
-                    logger.warning(f"Model {self.model_id} invalid. Falling back to amazon.titan-embed-text-v1")
-                    return _try_invoke("amazon.titan-embed-text-v1")
+                    logger.warning(f"Model {self.model_id} invalid. Falling back to amazon.titan-embed-g1-text-02")
+                    return _try_invoke("amazon.titan-embed-g1-text-02")
                     
                 logger.error(
                     f"Bedrock Embedding failed (request_id: {req_id}, code: {error_code}, msg: {error_msg})"
