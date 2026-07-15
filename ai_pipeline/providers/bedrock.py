@@ -203,7 +203,12 @@ class BedrockTextEmbedder(TextEmbedder):
         region_name: Optional[str] = None,
         embedding_dim: int = 1024,
     ):
-        self.model_id = model_id or "amazon.titan-embed-text-v2:0"
+        if not model_id:
+            if region_name == "ap-southeast-1":
+                model_id = "cohere.embed-multilingual-v3"
+            else:
+                model_id = "amazon.titan-embed-text-v2:0"
+        self.model_id = model_id
         self.region_name = region_name
         self.embedding_dim = embedding_dim
         self.client = _get_bedrock_client(region_name)
@@ -226,7 +231,12 @@ class BedrockTextEmbedder(TextEmbedder):
         @_bedrock_retry
         def _invoke_single(text: str) -> List[float]:
             def _try_invoke(model_id: str) -> List[float]:
-                if "v1" in model_id:
+                if "cohere" in model_id.lower():
+                    body = json.dumps({
+                        "texts": [text],
+                        "input_type": "search_document"
+                    })
+                elif "v1" in model_id or "g1" in model_id:
                     body = json.dumps({
                         "inputText": text
                     })
@@ -241,7 +251,11 @@ class BedrockTextEmbedder(TextEmbedder):
                     modelId=model_id,
                 )
                 response_body = json.loads(response["body"].read())
-                embedding = response_body["embedding"]
+                
+                if "cohere" in model_id.lower():
+                    embedding = response_body["embeddings"][0]
+                else:
+                    embedding = response_body["embedding"]
                 
                 # Safely truncate if model returns higher dimension than database supports
                 if len(embedding) > self.embedding_dim:
@@ -254,10 +268,12 @@ class BedrockTextEmbedder(TextEmbedder):
                 error_code = e.response["Error"]["Code"]
                 error_msg = e.response["Error"].get("Message", "")
                 
-                # Automatic fallback if V2 is not available/invalid in the region
+                # Automatic fallback if model is not available/invalid in the region
                 if error_code == "ValidationException" and "invalid" in error_msg.lower():
-                    logger.warning(f"Model {self.model_id} invalid. Falling back to amazon.titan-embed-text-v1")
-                    return _try_invoke("amazon.titan-embed-text-v1")
+                    fallback_id = "cohere.embed-multilingual-v3" if self.region_name == "ap-southeast-1" else "amazon.titan-embed-g1-text-02"
+                    if self.model_id != fallback_id:
+                        logger.warning(f"Model {self.model_id} invalid. Falling back to {fallback_id}")
+                        return _try_invoke(fallback_id)
                     
                 logger.error(
                     f"Bedrock Embedding failed (request_id: {req_id}, code: {error_code}, msg: {error_msg})"
