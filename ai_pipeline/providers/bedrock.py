@@ -172,22 +172,30 @@ class BedrockVisionProvider(VisionProvider):
         }
 
         @_bedrock_retry
-        def _invoke() -> str:
+        def _invoke(model_id: str) -> str:
             try:
                 response = self.client.invoke_model(
                     body=json.dumps(body),
-                    modelId=self.model_id,
+                    modelId=model_id,
                 )
                 response_body = json.loads(response["body"].read())
                 return response_body["content"][0]["text"].strip()
             except ClientError as e:
                 error_code = e.response["Error"]["Code"]
+                error_msg = e.response["Error"].get("Message", "")
+                
+                # Fallback to Haiku if Sonnet is throttled (daily limit) or invalid
+                if error_code in ("ThrottlingException", "ValidationException") and "sonnet" in model_id.lower():
+                    fallback_id = "anthropic.claude-3-haiku-20240307-v1:0"
+                    logger.warning(f"Model {model_id} failed ({error_code}). Falling back to Haiku: {fallback_id}")
+                    return _invoke(fallback_id)
+                    
                 logger.error(
-                    f"Bedrock Vision failed (request_id: {req_id}, code: {error_code})"
+                    f"Bedrock Vision failed (request_id: {req_id}, code: {error_code}, msg: {error_msg})"
                 )
                 raise
 
-        return _invoke()
+        return _invoke(self.model_id)
 
 
 # ---------------------------------------------------------------------------
