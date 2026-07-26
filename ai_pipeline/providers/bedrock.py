@@ -128,7 +128,7 @@ class BedrockVisionProvider(VisionProvider):
     """AWS Bedrock Vision Provider sử dụng Claude 3.5 Sonnet."""
 
     def __init__(self, model_id: Optional[str] = None, region_name: Optional[str] = None):
-        self.model_id = model_id or "anthropic.claude-3-5-sonnet-20240620-v1:0"
+        self.model_id = model_id or "apac.anthropic.claude-3-5-sonnet-20240620-v1:0"
         self.region_name = region_name
         self.client = _get_bedrock_client(region_name)
 
@@ -186,7 +186,7 @@ class BedrockVisionProvider(VisionProvider):
                 
                 # Fallback to Haiku if Sonnet is throttled (daily limit) or invalid
                 if error_code in ("ThrottlingException", "ValidationException") and "sonnet" in model_id.lower():
-                    fallback_id = "anthropic.claude-3-haiku-20240307-v1:0"
+                    fallback_id = "apac.anthropic.claude-3-haiku-20240307-v1:0"
                     logger.warning(f"Model {model_id} failed ({error_code}). Falling back to Haiku: {fallback_id}")
                     return _invoke(fallback_id)
                     

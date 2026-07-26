@@ -3,6 +3,7 @@
 Audio / ASR Models — Semantic Indexer Ready (CPU Optimized for i7-10700H)
 --------------------------------------------------------------------------
 Mục tiêu:
+- Hỗ trợ Amazon Transcribe chuẩn AWS Serverless
 - Faster-Whisper cấu hình luồng an toàn, tránh quá nhiệt/treo máy trên Windows Local.
 - Làm sạch hoàn toàn artifact ASR ([Music], [Applause], ...).
 - Chuẩn hóa transcript hỗ trợ Editor tìm kiếm linh hoạt (có dấu + không dấu).
@@ -13,12 +14,19 @@ from __future__ import annotations
 import gc
 import re
 import time
+import json
+import uuid
+import urllib.request
 import unicodedata
+import os
 from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from abc import ABC, abstractmethod
 
+import boto3
 from ai_pipeline.config import config
+from ai_pipeline.database.storage_client import StorageClientFactory
 from utils.logger import log_exception, log_model_loading, logger
 
 
@@ -138,141 +146,20 @@ class VietnameseTextNormalizer:
 
 
 # =============================================================================
-# Whisper ASR Model
+# ASR Provider Base Interface
 # =============================================================================
 
-class WhisperModel:
-    """Faster-Whisper ASR Model - Được tinh chỉnh nhẹ cho chip i7 Laptop."""
+class ASRProvider(ABC):
+    """Giao diện chung cho các mô hình nhận diện giọng nói (Local Whisper / AWS Transcribe)"""
 
-    def __init__(self, model_size: str = None):
-        self.model_size = model_size or getattr(config.model, "whisper_model", "base")
-        self.model = None
-        self._load_model()
+    @abstractmethod
+    def transcribe(self, audio_path: Path, language: str = None, **kwargs) -> Dict[str, Any]:
+        """Thực hiện bóc băng audio"""
+        pass
 
-    def _load_model(self):
-        """Khởi tạo mô hình định dạng nén INT8, giới hạn 4 luồng xử lý."""
-        try:
-            import faster_whisper  # lazy import
-
-            log_model_loading(f"Faster-Whisper-{self.model_size}", "loading")
-
-            model_cache_dir = (
-                Path("/app/models/whisper")
-                if Path("/app").exists()
-                else Path("./models/whisper")
-            )
-            model_cache_dir.mkdir(parents=True, exist_ok=True)
-
-            # Khống chế tài nguyên tối ưu cho i7-10700H
-            self.model = faster_whisper.WhisperModel(
-                self.model_size,
-                device="cpu",
-                compute_type="int8",    # Sử dụng lượng tử hóa int8 giảm tải CPU
-                cpu_threads=4,          # Giới hạn 4 luồng (tránh ăn 100% CPU gây nóng máy)
-                num_workers=1,          # Giảm worker xuống 1 để luồng I/O mượt mà
-                download_root=str(model_cache_dir),
-            )
-
-            log_model_loading(f"Faster-Whisper-{self.model_size}", "loaded")
-            logger.info(f" Faster-Whisper '{self.model_size}' sẵn sàng ")
-
-        except Exception as e:
-            log_exception(e, "WhisperModel._load_model")
-            raise
-
-    def transcribe(
-        self,
-        audio_path: Path,
-        language: str = None,
-        word_timestamps: bool = True,
-        beam_size: int = 3,       # Giảm từ 5 xuống 3 để xử lý nhanh hơn, chất lượng ít đổi
-        vad_filter: bool = True,
-    ) -> Dict[str, Any]:
-        try:
-            start_time = time.time()
-            logger.info(f"Đang xử lý âm thanh: {audio_path.name}")
-
-            segments_generator, info = self.model.transcribe(
-                str(audio_path),
-                language=language,
-                word_timestamps=word_timestamps,
-                beam_size=beam_size,
-                vad_filter=vad_filter,
-                vad_parameters=dict(
-                    min_silence_duration_ms=500,
-                    max_speech_duration_s=30,
-                ),
-                temperature=0.0,
-            )
-
-            detected_lang = getattr(info, "language", "unknown")
-            logger.info(f"Ngôn ngữ phát hiện: {detected_lang}")
-
-            segments = list(segments_generator)
-            transcript_data = self._format_transcript(segments, detected_lang)
-
-            duration = time.time() - start_time
-            logger.info(f"Xử lý hoàn tất sau {duration:.2f}s | {len(transcript_data['segments'])} segments")
-
-            return transcript_data
-
-        except Exception as e:
-            log_exception(e, "WhisperModel.transcribe")
-            return self._get_empty_transcript()
-        finally:
-            gc.collect()  # Tự động dọn RAM rác sau mỗi lượt nhận diện xong
-
-    def _format_transcript(self, segments, language: str) -> Dict[str, Any]:
-        formatted_segments: List[Dict[str, Any]] = []
-        all_words: List[Dict[str, Any]] = []
-
-        for segment in segments:
-            raw_text = (segment.text or "").strip()
-            clean_text = VietnameseTextNormalizer.clean_whisper_text(raw_text)
-
-            if not clean_text:
-                continue
-
-            seg_words: List[Dict[str, Any]] = []
-            if hasattr(segment, "words") and segment.words:
-                for word in segment.words:
-                    word_str = (getattr(word, "word", "") or "").strip()
-                    word_str = VietnameseTextNormalizer.clean_whisper_text(word_str)
-
-                    if not word_str or word_str.startswith("[") or word_str.startswith("("):
-                        continue
-
-                    word_data = {
-                        "word": word_str,
-                        "start": float(getattr(word, "start", 0.0)),
-                        "end": float(getattr(word, "end", 0.0)),
-                        "score": float(getattr(word, "probability", 1.0)),
-                    }
-                    seg_words.append(word_data)
-                    all_words.append(word_data)
-
-            seg_data = {
-                "start": float(getattr(segment, "start", 0.0)),
-                "end": float(getattr(segment, "end", 0.0)),
-                "text": clean_text,
-                "normalized_text": VietnameseTextNormalizer.normalize_for_index(clean_text),
-                "searchable_text": VietnameseTextNormalizer.build_searchable_text(clean_text),
-                "words": seg_words,
-            }
-            formatted_segments.append(seg_data)
-
-        full_text = " ".join(seg["text"] for seg in formatted_segments).strip()
-        normalized_text = VietnameseTextNormalizer.normalize_for_index(full_text)
-        searchable_text = VietnameseTextNormalizer.build_searchable_text(full_text)
-
-        return {
-            "segments": formatted_segments,
-            "words": all_words,
-            "text": full_text,
-            "normalized_text": normalized_text,
-            "searchable_text": searchable_text,
-            "language": language or "unknown",
-        }
+    def unload(self):
+        """Giải phóng bộ nhớ (dùng cho local)"""
+        pass
 
     def _get_empty_transcript(self) -> Dict[str, Any]:
         return {
@@ -344,6 +231,145 @@ class WhisperModel:
 
         return matches
 
+
+# =============================================================================
+# Whisper ASR Model (Local)
+# =============================================================================
+
+class WhisperModel(ASRProvider):
+    """Faster-Whisper ASR Model - Được tinh chỉnh nhẹ cho chip i7 Laptop."""
+
+    def __init__(self, model_size: str = None):
+        self.model_size = model_size or getattr(config.model, "whisper_model", "base")
+        self.model = None
+        self._load_model()
+
+    def _load_model(self):
+        """Khởi tạo mô hình định dạng nén INT8, giới hạn 4 luồng xử lý."""
+        try:
+            import faster_whisper  # lazy import
+
+            log_model_loading(f"Faster-Whisper-{self.model_size}", "loading")
+
+            model_cache_dir = (
+                Path("/app/models/whisper")
+                if Path("/app").exists()
+                else Path("./models/whisper")
+            )
+            model_cache_dir.mkdir(parents=True, exist_ok=True)
+
+            # Khống chế tài nguyên tối ưu cho i7-10700H
+            self.model = faster_whisper.WhisperModel(
+                self.model_size,
+                device="cpu",
+                compute_type="int8",    # Sử dụng lượng tử hóa int8 giảm tải CPU
+                cpu_threads=4,          # Giới hạn 4 luồng (tránh ăn 100% CPU gây nóng máy)
+                num_workers=1,          # Giảm worker xuống 1 để luồng I/O mượt mà
+                download_root=str(model_cache_dir),
+            )
+
+            log_model_loading(f"Faster-Whisper-{self.model_size}", "loaded")
+            logger.info(f" Faster-Whisper '{self.model_size}' sẵn sàng ")
+
+        except Exception as e:
+            log_exception(e, "WhisperModel._load_model")
+            raise
+
+    def transcribe(
+        self,
+        audio_path: Path,
+        language: str = None,
+        word_timestamps: bool = True,
+        beam_size: int = 3,       # Giảm từ 5 xuống 3 để xử lý nhanh hơn, chất lượng ít đổi
+        vad_filter: bool = True,
+        **kwargs
+    ) -> Dict[str, Any]:
+        try:
+            start_time = time.time()
+            logger.info(f"[Whisper] Đang xử lý âm thanh: {audio_path.name}")
+
+            segments_generator, info = self.model.transcribe(
+                str(audio_path),
+                language=language,
+                word_timestamps=word_timestamps,
+                beam_size=beam_size,
+                vad_filter=vad_filter,
+                vad_parameters=dict(
+                    min_silence_duration_ms=500,
+                    max_speech_duration_s=30,
+                ),
+                temperature=0.0,
+            )
+
+            detected_lang = getattr(info, "language", "unknown")
+            logger.info(f"Ngôn ngữ phát hiện: {detected_lang}")
+
+            segments = list(segments_generator)
+            transcript_data = self._format_transcript(segments, detected_lang)
+
+            duration = time.time() - start_time
+            logger.info(f"[Whisper] Xử lý hoàn tất sau {duration:.2f}s | {len(transcript_data['segments'])} segments")
+
+            return transcript_data
+
+        except Exception as e:
+            log_exception(e, "WhisperModel.transcribe")
+            return self._get_empty_transcript()
+        finally:
+            gc.collect()  # Tự động dọn RAM rác sau mỗi lượt nhận diện xong
+
+    def _format_transcript(self, segments, language: str) -> Dict[str, Any]:
+        formatted_segments: List[Dict[str, Any]] = []
+        all_words: List[Dict[str, Any]] = []
+
+        for segment in segments:
+            raw_text = (segment.text or "").strip()
+            clean_text = VietnameseTextNormalizer.clean_whisper_text(raw_text)
+
+            if not clean_text:
+                continue
+
+            seg_words: List[Dict[str, Any]] = []
+            if hasattr(segment, "words") and segment.words:
+                for word in segment.words:
+                    word_str = (getattr(word, "word", "") or "").strip()
+                    word_str = VietnameseTextNormalizer.clean_whisper_text(word_str)
+
+                    if not word_str or word_str.startswith("[") or word_str.startswith("("):
+                        continue
+
+                    word_data = {
+                        "word": word_str,
+                        "start": float(getattr(word, "start", 0.0)),
+                        "end": float(getattr(word, "end", 0.0)),
+                        "score": float(getattr(word, "probability", 1.0)),
+                    }
+                    seg_words.append(word_data)
+                    all_words.append(word_data)
+
+            seg_data = {
+                "start": float(getattr(segment, "start", 0.0)),
+                "end": float(getattr(segment, "end", 0.0)),
+                "text": clean_text,
+                "normalized_text": VietnameseTextNormalizer.normalize_for_index(clean_text),
+                "searchable_text": VietnameseTextNormalizer.build_searchable_text(clean_text),
+                "words": seg_words,
+            }
+            formatted_segments.append(seg_data)
+
+        full_text = " ".join(seg["text"] for seg in formatted_segments).strip()
+        normalized_text = VietnameseTextNormalizer.normalize_for_index(full_text)
+        searchable_text = VietnameseTextNormalizer.build_searchable_text(full_text)
+
+        return {
+            "segments": formatted_segments,
+            "words": all_words,
+            "text": full_text,
+            "normalized_text": normalized_text,
+            "searchable_text": searchable_text,
+            "language": language or "unknown",
+        }
+
     def unload(self):
         """Giải phóng hoàn toàn mô hình khỏi RAM và dọn bộ nhớ hệ thống."""
         if self.model is not None:
@@ -354,6 +380,162 @@ class WhisperModel:
             self.model = None
         gc.collect()
         logger.info(f"Faster-Whisper model '{self.model_size}' giải phóng bộ nhớ thành công.")
+
+
+# =============================================================================
+# AWS Transcribe Model (Cloud)
+# =============================================================================
+
+class AWSTranscribeProvider(ASRProvider):
+    """Sử dụng Amazon Transcribe chuẩn kiến trúc AWS Serverless"""
+
+    def __init__(self):
+        self.s3_client = StorageClientFactory.from_env()
+        # S3 bucket configuration comes from the env var already setup in storage_client.py
+        # But we need it to construct S3 URI for Amazon Transcribe
+        self.bucket = os.environ.get("AWS_S3_BUCKET", "cloudforge-media-upload")
+        self.transcribe_client = boto3.client(
+            "transcribe",
+            region_name=os.getenv("AWS_DEFAULT_REGION", "ap-southeast-1")
+        )
+        logger.info(" AWS Transcribe Provider sẵn sàng ")
+
+    def transcribe(self, audio_path: Path, language: str = None, **kwargs) -> Dict[str, Any]:
+        try:
+            start_time = time.time()
+            logger.info(f"[AWSTranscribe] Đang xử lý: {audio_path.name}")
+
+            job_id = uuid.uuid4().hex
+            remote_path = f"audio-temp/{job_id}_{audio_path.name}"
+
+            # 1. Upload audio to S3 (Trạm trung chuyển)
+            logger.info(f"[AWSTranscribe] Tải âm thanh lên s3://{self.bucket}/{remote_path}")
+            if not self.s3_client.upload_file(str(audio_path), remote_path):
+                raise Exception("Không thể upload audio lên S3 cho quá trình Transcribe")
+
+            job_uri = f"s3://{self.bucket}/{remote_path}"
+            job_name = f"sma-transcribe-{job_id}"
+
+            # 2. Start Transcription Job
+            logger.info(f"[AWSTranscribe] Khởi tạo Job: {job_name}")
+            params = {
+                "TranscriptionJobName": job_name,
+                "Media": {"MediaFileUri": job_uri},
+            }
+            if language:
+                params["LanguageCode"] = language
+            else:
+                params["IdentifyLanguage"] = True
+
+            self.transcribe_client.start_transcription_job(**params)
+
+            # 3. Polling for completion
+            while True:
+                res = self.transcribe_client.get_transcription_job(TranscriptionJobName=job_name)
+                status = res["TranscriptionJob"]["TranscriptionJobStatus"]
+                if status in ["COMPLETED", "FAILED"]:
+                    break
+                logger.info(f"[AWSTranscribe] Job Status: {status}. Đợi 5s...")
+                time.sleep(5)
+
+            if status == "FAILED":
+                err = res["TranscriptionJob"].get("FailureReason", "Unknown Error")
+                raise Exception(f"Transcribe job {job_name} thất bại: {err}")
+
+            # 4. Download and parse results
+            logger.info(f"[AWSTranscribe] Job hoàn tất. Đang parse JSON từ AWS...")
+            transcript_uri = res["TranscriptionJob"]["Transcript"]["TranscriptFileUri"]
+
+            detected_lang = res["TranscriptionJob"].get("LanguageCode", language or "unknown")
+
+            req = urllib.request.Request(transcript_uri)
+            with urllib.request.urlopen(req) as response:
+                transcript_json = json.loads(response.read().decode("utf-8"))
+
+            result = self._parse_aws_json(transcript_json, detected_lang)
+
+            # 5. Cleanup S3 temp audio file
+            logger.info(f"[AWSTranscribe] Dọn dẹp file tạm trên S3: {remote_path}")
+            self.s3_client.delete_file(remote_path)
+
+            logger.info(f"[AWSTranscribe] Xử lý hoàn tất sau {time.time()-start_time:.2f}s")
+            return result
+
+        except Exception as e:
+            log_exception(e, "AWSTranscribeProvider.transcribe")
+            return self._get_empty_transcript()
+
+    def _parse_aws_json(self, data: dict, language: str) -> Dict[str, Any]:
+        """Convert format JSON của AWS Transcribe về chuẩn dict của Whisper để tương thích Editor."""
+        items = data.get("results", {}).get("items", [])
+        transcripts = data.get("results", {}).get("transcripts", [])
+        full_text = transcripts[0].get("transcript", "") if transcripts else ""
+
+        formatted_segments = []
+        all_words = []
+
+        current_segment_words = []
+        current_segment_text = []
+        current_start = 0.0
+
+        for item in items:
+            item_type = item.get("type")
+            if item_type == "pronunciation":
+                word_str = item["alternatives"][0]["content"]
+                start = float(item.get("start_time", 0.0))
+                end = float(item.get("end_time", 0.0))
+                score = float(item["alternatives"][0].get("confidence", 1.0))
+
+                clean_word = VietnameseTextNormalizer.clean_whisper_text(word_str)
+                if not current_segment_words:
+                    current_start = start
+
+                word_data = {"word": clean_word, "start": start, "end": end, "score": score}
+                current_segment_words.append(word_data)
+                all_words.append(word_data)
+                current_segment_text.append(word_str)
+
+            elif item_type == "punctuation":
+                punct_str = item["alternatives"][0]["content"]
+                if current_segment_text:
+                    current_segment_text[-1] += punct_str
+
+                # Ngắt segment ở dấu câu
+                if punct_str in [".", "?", "!"] and current_segment_words:
+                    seg_text = " ".join(current_segment_text)
+                    clean_text = VietnameseTextNormalizer.clean_whisper_text(seg_text)
+                    formatted_segments.append({
+                        "start": current_start,
+                        "end": current_segment_words[-1]["end"],
+                        "text": clean_text,
+                        "normalized_text": VietnameseTextNormalizer.normalize_for_index(clean_text),
+                        "searchable_text": VietnameseTextNormalizer.build_searchable_text(clean_text),
+                        "words": current_segment_words
+                    })
+                    current_segment_words = []
+                    current_segment_text = []
+
+        # Thêm segment cuối nếu còn sót
+        if current_segment_words:
+            seg_text = " ".join(current_segment_text)
+            clean_text = VietnameseTextNormalizer.clean_whisper_text(seg_text)
+            formatted_segments.append({
+                "start": current_start,
+                "end": current_segment_words[-1]["end"],
+                "text": clean_text,
+                "normalized_text": VietnameseTextNormalizer.normalize_for_index(clean_text),
+                "searchable_text": VietnameseTextNormalizer.build_searchable_text(clean_text),
+                "words": current_segment_words
+            })
+
+        return {
+            "segments": formatted_segments,
+            "words": all_words,
+            "text": VietnameseTextNormalizer.clean_whisper_text(full_text),
+            "normalized_text": VietnameseTextNormalizer.normalize_for_index(full_text),
+            "searchable_text": VietnameseTextNormalizer.build_searchable_text(full_text),
+            "language": language
+        }
 
 
 # =============================================================================
@@ -459,5 +641,8 @@ class TranscriptProcessor:
 # Factory
 # =============================================================================
 
-def create_asr_model() -> WhisperModel:
+def create_asr_model() -> ASRProvider:
+    provider = getattr(config.model, "asr_provider", "aws")
+    if provider == "aws":
+        return AWSTranscribeProvider()
     return WhisperModel()
