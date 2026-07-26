@@ -36,6 +36,7 @@ class ModelConfig:
     reranker_model:  str = "bge-reranker-v2-m3"
 
     # ASR
+    asr_provider: str = os.getenv("ASR_PROVIDER", "aws")
     whisper_model: str = "base"
 
     # Image & Generation

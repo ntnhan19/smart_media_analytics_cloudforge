@@ -364,7 +364,7 @@ class OllamaRefinementLLM(BaseRefinementLLM):
 # =============================================================================
 
 class BedrockRefinementLLM(BaseRefinementLLM):
-    def __init__(self, model_name: str = "anthropic.claude-3-5-sonnet-20240620-v1:0"):
+    def __init__(self, model_name: str = "apac.anthropic.claude-3-5-sonnet-20240620-v1:0"):
         self.model_name = model_name
         from botocore.config import Config
         config = Config(retries={"max_attempts": 1, "mode": "standard"})
@@ -386,7 +386,7 @@ class BedrockRefinementLLM(BaseRefinementLLM):
             except ClientError as e:
                 error_code = e.response["Error"]["Code"]
                 if error_code in ("ThrottlingException", "ValidationException") and "sonnet" in model_id.lower():
-                    fallback_id = "anthropic.claude-3-haiku-20240307-v1:0"
+                    fallback_id = "apac.anthropic.claude-3-haiku-20240307-v1:0"
                     logger.warning(f"Refinement model {model_id} failed ({error_code}). Falling back to Haiku: {fallback_id}")
                     return _try_invoke(fallback_id)
                 raise
