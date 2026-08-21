@@ -9,32 +9,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.core.async_context import AsyncContext
-from starlette.types import ASGIApp, Receive, Scope, Send
-
-xray_recorder.configure(service='SmartMedia-BackendAPI', context=AsyncContext())
-
-class CustomXRayMiddleware:
-    def __init__(self, app: ASGIApp):
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
-            return await self.app(scope, receive, send)
-            
-        segment = xray_recorder.begin_segment('SmartMedia-BackendAPI')
-        try:
-            segment.put_http_meta('url', scope.get('path'))
-            segment.put_http_meta('method', scope.get('method'))
-            await self.app(scope, receive, send)
-        except Exception as e:
-            segment.add_exception(e)
-            raise
-        finally:
-            xray_recorder.end_segment()
-# ------------------------------------------------------------------
-
 from config import settings
 from core.limiter import limiter
 from api.routes import health, search, ingest, assets, scenes, media, clips
@@ -103,8 +77,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.add_middleware(CustomXRayMiddleware)
-# ----------------------------------------------
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -129,13 +101,16 @@ app.add_middleware(
 )
 
 
+from fastapi import Depends
+from api.deps import get_current_user
+
 app.include_router(health.router)
-app.include_router(search.router)
-app.include_router(ingest.router)
-app.include_router(assets.router)
-app.include_router(scenes.router)
-app.include_router(media.router)
-app.include_router(clips.router)
+app.include_router(search.router, dependencies=[Depends(get_current_user)])
+app.include_router(ingest.router, dependencies=[Depends(get_current_user)])
+app.include_router(assets.router, dependencies=[Depends(get_current_user)])
+app.include_router(scenes.router, dependencies=[Depends(get_current_user)])
+app.include_router(media.router, dependencies=[Depends(get_current_user)])
+app.include_router(clips.router, dependencies=[Depends(get_current_user)])
 
 if __name__ == "__main__":
     # pyrefly: ignore [missing-import]

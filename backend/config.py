@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     WHISPER_MODEL_SIZE: str = "base"
     APP_VERSION: str = "1.0.0"
     DATABASE_URL: str
+    GEMINI_API_KEY: str = ""
+    SUPABASE_JWT_SECRET: str = ""
 
     REDIS_URL: str = "redis://localhost:6379/0"
     EMBEDDING_DIM: int = 1024
