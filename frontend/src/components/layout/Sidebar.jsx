@@ -2,12 +2,12 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Upload, Settings, Folder, Heart, Trash, User, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { useAuth } from '../../contexts/AuthContext';
 import { getAssets } from '../../services/api';
 import AIProcessingPanel from './AIProcessingPanel';
 
 export default function Sidebar({ activeMenu, showLibraryCount = false, onClose, onOpen, isCollapsed = false }) {
-  const { user, signOut } = useAuthenticator((context) => [context.user]);
+  const { user, logout: signOut } = useAuth();
   const { data: assets } = useQuery({
     queryKey: ['assets'],
     queryFn: ({ signal }) => getAssets(signal),
@@ -33,9 +33,9 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/', id: 'dashboard', icon: LayoutDashboard },
-    { name: 'Upload', path: '/upload', id: 'upload', icon: Upload },
-    { name: 'Settings', path: '/settings', id: 'settings', icon: Settings },
+    { name: 'Dashboard', path: '/app', id: 'dashboard', icon: LayoutDashboard },
+    { name: 'Upload', path: '/app/upload', id: 'upload', icon: Upload },
+    { name: 'Settings', path: '/app/settings', id: 'settings', icon: Settings },
   ];
 
   return (
@@ -126,7 +126,7 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
                   {user?.attributes?.name || user?.username || 'User'}
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {user?.attributes?.email || ''}
+                  {user?.email || ''}
                 </span>
               </div>
             </div>
