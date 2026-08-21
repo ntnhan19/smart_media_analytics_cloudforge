@@ -8,8 +8,8 @@ export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const getActiveMenu = () => {
-    if (location.pathname.startsWith('/upload')) return 'upload';
-    if (location.pathname.startsWith('/settings')) return 'settings';
+    if (location.pathname.startsWith('/app/upload')) return 'upload';
+    if (location.pathname.startsWith('/app/settings')) return 'settings';
     return 'dashboard';
   };
 
