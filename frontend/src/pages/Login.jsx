@@ -13,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   const from = location.state?.from?.pathname || "/app";
 
@@ -25,6 +26,7 @@ export default function Login() {
 
     setLoading(true);
     setError('');
+    setMessage('');
     
     try {
       let result;
@@ -35,7 +37,12 @@ export default function Login() {
       }
       
       if (result.success) {
-        navigate(from, { replace: true });
+        if (isSignUp && !result.session) {
+          setMessage('Successfully signed up! Please check your email to verify your account.');
+          setIsSignUp(false); // Switch back to login view
+        } else {
+          navigate(from, { replace: true });
+        }
       }
     } catch (err) {
       setError(isSignUp ? 'Failed to create account. Email might be in use or password too weak.' : 'Failed to log in. Please check your credentials.');
@@ -67,6 +74,12 @@ export default function Login() {
             {isSignUp ? 'Sign up to start analyzing your media' : 'Sign in to access your media analytics'}
           </p>
         </div>
+
+        {message && (
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 text-green-700 dark:text-green-400 text-sm rounded-r-md">
+            {message}
+          </div>
+        )}
 
         <div className="bg-white dark:bg-[#1A162B] rounded-2xl shadow-xl border border-gray-100 dark:border-white/10 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
