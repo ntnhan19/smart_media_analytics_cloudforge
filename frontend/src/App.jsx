@@ -17,7 +17,15 @@ import { JobProvider } from './contexts/JobContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { useEffect } from 'react';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 function App() {
   useEffect(() => {
