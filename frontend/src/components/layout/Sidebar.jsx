@@ -33,8 +33,10 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
   };
 
   const navItems = [
-    { name: 'Home', path: '/', id: 'home', icon: Home },
     { name: 'Dashboard', path: '/app', id: 'dashboard', icon: LayoutDashboard },
+    { name: 'Assets', path: '/app/assets', id: 'assets', icon: Folder },
+    { name: 'Favourites', path: '/app/favourites', id: 'favourites', icon: Heart },
+    { name: 'Trash', path: '/app/trash', id: 'trash', icon: Trash },
     { name: 'Upload', path: '/app/upload', id: 'upload', icon: Upload },
     { name: 'Settings', path: '/app/settings', id: 'settings', icon: Settings },
   ];
@@ -46,7 +48,11 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
 
       {/* Header - Cố định */}
       <div className={`pt-3 pb-3 shrink-0 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between pl-[20px] pr-[16px]'}`}>
-        {!isCollapsed && <img src="/logo.png" alt="SMA Logo" className="w-[160px] h-auto object-contain dark:invert-0 invert" />}
+        {!isCollapsed && (
+          <NavLink to="/">
+            <img src="/logo.png" alt="SMA Logo" className="w-[160px] h-auto object-contain dark:invert-0 invert transition-transform hover:scale-105" />
+          </NavLink>
+        )}
         {(onClose || onOpen) && (
           <button
             onClick={isCollapsed ? onOpen : onClose}
@@ -79,39 +85,8 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
         })}
       </nav>
 
-      {/* Nội dung linh hoạt - Chỉ phần này mới được cuộn */}
+      {/* Phần trống để đẩy nội dung xuống nếu cần */}
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto scrollbar-hide">
-        {!isCollapsed && showLibraryCount && (
-          <div className="relative w-full px-[24px] py-3">
-            <div className="relative flex items-center justify-center mb-4">
-              <div className="absolute w-full h-px bg-gray-300 dark:bg-[#D9D9D9] transition-colors"></div>
-              <span className="bg-white dark:bg-[#16132A] px-2 relative z-10 text-[10px] text-gray-500 dark:text-gray-300 transition-colors">LIBRARY</span>
-            </div>
-            <div className="flex flex-col space-y-3 px-[10px]">
-              {[
-                { label: 'All Assets', icon: Folder, count: libraryStats.all, path: '/app' },
-                { label: 'Favourites', icon: Heart, count: libraryStats.favourites, path: '/app/favourites' },
-                { label: 'Trash', icon: Trash, count: libraryStats.trash, path: '/app/trash' }
-              ].map((item, idx) => (
-                <NavLink 
-                  key={idx} 
-                  to={item.path}
-                  end={item.path === '/app'}
-                  className={({ isActive }) => `flex items-center justify-between group cursor-pointer p-2 rounded-lg transition-colors ${isActive ? 'bg-sma-purple/10 dark:bg-sma-purple/20' : 'hover:bg-gray-100 dark:hover:bg-[#1A1630]'}`}
-                >
-                  <div className={`flex items-center gap-4 transition-colors ${window.location.pathname === item.path ? 'text-sma-purple dark:text-[#9A7DFF]' : 'text-gray-700 dark:text-gray-200 group-hover:text-sma-purple'}`}>
-                    <item.icon className="w-5 h-5" />
-                    <span className="text-[12px] font-medium">{item.label}</span>
-                  </div>
-                  <div className={`w-10 h-5 rounded-[5px] flex items-center justify-center text-[11px] transition-colors ${window.location.pathname === item.path ? 'bg-sma-purple text-white' : 'bg-gray-200 dark:bg-sma-blue text-gray-700 dark:text-white'}`}>
-                    {item.count}
-                  </div>
-                </NavLink>
-              ))}
-            </div>
-          </div>
-        )}
-
         {!isCollapsed && (
           <div className="flex justify-center w-full mt-auto py-4">
             <AIProcessingPanel />

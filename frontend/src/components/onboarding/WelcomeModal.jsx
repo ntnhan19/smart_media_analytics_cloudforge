@@ -58,7 +58,7 @@ export default function WelcomeModal({ isOpen, onClose }) {
           <div className="w-full relative min-h-[200px] flex flex-col items-center justify-center">
             {step === 1 && (
               <div className="animate-fade-in flex flex-col items-center">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-500/20 dark:to-purple-500/20 flex items-center justify-center mb-6 shadow-inner">
+                <div className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-6 shadow-sm">
                   <Play className="w-10 h-10 text-sma-purple" fill="currentColor" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Welcome to Smart Media Analytics</h3>
@@ -70,7 +70,7 @@ export default function WelcomeModal({ isOpen, onClose }) {
 
             {step === 2 && (
               <div className="animate-fade-in flex flex-col items-center">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-500/20 dark:to-indigo-500/20 flex items-center justify-center mb-6 shadow-inner relative">
+                <div className="w-20 h-20 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center mb-6 shadow-sm relative">
                   <Wand2 className="w-10 h-10 text-blue-500" />
                   <div className="absolute -top-2 -right-2 bg-white dark:bg-[#16132a] rounded-full p-1 shadow-sm">
                     <Zap className="w-4 h-4 text-amber-500" fill="currentColor" />
@@ -85,7 +85,7 @@ export default function WelcomeModal({ isOpen, onClose }) {
 
             {step === 3 && (
               <div className="animate-fade-in flex flex-col items-center">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-500/20 dark:to-teal-500/20 flex items-center justify-center mb-6 shadow-inner">
+                <div className="w-20 h-20 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mb-6 shadow-sm">
                   <Search className="w-10 h-10 text-emerald-500" strokeWidth={2.5} />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Semantic Search</h3>
@@ -109,7 +109,7 @@ export default function WelcomeModal({ isOpen, onClose }) {
           
           <button 
             onClick={handleNext}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-sma-purple to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-medium shadow-lg shadow-sma-purple/20 transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-sma-purple hover:bg-[#6b4ce6] text-white font-medium shadow-sm transition-all hover:scale-105 active:scale-95"
           >
             {step < 3 ? (
               <>Continue <ChevronRight className="w-4 h-4" /></>

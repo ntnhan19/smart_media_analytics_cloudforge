@@ -10,6 +10,9 @@ export default function AppShell() {
   const getActiveMenu = () => {
     if (location.pathname.startsWith('/app/upload')) return 'upload';
     if (location.pathname.startsWith('/app/settings')) return 'settings';
+    if (location.pathname.startsWith('/app/favourites')) return 'favourites';
+    if (location.pathname.startsWith('/app/trash')) return 'trash';
+    if (location.pathname.startsWith('/app/assets')) return 'assets';
     return 'dashboard';
   };
 
