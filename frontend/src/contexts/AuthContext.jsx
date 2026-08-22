@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
       throw error;
     }
     
-    return { success: true, user: data.user };
+    return { success: true, user: data.user, session: data.session };
   };
 
   const logout = async () => {

@@ -8,6 +8,8 @@ import AssetDetail from './pages/AssetDetail';
 import Upload from './pages/Upload';
 import Settings from './pages/Settings';
 import UiKitDemo from './pages/UiKitDemo';
+import Favourites from './pages/Favourites';
+import Trash from './pages/Trash';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -57,6 +59,8 @@ function App() {
                   }>
                     <Route index element={<Dashboard />} />
                     <Route path="search" element={<Search />} />
+                    <Route path="favourites" element={<Favourites />} />
+                    <Route path="trash" element={<Trash />} />
                     <Route path="assets/:id" element={<AssetDetail />} />
                     <Route path="upload" element={<Upload />} />
                     <Route path="settings" element={<Settings />} />
