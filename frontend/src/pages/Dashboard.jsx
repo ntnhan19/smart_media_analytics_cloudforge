@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAssets, getTags } from '../services/api';
 import { Icon } from '@iconify/react';
@@ -7,17 +7,30 @@ import MediaCard from '../components/media/MediaCard';
 import { useAuth } from '../contexts/AuthContext';
 import { getSearchHistory } from '../utils/history';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import WelcomeModal from '../components/onboarding/WelcomeModal';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const searchHistory = getSearchHistory();
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
   
   const { data: assetsData, isLoading } = useQuery({
     queryKey: ['assets'],
     queryFn: ({ signal }) => getAssets(signal, 50, 0),
     refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    if (!isLoading && !hasCheckedOnboarding) {
+      const hasSeen = localStorage.getItem('hasSeenOnboarding');
+      if (!hasSeen) {
+        setShowWelcomeModal(true);
+      }
+      setHasCheckedOnboarding(true);
+    }
+  }, [isLoading, hasCheckedOnboarding]);
 
   const { data: tagsData } = useQuery({
     queryKey: ['tags'],
@@ -62,8 +75,14 @@ export default function Dashboard() {
     return [...assets].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 4);
   }, [assets]);
 
+  const closeWelcomeModal = () => {
+    setShowWelcomeModal(false);
+    localStorage.setItem('hasSeenOnboarding', 'true');
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 relative min-h-full flex flex-col p-2 pb-12">
+      <WelcomeModal isOpen={showWelcomeModal} onClose={closeWelcomeModal} />
       
       {/* 1. Welcome Banner */}
       <div className="bg-[#1a1b26] rounded-2xl p-8 relative overflow-hidden text-white flex flex-col md:flex-row items-center justify-between shadow-sm">
