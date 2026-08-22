@@ -203,6 +203,12 @@ export default function Dashboard() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  useEffect(() => {
+    if (error) {
+      showToast("Unable to sync library. Please try again later.", "error");
+    }
+  }, [error]);
+
   return (
     <div className="max-w-7xl mx-auto space-y-4 relative min-h-full flex flex-col">
       {toast && (
@@ -270,12 +276,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-xl p-4 flex items-center gap-3 text-red-600 dark:text-red-400 shadow-sm animate-fade-in-down mb-2">
-          <Icon icon="lucide:alert-circle" width="20" height="20" className="shrink-0" />
-          <span className="text-sm font-medium">Backend connection unavailable. Some features might not work as expected.</span>
-        </div>
-      )}
+
 
       {!isLoading && (
         <div className="flex-1 min-h-0 flex flex-col">
@@ -409,10 +410,9 @@ export default function Dashboard() {
 
             </div>
           ) : (
-            // Premium Empty State Box
-            <div className="w-full max-w-[800px] mx-auto min-h-[460px] relative mt-10 rounded-2xl overflow-hidden flex flex-col items-center justify-center p-10 group">
-              {/* Glassmorphic Background */}
-              <div className="absolute inset-0 bg-white/40 dark:bg-[#1a1b26]/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-2xl transition-all duration-500 group-hover:bg-white/60 dark:group-hover:bg-[#1a1b26]/60"></div>
+            <div className="flex-1 flex flex-col items-center justify-center pb-12 w-full">
+              {/* Premium Empty State Box */}
+              <div className="w-full max-w-[800px] mx-auto relative rounded-2xl overflow-hidden flex flex-col items-center justify-center p-10 group bg-white/40 dark:bg-[#1a1b26]/40 backdrop-blur-xl border border-white/20 dark:border-white/5 transition-all duration-500 hover:bg-white/60 dark:hover:bg-[#1a1b26]/60">
 
               {/* Decorative Gradient Orbs */}
               <div className="absolute -top-24 -left-24 w-64 h-64 bg-sma-purple/20 rounded-full blur-3xl opacity-50 transition-opacity duration-700 group-hover:opacity-70"></div>
@@ -422,7 +422,7 @@ export default function Dashboard() {
               <div className="relative z-10 flex flex-col items-center w-full">
 
                 {/* Floating Icon */}
-                <div className="mb-8 relative animate-float">
+                <div className="mb-8 relative">
                   <div className="absolute inset-0 bg-gradient-to-tr from-sma-purple to-indigo-500 rounded-full blur-xl opacity-30"></div>
                   <div className="relative bg-white dark:bg-sma-surface p-4 rounded-2xl border border-gray-100 dark:border-white/10 shadow-xl shadow-sma-purple/10">
                     <Icon icon="lucide:film" width="48" height="48" className="text-sma-purple dark:text-indigo-400" />
@@ -466,6 +466,7 @@ export default function Dashboard() {
                   <Icon icon="lucide:brain-circuit" width="20" height="20" className="text-sma-purple/70" />
                   <span className="text-[14px] font-medium font-inter">Powered by Supabase & Gemini</span>
                 </div>
+              </div>
               </div>
             </div>
           )}
