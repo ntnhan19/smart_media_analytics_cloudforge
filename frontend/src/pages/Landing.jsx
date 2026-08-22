@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Play, Search, Video, Mic, ChevronRight, Zap, Shield, Cpu, ArrowRight, BarChart3, Layers } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
 
 export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -12,6 +15,10 @@ export default function Landing() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  if (isAuthenticated) {
+    return <Navigate to="/app" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0a0a0f] text-gray-900 dark:text-white font-inter selection:bg-sma-purple/30 overflow-x-hidden">
