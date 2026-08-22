@@ -293,9 +293,9 @@ export default function Landing() {
       <footer className="bg-[#050508] py-12 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 text-sm text-gray-600">
               <Play className="text-sma-purple w-5 h-5" fill="currentColor" />
-              <span className="text-white font-bold text-lg tracking-tight">Smart Media Analytics</span>
+              <span>© {new Date().getFullYear()} Smart Media Analytics. All rights reserved. Proprietary and Confidential.</span>
             </div>
             
             <div className="flex gap-8">
@@ -303,10 +303,6 @@ export default function Landing() {
               <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">Terms of Service</a>
               <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">Contact Support</a>
             </div>
-          </div>
-          
-          <div className="mt-8 pt-8 border-t border-white/5 text-center md:text-left text-sm text-gray-600">
-            © {new Date().getFullYear()} Smart Media Analytics. All rights reserved. Proprietary and Confidential.
           </div>
         </div>
       </footer>
