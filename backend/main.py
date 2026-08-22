@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 
 from config import settings
 from core.limiter import limiter
-from api.routes import health, search, ingest, assets, scenes, media, clips
+from api.routes import health, search, ingest, assets, scenes, media, clips, stats
 
 class JSONFormatter(logging.Formatter):
     def format(self, record):
@@ -111,6 +111,7 @@ app.include_router(assets.router, dependencies=[Depends(get_current_user)])
 app.include_router(scenes.router, dependencies=[Depends(get_current_user)])
 app.include_router(media.router, dependencies=[Depends(get_current_user)])
 app.include_router(clips.router, dependencies=[Depends(get_current_user)])
+app.include_router(stats.router)
 
 if __name__ == "__main__":
     # pyrefly: ignore [missing-import]
