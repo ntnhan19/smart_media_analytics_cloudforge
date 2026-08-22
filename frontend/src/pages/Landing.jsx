@@ -34,7 +34,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-              <img src="/logo.png" alt="SMA Logo" className="h-8 md:h-10 w-auto object-contain dark:invert-0 invert" />
+              <img src="/logo.png" alt="SMA Logo" className="h-10 md:h-14 w-auto object-contain dark:invert-0 invert" />
             </div>
 
             <nav className="hidden md:flex items-center gap-8">
@@ -120,22 +120,22 @@ export default function Landing() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-[#16132A] border border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center shadow-lg hover:-translate-y-1 transition-transform">
+              <div className="bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 rounded-3xl p-8 flex flex-col items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all">
                 <Database className="w-8 h-8 text-sma-purple mb-4" />
-                <h3 className="text-4xl font-black text-white mb-2">{stats.totalAssets.toLocaleString()}</h3>
-                <p className="text-gray-400 font-medium uppercase tracking-wider text-sm">Media Assets Analyzed</p>
+                <h3 className="text-4xl font-black text-gray-900 dark:text-white mb-2">{stats.totalAssets.toLocaleString()}</h3>
+                <p className="text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider text-sm">Media Assets Analyzed</p>
               </div>
 
-              <div className="bg-[#16132A] border border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center shadow-lg hover:-translate-y-1 transition-transform">
+              <div className="bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 rounded-3xl p-8 flex flex-col items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all">
                 <Activity className="w-8 h-8 text-sma-blue mb-4" />
-                <h3 className="text-4xl font-black text-white mb-2">{totalHours > 0 ? totalHours : '0'}</h3>
-                <p className="text-gray-400 font-medium uppercase tracking-wider text-sm">Hours of Content Processed</p>
+                <h3 className="text-4xl font-black text-gray-900 dark:text-white mb-2">{totalHours > 0 ? totalHours : '0'}</h3>
+                <p className="text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider text-sm">Hours of Content Processed</p>
               </div>
 
-              <div className="bg-[#16132A] border border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center shadow-lg hover:-translate-y-1 transition-transform">
+              <div className="bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 rounded-3xl p-8 flex flex-col items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all">
                 <Tag className="w-8 h-8 text-emerald-500 mb-4" />
-                <h3 className="text-4xl font-black text-white mb-2">{stats.totalTagsGenerated.toLocaleString()}</h3>
-                <p className="text-gray-400 font-medium uppercase tracking-wider text-sm">AI Tags Generated</p>
+                <h3 className="text-4xl font-black text-gray-900 dark:text-white mb-2">{stats.totalTagsGenerated.toLocaleString()}</h3>
+                <p className="text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider text-sm">AI Tags Generated</p>
               </div>
             </div>
           </div>
