@@ -235,12 +235,12 @@ export default function Dashboard() {
       )}
 
       {error && (
-        <div className="bg-red-900/20 border border-red-500/50 text-red-400 p-6 rounded-xl text-center">
-          Failed to load assets. Please try again later.
+        <div className="bg-red-900/20 border border-red-500/50 text-red-400 p-4 rounded-xl text-center text-sm shadow-sm">
+          Warning: Could not connect to the backend server. Some features may be unavailable.
         </div>
       )}
 
-      {!isLoading && !error && (
+      {!isLoading && (
         <div className="flex-1 min-h-0 flex flex-col">
           {(assets && assets.length > 0) || currentPage > 1 ? (
             <div className="flex flex-col flex-1 h-full min-h-0 w-full">
@@ -397,7 +397,7 @@ export default function Dashboard() {
                     Your Library is Empty
                   </h2>
                   <p className="text-[16px] md:text-[18px] text-gray-500 dark:text-gray-400 mt-3 font-inter max-w-[480px] mx-auto leading-relaxed">
-                    Upload your first video to unleash the power of AWS serverless AI and semantic search.
+                    Upload your first video to unleash the power of Gemini AI and semantic search.
                   </p>
                 </div>
 
@@ -422,12 +422,12 @@ export default function Dashboard() {
               <div className="relative z-10 w-full flex flex-col sm:flex-row justify-center items-center gap-6 mt-14 pt-8 border-t border-gray-200/50 dark:border-white/10">
                 <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                   <Icon icon="lucide:cloud" width="20" height="20" className="text-blue-500/70" />
-                  <span className="text-[14px] font-medium font-inter">100% Serverless</span>
+                  <span className="text-[14px] font-medium font-inter">Zero-cost Sandbox</span>
                 </div>
                 <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></div>
                 <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                   <Icon icon="lucide:brain-circuit" width="20" height="20" className="text-sma-purple/70" />
-                  <span className="text-[14px] font-medium font-inter">Powered by CloudForge</span>
+                  <span className="text-[14px] font-medium font-inter">Powered by Supabase & Gemini</span>
                 </div>
               </div>
             </div>
