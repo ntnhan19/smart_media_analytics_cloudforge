@@ -89,19 +89,24 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
             </div>
             <div className="flex flex-col space-y-3 px-[10px]">
               {[
-                { label: 'All Assets', icon: Folder, count: libraryStats.all },
-                { label: 'Favourites', icon: Heart, count: libraryStats.favourites },
-                { label: 'Trash', icon: Trash, count: libraryStats.trash }
+                { label: 'All Assets', icon: Folder, count: libraryStats.all, path: '/app' },
+                { label: 'Favourites', icon: Heart, count: libraryStats.favourites, path: '/app/favourites' },
+                { label: 'Trash', icon: Trash, count: libraryStats.trash, path: '/app/trash' }
               ].map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between group cursor-pointer">
-                  <div className="flex items-center gap-4 text-gray-700 dark:text-gray-200 group-hover:text-sma-purple transition-colors">
+                <NavLink 
+                  key={idx} 
+                  to={item.path}
+                  end={item.path === '/app'}
+                  className={({ isActive }) => `flex items-center justify-between group cursor-pointer p-2 rounded-lg transition-colors ${isActive ? 'bg-sma-purple/10 dark:bg-sma-purple/20' : 'hover:bg-gray-100 dark:hover:bg-[#1A1630]'}`}
+                >
+                  <div className={`flex items-center gap-4 transition-colors ${window.location.pathname === item.path ? 'text-sma-purple dark:text-[#9A7DFF]' : 'text-gray-700 dark:text-gray-200 group-hover:text-sma-purple'}`}>
                     <item.icon className="w-5 h-5" />
-                    <span className="text-[12px]">{item.label}</span>
+                    <span className="text-[12px] font-medium">{item.label}</span>
                   </div>
-                  <div className="w-10 h-5 bg-gray-200 dark:bg-sma-blue rounded-[5px] flex items-center justify-center text-[11px] text-gray-700 dark:text-white transition-colors">
+                  <div className={`w-10 h-5 rounded-[5px] flex items-center justify-center text-[11px] transition-colors ${window.location.pathname === item.path ? 'bg-sma-purple text-white' : 'bg-gray-200 dark:bg-sma-blue text-gray-700 dark:text-white'}`}>
                     {item.count}
                   </div>
-                </div>
+                </NavLink>
               ))}
             </div>
           </div>

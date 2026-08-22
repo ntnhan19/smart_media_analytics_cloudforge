@@ -7,6 +7,7 @@ import SearchBar from '../components/search/SearchBar';
 import SearchFilters from '../components/search/SearchFilters';
 import SearchHistory from '../components/search/SearchHistory';
 import { getSearchHistory, addSearchHistory, clearSearchHistory } from '../utils/history';
+import WelcomeModal from '../components/onboarding/WelcomeModal';
 
 import { getAssets, getTags } from '../services/api';
 
@@ -51,7 +52,16 @@ export default function Dashboard() {
     keepPreviousData: true,
   });
 
-  const assets = useMemo(() => assetsData?.items || [], [assetsData]);
+  const assets = useMemo(() => {
+    const rawAssets = assetsData?.items || [];
+    try {
+      const trashedIds = JSON.parse(localStorage.getItem('trashedIds') || '[]');
+      return rawAssets.filter(a => !trashedIds.includes(a.asset_id));
+    } catch {
+      return rawAssets;
+    }
+  }, [assetsData]);
+  
   const totalAssets = assetsData?.total || 0;
   const totalPages = Math.max(1, Math.ceil(totalAssets / itemsPerPage));
 
@@ -209,6 +219,21 @@ export default function Dashboard() {
     }
   }, [error]);
 
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  useEffect(() => {
+    if (!isLoading && !error && assets.length === 0) {
+      const hasSeen = localStorage.getItem('hasSeenOnboarding');
+      if (!hasSeen) {
+        setShowWelcomeModal(true);
+      }
+    }
+  }, [isLoading, error, assets.length]);
+
+  const closeWelcomeModal = () => {
+    setShowWelcomeModal(false);
+    localStorage.setItem('hasSeenOnboarding', 'true');
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-4 relative min-h-full flex flex-col">
       {toast && (
@@ -216,6 +241,8 @@ export default function Dashboard() {
           {toast.message}
         </div>
       )}
+
+      <WelcomeModal isOpen={showWelcomeModal} onClose={closeWelcomeModal} />
 
       {currentPage === 1 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 mb-6">

@@ -94,19 +94,16 @@ export default function MediaCard({
     setIsDeleting(true);
     setErrorMsg('');
     try {
-      await deleteAsset(asset_id);
-      if (showToast) showToast('Video deleted successfully', 'success');
-
-      // Update local storage deleted count for UI display
-      const currentCount = parseInt(localStorage.getItem('deletedAssetsCount') || '0', 10);
-      localStorage.setItem('deletedAssetsCount', (currentCount + 1).toString());
-      window.dispatchEvent(new Event('assetDeleted'));
+      // Soft delete MVP: store in localStorage
+      const trashed = JSON.parse(localStorage.getItem('trashedIds') || '[]');
+      if (!trashed.includes(asset_id)) {
+        trashed.push(asset_id);
+        localStorage.setItem('trashedIds', JSON.stringify(trashed));
+      }
+      
+      if (showToast) showToast('Video moved to trash', 'success');
 
       queryClient.invalidateQueries({ queryKey: ['assets'] });
-    } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to delete video';
-      setErrorMsg(msg);
-      if (showToast) showToast(msg, 'error');
     } finally {
       setIsDeleting(false);
       setShowConfirm(false);
