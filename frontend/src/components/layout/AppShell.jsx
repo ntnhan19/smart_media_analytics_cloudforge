@@ -14,7 +14,7 @@ export default function AppShell() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F4F5F7] dark:bg-[#0F0D15] text-gray-900 dark:text-white transition-colors">
+    <div className="flex h-screen overflow-hidden bg-white dark:bg-[#0F0D15] text-gray-900 dark:text-white transition-colors">
 
       {/* Sidebar */}
       <div

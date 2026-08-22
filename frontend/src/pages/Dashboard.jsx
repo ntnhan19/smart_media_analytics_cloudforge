@@ -412,11 +412,7 @@ export default function Dashboard() {
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center pb-12 w-full">
               {/* Premium Empty State Box */}
-              <div className="w-full max-w-[800px] mx-auto relative rounded-2xl overflow-hidden flex flex-col items-center justify-center p-10 group bg-white/40 dark:bg-[#1a1b26]/40 backdrop-blur-xl border border-white/20 dark:border-white/5 transition-all duration-500 hover:bg-white/60 dark:hover:bg-[#1a1b26]/60">
-
-              {/* Decorative Gradient Orbs */}
-              <div className="absolute -top-24 -left-24 w-64 h-64 bg-sma-purple/20 rounded-full blur-3xl opacity-50 transition-opacity duration-700 group-hover:opacity-70"></div>
-              <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl opacity-50 transition-opacity duration-700 group-hover:opacity-70"></div>
+              <div className="w-full max-w-[800px] mx-auto relative rounded-2xl overflow-hidden flex flex-col items-center justify-center p-10 bg-white dark:bg-[#1a1b26] border border-gray-100 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
 
               {/* Content Container */}
               <div className="relative z-10 flex flex-col items-center w-full">
