@@ -24,16 +24,8 @@ export default function Landing() {
       <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/80 dark:bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 py-3 shadow-sm' : 'bg-transparent py-5'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3 group cursor-pointer">
-              <div className="relative">
-                <div className="absolute inset-0 bg-sma-purple blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <div className="bg-gradient-to-br from-[#16132A] to-[#2a244c] p-2 rounded-xl border border-sma-purple/30 relative z-10">
-                  <Play className="text-sma-purple w-5 h-5" fill="currentColor" />
-                </div>
-              </div>
-              <span className="font-extrabold text-xl tracking-tight text-gray-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-sma-purple group-hover:to-sma-blue transition-all duration-300">
-                SMA
-              </span>
+            <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo(0,0)}>
+              <img src="/logo.png" alt="SMA Logo" className="h-8 md:h-10 w-auto object-contain dark:invert-0 invert" />
             </div>
 
             <nav className="hidden md:flex items-center gap-8">

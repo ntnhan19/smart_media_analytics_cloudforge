@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, LayoutDashboard, Upload, Settings, Folder, Heart, Trash, User, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react';
+import { LayoutDashboard, Folder, Heart, Trash, Upload, Settings, Home, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -39,6 +39,7 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
     { name: 'Trash', path: '/app/trash', id: 'trash', icon: Trash },
     { name: 'Upload', path: '/app/upload', id: 'upload', icon: Upload },
     { name: 'Settings', path: '/app/settings', id: 'settings', icon: Settings },
+    { name: 'Website', path: '/', id: 'home', icon: Home },
   ];
 
   return (
