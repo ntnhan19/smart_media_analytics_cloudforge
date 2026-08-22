@@ -144,15 +144,12 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Transition Gradient Divider */}
-        <div className="h-32 bg-gradient-to-b from-[#F8F9FA] to-[#0a0a0f] dark:from-[#0a0a0f] dark:to-[#0a0a0f] w-full"></div>
-
         {/* Features Section */}
-        <div id="features" className="py-24 bg-[#0a0a0f] relative z-10 border-t border-white/5">
+        <div id="features" className="py-24 relative z-10 border-t border-gray-200 dark:border-white/5">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-20">
               <h2 className="text-sm font-bold tracking-widest text-sma-purple uppercase mb-3">Enterprise Capabilities</h2>
-              <h3 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-6">
+              <h3 className="text-3xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
                 Purpose-built for Media Workflows
               </h3>
               <p className="max-w-2xl mx-auto text-lg text-gray-400 font-light">
@@ -162,34 +159,34 @@ export default function Landing() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Feature 1 */}
-              <div className="p-8 rounded-3xl bg-[#16132A] border border-white/5 hover:border-sma-purple/50 transition-all duration-300 group shadow-lg">
+              <div className="p-8 rounded-3xl bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 hover:border-sma-purple/50 transition-all duration-300 group shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
                 <div className="w-14 h-14 rounded-2xl bg-sma-purple/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                   <Search className="w-7 h-7 text-sma-purple" />
                 </div>
-                <h4 className="text-xl font-bold text-white mb-3">Semantic Search</h4>
-                <p className="text-gray-400 leading-relaxed font-light">
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Semantic Search</h4>
+                <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-light">
                   Find exact moments using natural language. Instead of searching for "IMG_102", search for "a red car driving on a bridge at sunset".
                 </p>
               </div>
 
               {/* Feature 2 */}
-              <div className="p-8 rounded-3xl bg-[#16132A] border border-white/5 hover:border-sma-blue/50 transition-all duration-300 group shadow-lg">
+              <div className="p-8 rounded-3xl bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 hover:border-sma-blue/50 transition-all duration-300 group shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
                 <div className="w-14 h-14 rounded-2xl bg-sma-blue/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                   <Video className="w-7 h-7 text-sma-blue" />
                 </div>
-                <h4 className="text-xl font-bold text-white mb-3">Vision AI Analysis</h4>
-                <p className="text-gray-400 leading-relaxed font-light">
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Vision AI Analysis</h4>
+                <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-light">
                   Automated keyframe extraction and scene detection. We use advanced Vision Language Models to understand the visual context of your videos.
                 </p>
               </div>
 
               {/* Feature 3 */}
-              <div className="p-8 rounded-3xl bg-[#16132A] border border-white/5 hover:border-emerald-500/50 transition-all duration-300 group shadow-lg">
+              <div className="p-8 rounded-3xl bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 hover:border-emerald-500/50 transition-all duration-300 group shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
                 <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                   <Mic className="w-7 h-7 text-emerald-500" />
                 </div>
-                <h4 className="text-xl font-bold text-white mb-3">Audio Transcription</h4>
-                <p className="text-gray-400 leading-relaxed font-light">
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Audio Transcription</h4>
+                <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-light">
                   Highly accurate, multi-language speech-to-text powered by state-of-the-art ASR models. Search through spoken words instantly.
                 </p>
               </div>
@@ -198,11 +195,11 @@ export default function Landing() {
         </div>
 
         {/* How it Works / Tech Workflow */}
-        <div id="how-it-works" className="py-24 bg-[#0a0a0f] relative border-t border-white/5">
+        <div id="how-it-works" className="py-24 relative border-t border-gray-200 dark:border-white/5">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 leading-tight">
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
                   A seamless pipeline from <br /> upload to insights
                 </h2>
                 <p className="text-gray-400 text-lg font-light mb-10">
@@ -211,80 +208,80 @@ export default function Landing() {
 
                 <div className="space-y-8 relative">
                   {/* Vertical connecting line */}
-                  <div className="absolute left-5 top-10 bottom-10 w-0.5 border-l-2 border-dashed border-white/10 -z-10"></div>
+                  <div className="absolute left-5 top-10 bottom-10 w-0.5 border-l-2 border-dashed border-gray-200 dark:border-white/10 -z-10"></div>
 
                   <div className="flex gap-6">
                     <div className="shrink-0 mt-1">
-                      <div className="w-10 h-10 rounded-full bg-[#16132A] flex items-center justify-center border-2 border-white/20 text-white font-bold">
+                      <div className="w-10 h-10 rounded-full bg-white dark:bg-[#16132A] flex items-center justify-center border-2 border-gray-200 dark:border-white/20 text-gray-700 dark:text-white font-bold">
                         1
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-xl font-bold text-white mb-2">Secure Upload & Storage</h4>
-                      <p className="text-gray-400 font-light">Your media is encrypted and safely stored in high-performance cloud buckets, ready for processing.</p>
+                      <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Secure Upload & Storage</h4>
+                      <p className="text-gray-500 dark:text-gray-400 font-light">Your media is encrypted and safely stored in high-performance cloud buckets, ready for processing.</p>
                     </div>
                   </div>
 
                   <div className="flex gap-6">
                     <div className="shrink-0 mt-1">
-                      <div className="w-10 h-10 rounded-full bg-[#16132A] flex items-center justify-center border-2 border-sma-purple/50 text-sma-purple font-bold">
+                      <div className="w-10 h-10 rounded-full bg-white dark:bg-[#16132A] flex items-center justify-center border-2 border-sma-purple/50 text-sma-purple font-bold">
                         2
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-xl font-bold text-white mb-2">Automated AI Processing</h4>
-                      <p className="text-gray-400 font-light">Background workers automatically extract audio, detect scenes, transcribe speech, and generate embeddings.</p>
+                      <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Automated AI Processing</h4>
+                      <p className="text-gray-500 dark:text-gray-400 font-light">Background workers automatically extract audio, detect scenes, transcribe speech, and generate embeddings.</p>
                     </div>
                   </div>
 
                   <div className="flex gap-6">
                     <div className="shrink-0 mt-1">
-                      <div className="w-10 h-10 rounded-full bg-[#16132A] flex items-center justify-center border-2 border-sma-blue/50 text-sma-blue font-bold">
+                      <div className="w-10 h-10 rounded-full bg-white dark:bg-[#16132A] flex items-center justify-center border-2 border-sma-blue/50 text-sma-blue font-bold">
                         3
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-xl font-bold text-white mb-2">Instant Search & Discovery</h4>
-                      <p className="text-gray-400 font-light">Data is indexed in a vector database, allowing you to instantly query your entire library using natural language.</p>
+                      <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Instant Search & Discovery</h4>
+                      <p className="text-gray-500 dark:text-gray-400 font-light">Data is indexed in a vector database, allowing you to instantly query your entire library using natural language.</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="relative">
-                <div className="aspect-square rounded-full border border-white/10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] animate-[spin_60s_linear_infinite]"></div>
-                <div className="aspect-square rounded-full border border-white/5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] animate-[spin_40s_linear_infinite_reverse]"></div>
+                <div className="aspect-square rounded-full border border-gray-200 dark:border-white/10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] animate-[spin_60s_linear_infinite]"></div>
+                <div className="aspect-square rounded-full border border-gray-100 dark:border-white/5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] animate-[spin_40s_linear_infinite_reverse]"></div>
 
                 <div className="relative z-10">
                   <div className="mb-6 text-center">
-                    <span className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold tracking-widest text-gray-400 uppercase">
+                    <span className="px-4 py-1.5 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs font-bold tracking-widest text-gray-500 dark:text-gray-400 uppercase">
                       Underlying Infrastructure
                     </span>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-4 pt-12">
-                      <div className="bg-[#16132A] border border-white/5 p-6 rounded-2xl shadow-xl">
+                      <div className="bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 p-6 rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
                         <Layers className="w-8 h-8 text-sma-purple mb-4" />
-                        <h5 className="text-white font-bold mb-1">Scalable Architecture</h5>
-                        <p className="text-xs text-gray-400">Microservices designed to handle massive media libraries.</p>
+                        <h5 className="text-gray-900 dark:text-white font-bold mb-1">Scalable Architecture</h5>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Microservices designed to handle massive media libraries.</p>
                       </div>
-                      <div className="bg-[#16132A] border border-white/5 p-6 rounded-2xl shadow-xl">
+                      <div className="bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 p-6 rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
                         <BarChart3 className="w-8 h-8 text-sma-blue mb-4" />
-                        <h5 className="text-white font-bold mb-1">Deep Analytics</h5>
-                        <p className="text-xs text-gray-400">Extract metadata, tags, and sentiment from every frame.</p>
+                        <h5 className="text-gray-900 dark:text-white font-bold mb-1">Deep Analytics</h5>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Extract metadata, tags, and sentiment from every frame.</p>
                       </div>
                     </div>
                     <div className="space-y-4">
-                      <div className="bg-[#16132A] border border-white/5 p-6 rounded-2xl shadow-xl">
+                      <div className="bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 p-6 rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
                         <Cpu className="w-8 h-8 text-emerald-500 mb-4" />
-                        <h5 className="text-white font-bold mb-1">Local Inference</h5>
-                        <p className="text-xs text-gray-400">Powered by advanced LLMs and VLMs running securely.</p>
+                        <h5 className="text-gray-900 dark:text-white font-bold mb-1">Local Inference</h5>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Powered by advanced LLMs and VLMs running securely.</p>
                       </div>
-                      <div className="bg-[#16132A] border border-white/5 p-6 rounded-2xl shadow-xl">
+                      <div className="bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 p-6 rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
                         <Shield className="w-8 h-8 text-amber-500 mb-4" />
-                        <h5 className="text-white font-bold mb-1">Enterprise Security</h5>
-                        <p className="text-xs text-gray-400">Your data never leaves your controlled environment.</p>
+                        <h5 className="text-gray-900 dark:text-white font-bold mb-1">Enterprise Security</h5>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Your data never leaves your controlled environment.</p>
                       </div>
                     </div>
                   </div>
@@ -295,25 +292,20 @@ export default function Landing() {
         </div>
 
         {/* Trusted By / Social Proof Section */}
-        <div className="py-20 bg-[#0a0a0f] border-t border-white/5 relative z-10">
+        <div className="py-20 border-t border-gray-200 dark:border-white/5 relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <p className="text-sm font-semibold text-gray-500 tracking-widest uppercase mb-10">Trusted by innovative teams</p>
-            <div className="flex flex-wrap justify-center gap-12 md:gap-20 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-              {/* TODO: Thay thế bằng logo khách hàng/đối tác thật */}
-              <div className="text-2xl font-black text-gray-400 font-serif">Acme Corp</div>
-              <div className="text-2xl font-black text-gray-400 tracking-tighter">GLOBALNET</div>
-              <div className="text-2xl font-black text-gray-400 italic">Visionary</div>
-              <div className="text-2xl font-black text-gray-400">NEXUS</div>
-              <div className="text-2xl font-black text-gray-400 font-mono">TechFlow</div>
-            </div>
+            {/* 
+              TODO: Thêm dải logo khách hàng hoặc case studies thật tại đây.
+              Vui lòng KHÔNG dùng logo giả mạo hoặc tên công ty giả theo đúng Action Item 7.2.
+            */}
           </div>
         </div>
 
         {/* CTA Section */}
-        <div className="relative py-24 overflow-hidden border-t border-white/10 bg-[#0a0a0f]">
+        <div className="relative py-24 overflow-hidden border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
           <div className="max-w-4xl mx-auto px-4 relative z-10 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">Ready to transform your media library?</h2>
-            <p className="text-xl text-gray-400 mb-10 font-light">Join the future of media asset management. Intelligent, fast, and secure.</p>
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">Ready to transform your media library?</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 font-light">Join the future of media asset management. Intelligent, fast, and secure.</p>
             <Link
               to="/login"
               className="inline-flex items-center justify-center gap-2 px-12 py-5 rounded-2xl font-bold text-white bg-sma-purple hover:bg-[#6b4ce6] shadow-[0_8px_30px_rgb(123,92,245,0.4)] transition-all hover:scale-105 active:scale-95"
@@ -325,7 +317,7 @@ export default function Landing() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#050508] py-12 border-t border-white/5">
+      <footer className="bg-white dark:bg-[#050508] py-12 border-t border-gray-200 dark:border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-3 text-sm text-gray-600">
