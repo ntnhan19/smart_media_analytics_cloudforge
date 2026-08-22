@@ -20,6 +20,11 @@ api.interceptors.response.use(
 
 export default api;
 
+export const getPublicStats = async (signal) => {
+  const response = await api.get('/public/stats', { signal });
+  return response.data;
+};
+
 export const searchMedia = async (payload, signal) => {
   const response = await api.post('/search', payload, {
     signal,
