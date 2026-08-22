@@ -85,29 +85,29 @@ export default function Dashboard() {
       <WelcomeModal isOpen={showWelcomeModal} onClose={closeWelcomeModal} />
       
       {/* 1. Welcome Banner */}
-      <div className="bg-[#1a1b26] rounded-2xl p-8 relative overflow-hidden text-white flex flex-col md:flex-row items-center justify-between shadow-sm">
+      <div className="bg-white dark:bg-[#1a1b26] rounded-3xl p-8 relative overflow-hidden flex flex-col md:flex-row items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-sm border border-gray-100 dark:border-white/5">
         <div className="relative z-10 flex-1">
-          <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.attributes?.name || user?.username || 'User'}! 👋</h1>
-          <p className="text-gray-400 text-sm max-w-xl">
-            You currently have <strong className="text-white">{totalAssets}</strong> assets in your library. 
-            {processingJobs > 0 && <span> <strong className="text-sma-purple">{processingJobs}</strong> videos are being analyzed by Gemini AI.</span>}
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {user?.attributes?.name || user?.username || 'User'}! 👋</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xl">
+            You currently have <strong className="text-sma-purple dark:text-white">{totalAssets}</strong> assets in your library. 
+            {processingJobs > 0 && <span> <strong className="text-blue-500">{processingJobs}</strong> videos are being analyzed by Gemini AI.</span>}
           </p>
           <div className="flex gap-4 mt-6">
             <button 
               onClick={() => navigate('/app/upload')}
-              className="bg-sma-purple hover:bg-[#6b4ce6] text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm flex items-center gap-2"
+              className="bg-sma-purple hover:bg-[#6b4ce6] text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 active:scale-95"
             >
               <Icon icon="lucide:upload-cloud" width="18" /> Upload Media
             </button>
             <button 
               onClick={() => navigate('/app/assets')}
-              className="bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white px-5 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 active:scale-95"
             >
               <Icon icon="lucide:layout-grid" width="18" /> View Library
             </button>
           </div>
         </div>
-        <div className="hidden md:block absolute -right-10 -bottom-10 opacity-30 pointer-events-none">
+        <div className="hidden md:block absolute -right-10 -bottom-10 opacity-10 dark:opacity-30 pointer-events-none">
           <Icon icon="lucide:activity" width="300" height="300" className="text-sma-purple" />
         </div>
       </div>
@@ -120,13 +120,13 @@ export default function Dashboard() {
           { label: 'Favourites', value: favouritesCount, icon: 'heart', color: 'text-red-500', bg: 'bg-red-500/10' },
           { label: 'Storage Used', value: `${(totalAssets * 12.5).toFixed(1)} MB`, icon: 'hard-drive', color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
         ].map((stat, idx) => (
-          <div key={idx} className="bg-white dark:bg-[#1a1b26] p-5 rounded-2xl border border-gray-100 dark:border-white/5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+          <div key={idx} className="bg-white dark:bg-[#1a1b26] p-5 rounded-3xl border border-gray-100 dark:border-white/5 flex items-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all cursor-default">
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">{stat.label}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-[11px] font-bold uppercase tracking-widest mb-1">{stat.label}</p>
               <h3 className="text-2xl font-black text-gray-900 dark:text-white">{stat.value}</h3>
             </div>
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bg}`}>
-              <Icon icon={`lucide:${stat.icon}`} width="24" className={stat.color} />
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${stat.bg}`}>
+              <Icon icon={`lucide:${stat.icon}`} width="22" className={stat.color} />
             </div>
           </div>
         ))}
@@ -137,7 +137,7 @@ export default function Dashboard() {
         {/* 3. Main Chart & Uploads */}
         <div className="lg:col-span-2 space-y-6">
           
-          <div className="bg-white dark:bg-[#1a1b26] p-6 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+          <div className="bg-white dark:bg-[#1a1b26] p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <Icon icon="lucide:bar-chart-2" className="text-sma-purple" />
               Media Format Distribution
@@ -165,7 +165,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-[#1a1b26] p-6 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+          <div className="bg-white dark:bg-[#1a1b26] p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Icon icon="lucide:clock" className="text-sma-purple" />
@@ -199,7 +199,7 @@ export default function Dashboard() {
 
         {/* 4. Side Widget (Tags & Searches) */}
         <div className="space-y-6">
-          <div className="bg-white dark:bg-[#1a1b26] p-6 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+          <div className="bg-white dark:bg-[#1a1b26] p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="lucide:tag" className="text-sma-purple" />
               Popular Tags
@@ -221,7 +221,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="bg-white dark:bg-[#1a1b26] p-6 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+          <div className="bg-white dark:bg-[#1a1b26] p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="lucide:search" className="text-sma-purple" />
               Recent Searches
