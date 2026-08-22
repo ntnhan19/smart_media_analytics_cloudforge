@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import AppShell from './components/layout/AppShell';
 import Dashboard from './pages/Dashboard';
+import Assets from './pages/Assets';
 import Search from './pages/Search';
 import AssetDetail from './pages/AssetDetail';
 import Upload from './pages/Upload';
@@ -58,6 +59,7 @@ function App() {
                     </RequireAuth>
                   }>
                     <Route index element={<Dashboard />} />
+                    <Route path="assets" element={<Assets />} />
                     <Route path="search" element={<Search />} />
                     <Route path="favourites" element={<Favourites />} />
                     <Route path="trash" element={<Trash />} />

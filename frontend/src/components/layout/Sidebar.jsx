@@ -33,7 +33,8 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
   };
 
   const navItems = [
-    { name: 'Assets', path: '/app', id: 'dashboard', icon: LayoutDashboard },
+    { name: 'Dashboard', path: '/app', id: 'dashboard', icon: LayoutDashboard },
+    { name: 'Assets', path: '/app/assets', id: 'assets', icon: Folder },
     { name: 'Favourites', path: '/app/favourites', id: 'favourites', icon: Heart },
     { name: 'Trash', path: '/app/trash', id: 'trash', icon: Trash },
     { name: 'Upload', path: '/app/upload', id: 'upload', icon: Upload },

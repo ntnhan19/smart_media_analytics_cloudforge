@@ -12,6 +12,7 @@ export default function AppShell() {
     if (location.pathname.startsWith('/app/settings')) return 'settings';
     if (location.pathname.startsWith('/app/favourites')) return 'favourites';
     if (location.pathname.startsWith('/app/trash')) return 'trash';
+    if (location.pathname.startsWith('/app/assets')) return 'assets';
     return 'dashboard';
   };
 
