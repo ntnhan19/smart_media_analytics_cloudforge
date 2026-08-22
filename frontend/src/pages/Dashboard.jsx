@@ -211,19 +211,19 @@ export default function Dashboard() {
         </div>
       )}
 
-      {(!assets || assets.length === 0) && !isLoading && !error && currentPage === 1 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-1">
-          <div className="bg-white dark:bg-[#16132A] p-2 rounded-xl border border-gray-200 dark:border-[#2D2844] w-60 h-30 transition-colors shadow-sm dark:shadow-none">
-            <h3 className="text-gray-500 dark:text-gray-400 font-medium">Total Assets</h3>
-            <p className="text-3xl font-bold mt-4 text-gray-900 dark:text-white">{totalAssets}</p>
+      {currentPage === 1 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1 mb-4">
+          <div className="bg-white dark:bg-[#16132A] p-5 rounded-xl border border-gray-200 dark:border-[#2D2844] transition-colors shadow-sm dark:shadow-none">
+            <h3 className="text-gray-500 dark:text-gray-400 font-medium text-sm uppercase tracking-wider">Total Assets</h3>
+            <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">{totalAssets}</p>
           </div>
-          <div className="bg-white dark:bg-[#16132A] p-2 rounded-xl border border-gray-200 dark:border-[#2D2844] w-60 h-30 transition-colors shadow-sm dark:shadow-none">
-            <h3 className="text-gray-500 dark:text-gray-400 font-medium">Storage Used</h3>
-            <p className="text-3xl font-bold mt-4 text-gray-900 dark:text-white">0 MB</p>
+          <div className="bg-white dark:bg-[#16132A] p-5 rounded-xl border border-gray-200 dark:border-[#2D2844] transition-colors shadow-sm dark:shadow-none">
+            <h3 className="text-gray-500 dark:text-gray-400 font-medium text-sm uppercase tracking-wider">Storage Used</h3>
+            <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">0 MB</p>
           </div>
-          <div className="bg-white dark:bg-[#16132A] p-2 rounded-xl border border-gray-200 dark:border-[#2D2844] w-60 h-30 transition-colors shadow-sm dark:shadow-none">
-            <h3 className="text-gray-500 dark:text-gray-400 font-medium">Recent Searches</h3>
-            <p className="text-3xl font-bold mt-4 text-gray-900 dark:text-white">{searchHistory.length}</p>
+          <div className="bg-white dark:bg-[#16132A] p-5 rounded-xl border border-gray-200 dark:border-[#2D2844] transition-colors shadow-sm dark:shadow-none">
+            <h3 className="text-gray-500 dark:text-gray-400 font-medium text-sm uppercase tracking-wider">Recent Searches</h3>
+            <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">{searchHistory.length}</p>
           </div>
         </div>
       )}
