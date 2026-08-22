@@ -204,7 +204,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4 relative h-full flex flex-col">
+    <div className="max-w-7xl mx-auto space-y-4 relative min-h-full flex flex-col">
       {toast && (
         <div className={`fixed top-[20px] right-[20px] z-50 px-4 py-2 rounded shadow-lg text-white font-inter text-sm animate-fade-in-down ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
           {toast.message}
