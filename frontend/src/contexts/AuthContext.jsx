@@ -39,6 +39,20 @@ export const AuthProvider = ({ children }) => {
     if (error) {
       throw error;
     }
+    return { success: true, user: data.user };
+  };
+  
+  const signup = async (email, password) => {
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    
+    setLoading(false);
+    if (error) {
+      throw error;
+    }
     
     return { success: true, user: data.user };
   };
@@ -48,7 +62,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, loading, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
