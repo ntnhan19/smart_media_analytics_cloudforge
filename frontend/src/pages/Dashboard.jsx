@@ -212,18 +212,54 @@ export default function Dashboard() {
       )}
 
       {currentPage === 1 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1 mb-4">
-          <div className="bg-white dark:bg-[#16132A] p-5 rounded-xl border border-gray-200 dark:border-[#2D2844] transition-colors shadow-sm dark:shadow-none">
-            <h3 className="text-gray-500 dark:text-gray-400 font-medium text-sm uppercase tracking-wider">Total Assets</h3>
-            <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">{totalAssets}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 mb-6">
+          {/* Total Assets Card */}
+          <div className="relative overflow-hidden bg-white dark:bg-[#1a1b26] p-6 rounded-2xl border border-gray-100 dark:border-white/5 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] group hover:-translate-y-1">
+            <div className="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity duration-500 transform group-hover:scale-110">
+               <Icon icon="lucide:layout-grid" width="80" height="80" className="text-sma-purple" />
+            </div>
+            <div className="relative z-10 flex flex-col justify-between h-full">
+              <h3 className="text-gray-500 dark:text-gray-400 font-bold text-[11px] uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Icon icon="lucide:database" width="14" height="14" className="text-sma-purple" />
+                Total Assets
+              </h3>
+              <div className="flex items-baseline gap-2 mt-2">
+                <p className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{totalAssets}</p>
+              </div>
+            </div>
           </div>
-          <div className="bg-white dark:bg-[#16132A] p-5 rounded-xl border border-gray-200 dark:border-[#2D2844] transition-colors shadow-sm dark:shadow-none">
-            <h3 className="text-gray-500 dark:text-gray-400 font-medium text-sm uppercase tracking-wider">Storage Used</h3>
-            <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">0 MB</p>
+
+          {/* Storage Used Card */}
+          <div className="relative overflow-hidden bg-white dark:bg-[#1a1b26] p-6 rounded-2xl border border-gray-100 dark:border-white/5 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] group hover:-translate-y-1">
+            <div className="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity duration-500 transform group-hover:scale-110">
+               <Icon icon="lucide:hard-drive" width="80" height="80" className="text-blue-500" />
+            </div>
+            <div className="relative z-10 flex flex-col justify-between h-full">
+              <h3 className="text-gray-500 dark:text-gray-400 font-bold text-[11px] uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Icon icon="lucide:server" width="14" height="14" className="text-blue-500" />
+                Storage Used
+              </h3>
+              <div className="flex items-baseline gap-1 mt-2">
+                <p className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">0</p>
+                <span className="text-lg font-medium text-gray-500 dark:text-gray-400">MB</span>
+              </div>
+            </div>
           </div>
-          <div className="bg-white dark:bg-[#16132A] p-5 rounded-xl border border-gray-200 dark:border-[#2D2844] transition-colors shadow-sm dark:shadow-none">
-            <h3 className="text-gray-500 dark:text-gray-400 font-medium text-sm uppercase tracking-wider">Recent Searches</h3>
-            <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">{searchHistory.length}</p>
+
+          {/* Recent Searches Card */}
+          <div className="relative overflow-hidden bg-white dark:bg-[#1a1b26] p-6 rounded-2xl border border-gray-100 dark:border-white/5 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] group hover:-translate-y-1">
+            <div className="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity duration-500 transform group-hover:scale-110">
+               <Icon icon="lucide:search" width="80" height="80" className="text-indigo-500" />
+            </div>
+            <div className="relative z-10 flex flex-col justify-between h-full">
+              <h3 className="text-gray-500 dark:text-gray-400 font-bold text-[11px] uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Icon icon="lucide:history" width="14" height="14" className="text-indigo-500" />
+                Recent Searches
+              </h3>
+              <div className="flex items-baseline gap-2 mt-2">
+                <p className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{searchHistory.length}</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -235,8 +271,9 @@ export default function Dashboard() {
       )}
 
       {error && (
-        <div className="bg-red-900/20 border border-red-500/50 text-red-400 p-4 rounded-xl text-center text-sm shadow-sm">
-          Warning: Could not connect to the backend server. Some features may be unavailable.
+        <div className="bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-xl p-4 flex items-center gap-3 text-red-600 dark:text-red-400 shadow-sm animate-fade-in-down mb-2">
+          <Icon icon="lucide:alert-circle" width="20" height="20" className="shrink-0" />
+          <span className="text-sm font-medium">Backend connection unavailable. Some features might not work as expected.</span>
         </div>
       )}
 
