@@ -97,19 +97,84 @@ export default function Landing() {
               </a>
             </div>
 
-            {/* Dashboard Screenshot Placeholder */}
-            <div className="max-w-5xl mx-auto relative group">
-              {/* Decorative glow behind the image */}
-              <div className="absolute -inset-1 bg-sma-purple/20 blur-2xl opacity-50 rounded-3xl"></div>
+            {/* Dashboard CSS Mockup */}
+            <div className="max-w-5xl mx-auto relative group perspective-1000">
+              {/* Decorative glow */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-sma-purple/30 to-sma-blue/30 blur-2xl opacity-50 rounded-3xl group-hover:opacity-70 transition-opacity duration-700"></div>
               
-              <div className="relative rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#16132A] p-2 shadow-2xl overflow-hidden aspect-[16/9] flex items-center justify-center">
-                {/* TODO: thay bằng screenshot dashboard thật */}
-                <div className="text-center">
-                  <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-4 border border-gray-200 dark:border-white/10">
-                    <Search className="w-8 h-8 text-gray-400" />
+              <div className="relative rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0a0a0f] shadow-2xl overflow-hidden flex flex-col transition-transform duration-700 hover:scale-[1.02]">
+                {/* Mockup Browser Header */}
+                <div className="h-10 bg-gray-50 dark:bg-[#16132A] border-b border-gray-200 dark:border-white/5 flex items-center px-4 gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-400/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-400/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-emerald-400/80"></div>
+                </div>
+
+                {/* Mockup Body */}
+                <div className="flex h-[400px] md:h-[600px] bg-white dark:bg-[#0a0a0f]">
+                  {/* Fake Sidebar */}
+                  <div className="hidden md:flex w-48 border-r border-gray-100 dark:border-white/5 flex-col p-4 gap-4">
+                    <div className="h-6 w-24 bg-gray-200 dark:bg-white/10 rounded-md mb-4"></div>
+                    <div className="h-4 w-full bg-sma-purple/20 rounded-md"></div>
+                    <div className="h-4 w-3/4 bg-gray-100 dark:bg-white/5 rounded-md"></div>
+                    <div className="h-4 w-5/6 bg-gray-100 dark:bg-white/5 rounded-md"></div>
+                    <div className="h-4 w-4/5 bg-gray-100 dark:bg-white/5 rounded-md"></div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-400">Dashboard UI Placeholder</h3>
-                  <p className="text-sm text-gray-500 mt-2">Add real product screenshot here</p>
+
+                  {/* Main Area */}
+                  <div className="flex-1 flex flex-col p-4 md:p-8">
+                    {/* Header */}
+                    <div className="flex justify-between items-center mb-8">
+                      <div className="h-10 w-full max-w-sm bg-gray-50 dark:bg-[#16132A] rounded-lg border border-gray-200 dark:border-white/5 flex items-center px-3 gap-2">
+                        <Search className="w-4 h-4 text-gray-400" />
+                        <div className="h-2 w-24 bg-gray-200 dark:bg-white/10 rounded-full"></div>
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-sma-purple to-sma-blue ml-4 shrink-0"></div>
+                    </div>
+
+                    {/* Stats Row */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                      <div className="h-24 rounded-xl bg-gray-50 dark:bg-[#16132A] border border-gray-100 dark:border-white/5 p-4 flex flex-col justify-between">
+                        <div className="h-3 w-20 bg-gray-200 dark:bg-white/10 rounded-full"></div>
+                        <div className="h-6 w-12 bg-gray-300 dark:bg-white/20 rounded-md"></div>
+                      </div>
+                      <div className="h-24 rounded-xl bg-gray-50 dark:bg-[#16132A] border border-gray-100 dark:border-white/5 p-4 flex flex-col justify-between">
+                        <div className="h-3 w-16 bg-gray-200 dark:bg-white/10 rounded-full"></div>
+                        <div className="h-6 w-16 bg-gray-300 dark:bg-white/20 rounded-md"></div>
+                      </div>
+                      <div className="h-24 rounded-xl bg-gray-50 dark:bg-[#16132A] border border-gray-100 dark:border-white/5 p-4 flex-col justify-between hidden sm:flex">
+                        <div className="h-3 w-24 bg-gray-200 dark:bg-white/10 rounded-full"></div>
+                        <div className="h-6 w-10 bg-gray-300 dark:bg-white/20 rounded-md"></div>
+                      </div>
+                    </div>
+
+                    {/* Fake Video Player & Tags */}
+                    <div className="flex-1 rounded-xl bg-gray-50 dark:bg-[#16132A] border border-gray-100 dark:border-white/5 relative overflow-hidden flex flex-col">
+                      {/* Fake Video Image Area */}
+                      <div className="flex-1 bg-gray-200/50 dark:bg-black/20 flex items-center justify-center relative">
+                        <div className="w-16 h-16 rounded-full bg-white/50 dark:bg-white/10 backdrop-blur-sm flex items-center justify-center text-gray-500 dark:text-white/50 border border-white/20 shadow-sm">
+                          <Play className="w-6 h-6 ml-1" fill="currentColor" />
+                        </div>
+                        {/* Overlay Bounding Boxes (AI vision simulation) */}
+                        <div className="absolute top-1/4 left-1/4 w-32 h-32 border border-sma-purple/50 rounded-lg bg-sma-purple/5 flex items-end p-1">
+                          <span className="text-[10px] bg-sma-purple text-white px-1.5 py-0.5 rounded shadow-sm font-medium">Person 98%</span>
+                        </div>
+                        <div className="absolute bottom-1/4 right-1/3 w-48 h-24 border border-emerald-500/50 rounded-lg bg-emerald-500/5 flex items-end p-1">
+                          <span className="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded shadow-sm font-medium">Car 94%</span>
+                        </div>
+                      </div>
+                      {/* Fake Timeline & Tags */}
+                      <div className="h-16 border-t border-gray-100 dark:border-white/5 p-4 flex items-center gap-3">
+                        <div className="px-3 py-1 bg-sma-purple/10 text-sma-purple text-xs rounded-full font-medium">Outdoors</div>
+                        <div className="px-3 py-1 bg-sma-blue/10 text-sma-blue text-xs rounded-full font-medium hidden sm:block">Daylight</div>
+                        <div className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-xs rounded-full font-medium">Vehicle</div>
+                        <div className="flex-1"></div>
+                        <div className="w-24 md:w-48 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                          <div className="w-1/3 h-full bg-sma-purple animate-pulse"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
