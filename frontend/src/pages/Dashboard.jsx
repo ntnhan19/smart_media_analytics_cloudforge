@@ -471,9 +471,12 @@ export default function Dashboard() {
                     <span>Upload First Video</span>
                   </button>
 
-                  <button className="flex-1 flex items-center justify-center gap-3 w-full h-[56px] bg-white/50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-[16px] transition-all duration-300 hover:-translate-y-0.5 backdrop-blur-sm">
+                  <button
+                    onClick={() => setShowWelcomeModal(true)}
+                    className="flex-1 flex items-center justify-center gap-3 w-full h-[56px] bg-white/50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-[16px] transition-all duration-300 hover:-translate-y-0.5 backdrop-blur-sm"
+                  >
                     <Icon icon="lucide:play-circle" width="24" height="24" />
-                    <span>Watch Demo</span>
+                    <span>Take a Tour</span>
                   </button>
                 </div>
               </div>
