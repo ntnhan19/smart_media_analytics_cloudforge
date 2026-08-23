@@ -22,7 +22,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-              <img src="/logo.png" alt="SMA Logo" className="h-10 md:h-14 w-auto object-contain dark:invert-0 invert" />
+              <img src="/logo.png" alt="SMA Logo" className="h-14 md:h-16 w-auto object-contain dark:invert-0 invert" />
             </div>
 
             <nav className="hidden md:flex items-center gap-8">
@@ -385,7 +385,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-3 text-sm text-gray-600">
-              <Play className="text-sma-purple w-5 h-5" fill="currentColor" />
+              <img src="/logo.png" alt="SMA Logo" className="h-10 w-auto object-contain dark:invert-0 invert" />
               <span>© {new Date().getFullYear()} Smart Media Analytics. All rights reserved. Proprietary and Confidential.</span>
             </div>
 

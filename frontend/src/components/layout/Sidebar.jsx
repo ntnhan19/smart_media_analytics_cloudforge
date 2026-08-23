@@ -51,7 +51,7 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
       <div className={`pt-3 pb-3 shrink-0 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between pl-[20px] pr-[16px]'}`}>
         {!isCollapsed && (
           <NavLink to="/" className="flex items-center">
-            <img src="/logo.png" alt="SMA Logo" className="h-10 w-auto object-contain dark:invert-0 invert transition-transform hover:scale-105" />
+            <img src="/logo.png" alt="SMA Logo" className="h-14 w-auto object-contain dark:invert-0 invert transition-transform hover:scale-105" />
           </NavLink>
         )}
         {(onClose || onOpen) && (
