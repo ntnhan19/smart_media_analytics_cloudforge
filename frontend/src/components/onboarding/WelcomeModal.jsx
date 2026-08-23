@@ -61,9 +61,9 @@ export default function WelcomeModal({ isOpen, onClose }) {
                 <div className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-6 shadow-sm">
                   <Play className="w-10 h-10 text-sma-purple" fill="currentColor" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Welcome to Smart Media Analytics</h3>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Step 1: Upload Your Media</h3>
                 <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-[280px]">
-                  Your intelligent media library is ready. Let's transform your unstructured video into searchable data.
+                  Start by clicking the <strong>"Upload Media"</strong> button. Simply drag and drop your video files and watch them get uploaded into your private library.
                 </p>
               </div>
             )}
@@ -76,9 +76,9 @@ export default function WelcomeModal({ isOpen, onClose }) {
                     <Zap className="w-4 h-4 text-amber-500" fill="currentColor" />
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Powered by Gemini AI</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-[280px]">
-                  Every video you upload is automatically transcribed, analyzed, and tagged using advanced AI models.
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Step 2: Let AI Process It</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-[320px]">
+                  Once uploaded, sit back! Our Gemini-powered AI will automatically transcribe speech, detect visual scenes, and identify objects frame-by-frame.
                 </p>
               </div>
             )}
@@ -88,9 +88,9 @@ export default function WelcomeModal({ isOpen, onClose }) {
                 <div className="w-20 h-20 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mb-6 shadow-sm">
                   <Search className="w-10 h-10 text-emerald-500" strokeWidth={2.5} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Semantic Search</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-[280px]">
-                  Don't just search for titles. Search for moments, spoken words, or visual context instantly.
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Step 3: Search Anything</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-[320px]">
+                  Go to your Library and use the top search bar. Type natural questions like <em>"a red car driving on a sunny day"</em> to instantly find specific video moments.
                 </p>
               </div>
             )}
