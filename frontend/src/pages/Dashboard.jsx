@@ -109,7 +109,7 @@ export default function Dashboard() {
               onClick={() => setShowWelcomeModal(true)}
               className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-5 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 active:scale-95"
             >
-              <Icon icon="lucide:sparkles" width="18" /> Khám phá tính năng
+              <Icon icon="lucide:sparkles" width="18" /> Product Tour
             </button>
           </div>
         </div>
