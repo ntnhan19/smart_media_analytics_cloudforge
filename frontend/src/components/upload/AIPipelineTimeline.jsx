@@ -133,7 +133,6 @@ export default function AIPipelineTimeline() {
       {/* Header */}
       <div className="flex justify-between items-center border-b border-gray-200 dark:border-white/5 pb-4 mb-6 transition-colors">
         <h3 className="text-gray-900 dark:text-white text-[14px] font-bold transition-colors">AI Processing Pipeline</h3>
-        <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-[11px] transition-colors">View Pipeline Docs</a>
       </div>
 
       {/* Stepper */}

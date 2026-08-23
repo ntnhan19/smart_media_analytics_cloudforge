@@ -15,6 +15,10 @@ export default function Dashboard() {
   const searchHistory = getSearchHistory();
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
+
+  // Personalize greeting
+  const displayName = user?.attributes?.name || user?.username || (user?.email ? user.email.split('@')[0] : 'User');
+
   
   const { data: assetsData, isLoading } = useQuery({
     queryKey: ['assets'],
@@ -84,10 +88,23 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto space-y-6 relative min-h-full flex flex-col p-2 pb-12">
       <WelcomeModal isOpen={showWelcomeModal} onClose={closeWelcomeModal} />
       
+      {/* Page Header (P2.4 Consistent Header) */}
+      <div className="mb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <Icon icon="lucide:layout-dashboard" width="20" className="text-gray-700 dark:text-gray-300" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Overview of your media and AI processing</p>
+          </div>
+        </div>
+      </div>
+
       {/* 1. Welcome Banner */}
-      <div className="bg-white dark:bg-[#1a1b26] rounded-3xl p-8 relative overflow-hidden flex flex-col md:flex-row items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-sm border border-gray-100 dark:border-white/5">
+      <div className="bg-white dark:bg-[#1a1b26] rounded-3xl p-8 relative overflow-hidden flex flex-col md:flex-row items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-sm border border-gray-100 dark:border-white/5 mt-4">
         <div className="relative z-10 flex-1">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {user?.attributes?.name || user?.username || 'User'}! 👋</h1>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {displayName}! 👋</h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xl">
             You currently have <strong className="text-sma-purple dark:text-white">{totalAssets}</strong> assets in your library. 
             {processingJobs > 0 && <span> <strong className="text-blue-500">{processingJobs}</strong> videos are being analyzed by Gemini AI.</span>}
@@ -101,15 +118,15 @@ export default function Dashboard() {
             </button>
             <button 
               onClick={() => navigate('/app/assets')}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white px-5 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 active:scale-95"
+              className="bg-transparent hover:bg-gray-50 text-gray-700 dark:hover:bg-white/5 dark:text-white px-5 py-2.5 rounded-xl font-medium transition-all border border-gray-300 dark:border-gray-600 flex items-center gap-2 active:scale-95"
             >
               <Icon icon="lucide:layout-grid" width="18" /> View Library
             </button>
             <button 
               onClick={() => setShowWelcomeModal(true)}
-              className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-5 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 active:scale-95"
+              className="bg-transparent hover:bg-gray-50 text-gray-500 dark:text-gray-400 dark:hover:bg-white/5 px-5 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 active:scale-95 underline-offset-4 hover:underline"
             >
-              <Icon icon="lucide:sparkles" width="18" /> Product Tour
+              <Icon icon="lucide:help-circle" width="18" /> Product Tour
             </button>
           </div>
         </div>

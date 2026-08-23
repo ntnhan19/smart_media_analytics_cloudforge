@@ -60,8 +60,15 @@ export const retryJob = async (jobId) => {
 };
 
 export const getAssets = async (signal, limit = 50, offset = 0) => {
-  const response = await api.get(`/assets?limit=${limit}&offset=${offset}`, { signal });
-  return response.data;
+  try {
+    const response = await api.get(`/assets?limit=${limit}&offset=${offset}`, { signal });
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return { items: [], total: 0 };
+    }
+    throw error;
+  }
 };
 
 export const deleteAsset = async (assetId) => {
@@ -70,8 +77,15 @@ export const deleteAsset = async (assetId) => {
 };
 
 export const getTags = async (signal) => {
-  const response = await api.get('/search/tags', { signal });
-  return response.data;
+  try {
+    const response = await api.get('/search/tags', { signal });
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return { tags: [], items: [] };
+    }
+    throw error;
+  }
 };
 
 export const getAsset = async (assetId, signal) => {

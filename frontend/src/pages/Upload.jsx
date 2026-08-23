@@ -87,8 +87,11 @@ export default function Upload() {
 
           {/* Cột 2: Configure AI */}
           <div className="min-h-0 overflow-hidden flex flex-col gap-2">
-            <h2 className="text-[11px] font-bold shrink-0">
-              2. {activeJobs?.length > 0 ? <span className="text-[#7B5CF5] underline underline-offset-4">Configure AI</span> : "Configure AI"}
+            <h2 className="text-[11px] font-bold shrink-0 flex items-center gap-1">
+              <span>2. {activeJobs?.length > 0 ? <span className="text-[#7B5CF5] underline underline-offset-4">Configure AI</span> : "Configure AI"}</span>
+              <span title="View Pipeline Docs" className="cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+              </span>
             </h2>
             <div className="flex-1 min-h-0 overflow-hidden">
               <AIPipelineTimeline />
