@@ -244,6 +244,19 @@ export default function Assets() {
 
       <WelcomeModal isOpen={showWelcomeModal} onClose={closeWelcomeModal} />
 
+      {/* Page Header (P2.4 Consistent Header) */}
+      <div className="mb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <Icon icon="lucide:layout-grid" width="20" className="text-gray-700 dark:text-gray-300" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Media Library</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Manage and explore all your uploaded videos and images</p>
+          </div>
+        </div>
+      </div>
+
       {currentPage === 1 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 mb-6">
           {/* Total Assets Card */}
@@ -481,18 +494,6 @@ export default function Assets() {
                 </div>
               </div>
 
-              {/* Bottom Feature Badges */}
-              <div className="relative z-10 w-full flex flex-col sm:flex-row justify-center items-center gap-6 mt-14 pt-8 border-t border-gray-200/50 dark:border-white/10">
-                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                  <Icon icon="lucide:cloud" width="20" height="20" className="text-blue-500/70" />
-                  <span className="text-[14px] font-medium font-inter">Zero-cost Sandbox</span>
-                </div>
-                <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></div>
-                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                  <Icon icon="lucide:brain-circuit" width="20" height="20" className="text-sma-purple/70" />
-                  <span className="text-[14px] font-medium font-inter">Powered by Supabase & Gemini</span>
-                </div>
-              </div>
               </div>
             </div>
           )}
