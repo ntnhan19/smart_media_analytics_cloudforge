@@ -92,7 +92,7 @@ export default function Dashboard() {
             You currently have <strong className="text-sma-purple dark:text-white">{totalAssets}</strong> assets in your library. 
             {processingJobs > 0 && <span> <strong className="text-blue-500">{processingJobs}</strong> videos are being analyzed by Gemini AI.</span>}
           </p>
-          <div className="flex gap-4 mt-6">
+          <div className="flex flex-wrap gap-4 mt-6">
             <button 
               onClick={() => navigate('/app/upload')}
               className="bg-sma-purple hover:bg-[#6b4ce6] text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 active:scale-95"
@@ -104,6 +104,12 @@ export default function Dashboard() {
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white px-5 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 active:scale-95"
             >
               <Icon icon="lucide:layout-grid" width="18" /> View Library
+            </button>
+            <button 
+              onClick={() => setShowWelcomeModal(true)}
+              className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-5 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 active:scale-95"
+            >
+              <Icon icon="lucide:sparkles" width="18" /> Khám phá tính năng
             </button>
           </div>
         </div>
