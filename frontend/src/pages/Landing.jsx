@@ -71,15 +71,15 @@ export default function Landing() {
             </div>
 
             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1]">
-              Unlock the Intelligence <br className="hidden md:block" />
+              Stop Losing Hours <br className="hidden md:block" />
               <span className="text-sma-purple">
-                Hidden in Your Media
+                Logging Raw Footage
               </span>
             </h1>
 
             <p className="mt-4 text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed font-light">
-              Transform hours of unstructured video and audio into searchable, actionable data.
-              Our AI-driven pipeline automatically transcribes, tags, and analyzes every frame.
+              Dump all your b-roll, interviews, and raw clips into one place. 
+              Our AI automatically tags objects, transcribes speech, and logs every scene so you can find the perfect shot instantly.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-16">
@@ -183,27 +183,27 @@ export default function Landing() {
           {/* Scale Highlights */}
           <div className="mt-32 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">BUILT TO SCALE</h2>
-              <p className="text-gray-500 dark:text-gray-400">Enterprise-grade architecture ready for your largest datasets.</p>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">BUILT FOR VIDEO EDITORS</h2>
+              <p className="text-gray-500 dark:text-gray-400">Stop wasting time searching through folders. Let the system do the heavy lifting.</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 rounded-3xl p-8 flex flex-col items-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all">
                 <Database className="w-10 h-10 text-sma-purple mb-5" />
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Unlimited Media Library</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">Scales from hundreds to millions of assets without performance loss.</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Dump Your Raw Footage</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">Drop hundreds of video files into your library and let the system organize them automatically.</p>
               </div>
 
               <div className="bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 rounded-3xl p-8 flex flex-col items-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all">
                 <Activity className="w-10 h-10 text-sma-blue mb-5" />
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Real-Time Processing</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">Every upload is transcribed, tagged, and indexed automatically — no manual work.</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Zero Manual Logging</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">Skip the tedious logging phase. We automatically scan every frame to tag scenes, objects, and people.</p>
               </div>
 
               <div className="bg-white dark:bg-[#16132A] border border-gray-100 dark:border-white/5 rounded-3xl p-8 flex flex-col items-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all">
                 <Tag className="w-10 h-10 text-emerald-500 mb-5" />
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Deep AI Understanding</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">Every frame and word is analyzed for searchable, actionable metadata.</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Find Exact Clips Instantly</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">Type "a wide shot of a red car" or search for a specific quote to jump right to the perfect frame.</p>
               </div>
             </div>
           </div>
@@ -213,12 +213,12 @@ export default function Landing() {
         <div id="features" className="py-24 relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-20">
-              <h2 className="text-sm font-bold tracking-widest text-sma-purple uppercase mb-3">Enterprise Capabilities</h2>
+              <h2 className="text-sm font-bold tracking-widest text-sma-purple uppercase mb-3">Editor Workflows</h2>
               <h3 className="text-3xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
-                Purpose-built for Media Workflows
+                Purpose-built for Video Editors
               </h3>
               <p className="max-w-2xl mx-auto text-lg text-gray-400 font-light">
-                Our platform goes beyond basic storage. We apply advanced Machine Learning models to understand the content of your media files.
+                We've built the ultimate assistant for your post-production workflow, eliminating the most tedious parts of video editing.
               </p>
             </div>
 
@@ -228,9 +228,9 @@ export default function Landing() {
                 <div className="w-14 h-14 rounded-2xl bg-sma-purple/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                   <Search className="w-7 h-7 text-sma-purple" />
                 </div>
-                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Semantic Search</h4>
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Natural Language Search</h4>
                 <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-light">
-                  Find exact moments using natural language. Instead of searching for "IMG_102", search for "a red car driving on a bridge at sunset".
+                  Don't remember the file name? Just describe what happens in the video. We'll find the exact timestamp of what you're looking for.
                 </p>
               </div>
 
@@ -239,9 +239,9 @@ export default function Landing() {
                 <div className="w-14 h-14 rounded-2xl bg-sma-blue/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                   <Video className="w-7 h-7 text-sma-blue" />
                 </div>
-                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Vision AI Analysis</h4>
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Automated Scene Detection</h4>
                 <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-light">
-                  Automated keyframe extraction and scene detection. We use advanced Vision Language Models to understand the visual context of your videos.
+                  We break down long interviews and raw b-roll into easily digestible, tagged scenes so you don't have to scrub through them.
                 </p>
               </div>
 
@@ -250,9 +250,9 @@ export default function Landing() {
                 <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                   <Mic className="w-7 h-7 text-emerald-500" />
                 </div>
-                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Audio Transcription</h4>
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Instant Transcription</h4>
                 <p className="text-gray-500 dark:text-gray-400 leading-relaxed font-light">
-                  Highly accurate, multi-language speech-to-text powered by state-of-the-art ASR models. Search through spoken words instantly.
+                  Need a specific soundbite? Search through spoken words instantly. We automatically transcribe all dialogue with high accuracy.
                 </p>
               </div>
             </div>
