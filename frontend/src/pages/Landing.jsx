@@ -210,7 +210,7 @@ export default function Landing() {
         </div>
 
         {/* Features Section */}
-        <div id="features" className="py-24 relative z-10 border-t border-gray-200 dark:border-white/5">
+        <div id="features" className="py-24 relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-20">
               <h2 className="text-sm font-bold tracking-widest text-sma-purple uppercase mb-3">Enterprise Capabilities</h2>
@@ -260,7 +260,7 @@ export default function Landing() {
         </div>
 
         {/* How it Works / Tech Workflow */}
-        <div id="how-it-works" className="py-24 relative border-t border-gray-200 dark:border-white/5">
+        <div id="how-it-works" className="py-24 relative z-10 bg-gray-50 dark:bg-white/5">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
               <div>
@@ -356,18 +356,17 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Trusted By / Social Proof Section */}
+        {/* Trusted By / Social Proof Section - Hidden until we have real logos */}
+        {/*
         <div className="py-20 border-t border-gray-200 dark:border-white/5 relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            {/* 
-              TODO: Thêm dải logo khách hàng hoặc case studies thật tại đây.
-              Vui lòng KHÔNG dùng logo giả mạo hoặc tên công ty giả theo đúng Action Item 7.2.
-            */}
+             TODO: Thêm dải logo khách hàng hoặc case studies thật tại đây.
           </div>
         </div>
+        */}
 
         {/* CTA Section */}
-        <div className="relative py-24 overflow-hidden border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
+        <div className="relative py-24 overflow-hidden">
           <div className="max-w-4xl mx-auto px-4 relative z-10 text-center">
             <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">Ready to transform your media library?</h2>
             <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 font-light">Join the future of media asset management. Intelligent, fast, and secure.</p>
