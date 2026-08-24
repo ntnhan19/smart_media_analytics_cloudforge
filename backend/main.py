@@ -54,6 +54,7 @@ async def lifespan(app: FastAPI):
         import models.asset
         import models.ingest_job
         import models.scene
+        import models.saved_search
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables initialized successfully via Auto-Migration.")
@@ -112,6 +113,7 @@ app.include_router(scenes.router, dependencies=[Depends(get_current_user)])
 app.include_router(media.router, dependencies=[Depends(get_current_user)])
 app.include_router(clips.router, dependencies=[Depends(get_current_user)])
 app.include_router(stats.router)
+app.include_router(saved_searches.router, dependencies=[Depends(get_current_user)])
 
 if __name__ == "__main__":
     # pyrefly: ignore [missing-import]

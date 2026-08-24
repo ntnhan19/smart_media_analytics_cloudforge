@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAssets, getTags } from '../services/api';
+import { savedSearchesApi } from '../api/savedSearches';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 import MediaCard from '../components/media/MediaCard';
@@ -35,6 +36,11 @@ export default function Dashboard() {
       setHasCheckedOnboarding(true);
     }
   }, [isLoading, hasCheckedOnboarding]);
+
+  const { data: savedSearchesData, isLoading: isLoadingSavedSearches } = useQuery({
+    queryKey: ['savedSearches'],
+    queryFn: savedSearchesApi.list,
+  });
 
   const { data: tagsData } = useQuery({
     queryKey: ['tags'],
@@ -263,6 +269,41 @@ export default function Dashboard() {
               </div>
             ) : (
               <p className="text-sm text-gray-500 dark:text-gray-400">No recent searches.</p>
+            )}
+          </div>
+
+          {/* Saved Searches Card */}
+          <div className="bg-white dark:bg-[#1a1b26] p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Icon icon="lucide:bookmark" className="text-sma-purple" />
+              Saved Searches
+            </h3>
+            {isLoadingSavedSearches ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+            ) : savedSearchesData && savedSearchesData.length > 0 ? (
+              <div className="flex flex-col space-y-2">
+                {savedSearchesData.slice(0, 5).map((item) => (
+                  <button 
+                    key={item.id} 
+                    onClick={() => navigate(`/app/search?q=${encodeURIComponent(item.query_text)}`)}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-sma-purple/5 dark:bg-sma-purple/10 text-gray-800 dark:text-gray-200 hover:bg-sma-purple/10 dark:hover:bg-sma-purple/20 transition-colors text-left"
+                  >
+                    <Icon icon="lucide:bookmark" className="text-sma-purple shrink-0" width="16" />
+                    <span className="text-sm font-medium truncate">{item.query_text}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col space-y-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">You haven't saved any semantic searches yet.</p>
+                <button 
+                  onClick={() => navigate('/app/search')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-sma-purple/10 text-sma-purple font-medium hover:bg-sma-purple hover:text-white transition-colors"
+                >
+                  Try Semantic Search
+                  <Icon icon="lucide:arrow-right" width="16" />
+                </button>
+              </div>
             )}
           </div>
         </div>
