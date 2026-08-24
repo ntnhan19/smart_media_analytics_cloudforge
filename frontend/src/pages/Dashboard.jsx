@@ -88,15 +88,15 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto space-y-6 relative min-h-full flex flex-col p-2 pb-12">
       <WelcomeModal isOpen={showWelcomeModal} onClose={closeWelcomeModal} />
       
-      {/* Page Header (P2.4 Consistent Header) */}
-      <div className="mb-2">
+      {/* Page Header (Consistent Header) */}
+      <div className="flex items-center justify-between mb-2 mt-2">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-            <Icon icon="lucide:layout-dashboard" width="20" className="text-gray-700 dark:text-gray-300" />
+          <div className="p-2.5 bg-sma-purple/10 dark:bg-sma-purple/20 rounded-xl">
+            <Icon icon="lucide:layout-dashboard" width="24" height="24" className="text-sma-purple dark:text-[#A78BFA]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Overview of your media and AI processing</p>
+            <h1 className="text-2xl font-bold font-inter text-gray-900 dark:text-white tracking-tight">Dashboard</h1>
+            <p className="text-sm font-inter text-gray-500 dark:text-gray-400">Overview of your media and AI processing</p>
           </div>
         </div>
       </div>

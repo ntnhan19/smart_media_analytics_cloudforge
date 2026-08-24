@@ -28,14 +28,14 @@ export default function Favourites() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 relative min-h-full flex flex-col p-2">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 mt-2">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-red-100 dark:bg-red-500/20 rounded-xl">
+          <div className="p-2.5 bg-red-100 dark:bg-red-500/20 rounded-xl">
             <Icon icon="lucide:heart" width="24" height="24" className="text-red-500" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Favourites</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Your most important media assets</p>
+            <h1 className="text-2xl font-bold font-inter text-gray-900 dark:text-white tracking-tight">Favourites</h1>
+            <p className="text-sm font-inter text-gray-500 dark:text-gray-400">Your most important media assets</p>
           </div>
         </div>
       </div>
