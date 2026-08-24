@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { useToast } from './ToastContext';
 
 const JobContext = createContext();
 
 export const JobProvider = ({ children }) => {
+  const { showToast } = useToast();
   const [activeJobs, setActiveJobs] = useState(() => {
     try {
       const stored = localStorage.getItem('active_jobs');
@@ -45,17 +47,24 @@ export const JobProvider = ({ children }) => {
 
   const updateJob = useCallback((jobUpdate) => {
     setActiveJobs(prev => {
+      const job = prev.find(j => j.job_id === jobUpdate.job_id);
+      if (job && job.status !== 'completed' && jobUpdate.status === 'completed') {
+        setTimeout(() => showToast(`AI Processing completed for ${job.file_name || 'video'}`, 'success', 5000), 0);
+      } else if (job && job.status !== 'failed' && jobUpdate.status === 'failed') {
+        setTimeout(() => showToast(`AI Processing failed for ${job.file_name || 'video'}`, 'error', 5000), 0);
+      }
+
       let updated = false;
-      const newJobs = prev.map(job => {
-        if (job.job_id === jobUpdate.job_id) {
+      const newJobs = prev.map(j => {
+        if (j.job_id === jobUpdate.job_id) {
           updated = true;
-          return { ...job, ...jobUpdate };
+          return { ...j, ...jobUpdate };
         }
-        return job;
+        return j;
       });
       return updated ? newJobs : prev;
     });
-  }, []);
+  }, [showToast]);
 
   const removeJob = useCallback((jobId) => {
     setActiveJobs(prev => prev.filter(j => j.job_id !== jobId));

@@ -20,6 +20,8 @@ import { JobProvider } from './contexts/JobContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { useEffect } from 'react';
 
+import { ToastProvider } from './contexts/ToastContext';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -44,34 +46,36 @@ function App() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%' }}>
       <div style={{ flex: 1 }}>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <JobProvider>
-              <BrowserRouter>
-                <Routes>
-                  {/* Public Routes */}
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/login" element={<Login />} />
+          <ToastProvider>
+            <AuthProvider>
+              <JobProvider>
+                <BrowserRouter>
+                  <Routes>
+                    {/* Public Routes */}
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/login" element={<Login />} />
 
-                  {/* Private App Routes */}
-                  <Route path="/app" element={
-                    <RequireAuth>
-                      <AppShell />
-                    </RequireAuth>
-                  }>
-                    <Route index element={<Dashboard />} />
-                    <Route path="assets" element={<Assets />} />
-                    <Route path="search" element={<Search />} />
-                    <Route path="favourites" element={<Favourites />} />
-                    <Route path="trash" element={<Trash />} />
-                    <Route path="assets/:id" element={<AssetDetail />} />
-                    <Route path="upload" element={<Upload />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="uikit" element={<UiKitDemo />} />
-                  </Route>
-                </Routes>
-              </BrowserRouter>
-            </JobProvider>
-          </AuthProvider>
+                    {/* Private App Routes */}
+                    <Route path="/app" element={
+                      <RequireAuth>
+                        <AppShell />
+                      </RequireAuth>
+                    }>
+                      <Route index element={<Dashboard />} />
+                      <Route path="assets" element={<Assets />} />
+                      <Route path="search" element={<Search />} />
+                      <Route path="favourites" element={<Favourites />} />
+                      <Route path="trash" element={<Trash />} />
+                      <Route path="assets/:id" element={<AssetDetail />} />
+                      <Route path="upload" element={<Upload />} />
+                      <Route path="settings" element={<Settings />} />
+                      <Route path="uikit" element={<UiKitDemo />} />
+                    </Route>
+                  </Routes>
+                </BrowserRouter>
+              </JobProvider>
+            </AuthProvider>
+          </ToastProvider>
         </QueryClientProvider>
       </div>
     </div>
