@@ -470,7 +470,7 @@ export default function Assets() {
                     Your Library is Empty
                   </h2>
                   <p className="text-[16px] md:text-[18px] text-gray-500 dark:text-gray-400 mt-3 font-inter max-w-[480px] mx-auto leading-relaxed">
-                    Upload your first video to unleash the power of Gemini AI and semantic search.
+                    Upload your first video to unleash the power of AI and semantic search.
                   </p>
                 </div>
 
