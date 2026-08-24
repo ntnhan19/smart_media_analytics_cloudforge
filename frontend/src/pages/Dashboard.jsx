@@ -107,7 +107,7 @@ export default function Dashboard() {
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {displayName}! 👋</h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xl">
             You currently have <strong className="text-sma-purple dark:text-white">{totalAssets}</strong> assets in your library. 
-            {processingJobs > 0 && <span> <strong className="text-blue-500">{processingJobs}</strong> videos are being analyzed by Gemini AI.</span>}
+            {processingJobs > 0 && <span> <strong className="text-blue-500">{processingJobs}</strong> videos are being analyzed by AI.</span>}
           </p>
           <div className="flex flex-wrap gap-4 mt-6">
             <button 
@@ -138,15 +138,18 @@ export default function Dashboard() {
       {/* 2. Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Assets', value: totalAssets, icon: 'database', color: 'text-sma-purple', bg: 'bg-sma-purple/10' },
-          { label: 'AI Processing', value: processingJobs, icon: 'cpu', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: 'Favourites', value: favouritesCount, icon: 'heart', color: 'text-red-500', bg: 'bg-red-500/10' },
-          { label: 'Storage Used', value: `${(totalAssets * 12.5).toFixed(1)} MB`, icon: 'hard-drive', color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
+          { label: 'Total Assets', value: totalAssets, icon: 'database', color: 'text-sma-purple', bg: 'bg-sma-purple/10', microcopy: totalAssets === 0 ? 'Upload to get started' : 'Ready to analyze' },
+          { label: 'AI Processing', value: processingJobs, icon: 'cpu', color: 'text-blue-500', bg: 'bg-blue-500/10', microcopy: processingJobs > 0 ? 'In progress...' : 'All caught up' },
+          { label: 'Favourites', value: favouritesCount, icon: 'heart', color: 'text-red-500', bg: 'bg-red-500/10', microcopy: favouritesCount > 0 ? 'Starred items' : 'No favourites yet' },
+          { label: 'Storage Used', value: `${(totalAssets * 12.5).toFixed(1)} MB`, icon: 'hard-drive', color: 'text-emerald-500', bg: 'bg-emerald-500/10', microcopy: 'Of 1GB limit' }
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-[#1a1b26] p-5 rounded-3xl border border-gray-100 dark:border-white/5 flex items-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all cursor-default">
             <div>
               <p className="text-gray-500 dark:text-gray-400 text-[11px] font-bold uppercase tracking-widest mb-1">{stat.label}</p>
-              <h3 className="text-2xl font-black text-gray-900 dark:text-white">{stat.value}</h3>
+              <div className="flex flex-col">
+                <h3 className="text-2xl font-black text-gray-900 dark:text-white">{stat.value}</h3>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium">{stat.microcopy}</span>
+              </div>
             </div>
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${stat.bg}`}>
               <Icon icon={`lucide:${stat.icon}`} width="22" className={stat.color} />

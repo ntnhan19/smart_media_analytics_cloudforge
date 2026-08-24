@@ -7,8 +7,8 @@ const PIPELINE_STAGES = [
   { id: 'metadata', name: 'Extract Metadata', desc: 'Reading metadata and file information', step_keys: ['metadata'] }, 
   { id: 'scene', name: 'Scene Detection', desc: 'Detecting scene changes in videos', step_keys: ['scene_detection'] },
   { id: 'thumbnail', name: 'Proxy & Thumbnail', desc: 'Generating thumbnails for each scene', step_keys: ['proxy'] }, 
-  { id: 'audio', name: 'Audio Transcription (Whisper)', desc: 'Transcribing speech to text', step_keys: ['transcription'] },
-  { id: 'caption', name: 'AI Caption Generation (LlaVa)', desc: 'Generating captions for each scene', step_keys: ['vision_caption', 'keyframe_extraction', 'keyframe_upload'] },
+  { id: 'audio', name: 'Audio Transcription', desc: 'Transcribing speech to text', step_keys: ['transcription'] },
+  { id: 'caption', name: 'AI Caption Generation', desc: 'Generating captions for each scene', step_keys: ['vision_caption', 'keyframe_extraction', 'keyframe_upload'] },
   { id: 'embedding', name: 'Embedding Generation', desc: 'Generating vectors embedding', step_keys: ['embedding'] },
   { id: 'index', name: 'Search Indexing', desc: 'Indexing to vector database', step_keys: ['persisting_results'] } 
 ];
