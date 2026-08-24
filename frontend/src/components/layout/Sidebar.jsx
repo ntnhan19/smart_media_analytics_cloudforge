@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Folder, Heart, Trash, Upload, Settings, Home, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
+import { Icon } from '@iconify/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAssets } from '../../services/api';
 import { projectsApi } from '../../api/projects';
