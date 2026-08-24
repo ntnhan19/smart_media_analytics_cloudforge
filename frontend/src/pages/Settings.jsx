@@ -76,9 +76,16 @@ export default function Settings() {
       )}
 
       {/* Header */}
-      <div className="mb-8 shrink-0 relative z-10">
-        <h1 className="text-3xl font-extrabold font-inter text-gray-900 dark:text-white tracking-tight">{t('settings.title')}</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 font-medium">{t('settings.subtitle')}</p>
+      <div className="flex items-center justify-between mb-8 mt-2 shrink-0 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl">
+            <Icon icon="lucide:settings" width="24" height="24" className="text-gray-600 dark:text-gray-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold font-inter text-gray-900 dark:text-white tracking-tight">{t('settings.title')}</h1>
+            <p className="text-sm font-inter text-gray-500 dark:text-gray-400">{t('settings.subtitle')}</p>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="flex-1 flex flex-col min-h-0 relative z-10">

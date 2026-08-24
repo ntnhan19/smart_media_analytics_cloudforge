@@ -51,17 +51,17 @@ export default function Upload() {
     <div className="h-full overflow-hidden text-gray-900 dark:text-white font-inter flex flex-col gap-2 transition-colors">
 
       {/* ── HEADER BAR ── */}
-      <div className="shrink-0 flex items-center justify-between py-1">
-        {/* Left: Title */}
-        <div>
-          <h1 className="text-[15px] font-bold leading-tight">Upload Media</h1>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight transition-colors">Add your media to your local library</p>
+      <div className="flex items-center justify-between mb-4 mt-2 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-emerald-100 dark:bg-emerald-500/20 rounded-xl">
+            <Icon icon="lucide:upload-cloud" width="24" height="24" className="text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold font-inter text-gray-900 dark:text-white tracking-tight">Upload Media</h1>
+            <p className="text-sm font-inter text-gray-500 dark:text-gray-400">Add your media to your local library</p>
+          </div>
         </div>
-
       </div>
-
-      {/* Divider line */}
-      <div className="shrink-0 h-px bg-gray-200 dark:bg-white/5 transition-colors" />
 
       {/* ── MAIN GRID WRAPPER ── */}
       <div
