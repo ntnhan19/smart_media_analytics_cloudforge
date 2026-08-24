@@ -54,8 +54,8 @@ export default function Upload() {
       {/* ── HEADER BAR ── */}
       <div className="flex items-center justify-between mb-4 mt-2 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-100 dark:bg-emerald-500/20 rounded-xl">
-            <Icon icon="lucide:upload-cloud" width="24" height="24" className="text-emerald-600 dark:text-emerald-400" />
+          <div className="p-2.5 bg-sma-purple/10 rounded-xl">
+            <Icon icon="lucide:upload-cloud" width="24" height="24" className="text-sma-purple" />
           </div>
           <div>
             <h1 className="text-2xl font-bold font-inter text-gray-900 dark:text-white tracking-tight">Upload Media</h1>
