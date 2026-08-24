@@ -86,7 +86,7 @@ export default function AIProcessingPanel() {
   const statusColor = totalJobs === 0 ? '#6B7280' : (failedJobs.length > 0 ? '#EF4444' : '#4ADE80');
 
   return (
-    <div className="w-[268px] bg-[#7B5CF5]/5 dark:bg-[#7B5CF5]/10 border border-sma-purple/30 dark:border-[#4F8EF7]/50 rounded-[8px] p-[12px] flex flex-col shrink-0 transition-colors">
+    <div className="w-full bg-[#7B5CF5]/5 dark:bg-[#7B5CF5]/10 border border-sma-purple/30 dark:border-[#4F8EF7]/50 rounded-[8px] p-[12px] flex flex-col shrink-0 transition-colors">
       <div className="flex items-center justify-between mb-[12px]">
         <h2 className="font-bold text-[10px] text-[#7B5CF5] uppercase truncate mr-2">SMA - AI Processing</h2>
         <div className="flex items-center gap-1.5 shrink-0">
