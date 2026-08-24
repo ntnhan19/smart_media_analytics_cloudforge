@@ -2,12 +2,14 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import MediaCard from '../components/media/MediaCard';
 import { Icon } from '@iconify/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import SearchBar from '../components/search/SearchBar';
 import SearchFilters from '../components/search/SearchFilters';
 import SearchHistory from '../components/search/SearchHistory';
 import { getSearchHistory, addSearchHistory, clearSearchHistory } from '../utils/history';
 import WelcomeModal from '../components/onboarding/WelcomeModal';
+import MoveToProjectModal from '../components/project/MoveToProjectModal';
+import { projectsApi } from '../api/projects';
 
 import { getAssets, getTags } from '../services/api';
 
@@ -30,8 +32,12 @@ export default function Assets() {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get('project');
   const queryClient = useQueryClient();
 
   const { data: tagsData, isLoading: isLoadingTags, isError: isErrorTags, refetch: refetchTags } = useQuery({
@@ -47,8 +53,8 @@ export default function Assets() {
   const offset = (currentPage - 1) * itemsPerPage;
 
   const { data: assetsData, isLoading, error } = useQuery({
-    queryKey: ['assets', currentPage],
-    queryFn: ({ signal }) => getAssets(signal, itemsPerPage, offset),
+    queryKey: ['assets', currentPage, projectId],
+    queryFn: ({ signal }) => getAssets(signal, itemsPerPage, offset, projectId),
     keepPreviousData: true,
   });
 
@@ -197,6 +203,23 @@ export default function Assets() {
       showToast('Failed to delete some videos', 'error');
     } finally {
       setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkMove = async (targetProjectId) => {
+    setIsMoving(true);
+    try {
+      await Promise.all(selectedAssetIds.map(id => projectsApi.assignAsset(id, targetProjectId)));
+      showToast(`${selectedAssetIds.length} assets moved successfully`, 'success');
+      setIsMoveModalOpen(false);
+      setSelectedAssetIds([]);
+      setIsSelectMode(false);
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+    } catch (err) {
+      console.error('Bulk move error:', err);
+      showToast('Failed to move assets', 'error');
+    } finally {
+      setIsMoving(false);
     }
   };
 
@@ -371,14 +394,22 @@ export default function Assets() {
                       <button
                         onClick={handleSelectAll}
                         className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white px-2 transition-colors border-r border-sma-purple/20"
-                        disabled={isBulkDeleting}
+                        disabled={isBulkDeleting || isMoving}
                       >
                         {selectedAssetIds.length === filteredAssets.length ? 'Deselect All' : 'Select All'}
                       </button>
                       <button
+                        onClick={() => setIsMoveModalOpen(true)}
+                        className="flex items-center px-2 py-1 bg-indigo-500 hover:bg-indigo-600 text-white text-xs rounded transition-colors disabled:opacity-50 ml-2"
+                        disabled={isBulkDeleting || isMoving || selectedAssetIds.length === 0}
+                      >
+                        <Icon icon="lucide:folder-input" className="mr-1 w-3 h-3" />
+                        Move
+                      </button>
+                      <button
                         onClick={handleBulkDelete}
                         className="flex items-center px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded transition-colors disabled:opacity-50 ml-2"
-                        disabled={isBulkDeleting || selectedAssetIds.length === 0}
+                        disabled={isBulkDeleting || isMoving || selectedAssetIds.length === 0}
                       >
                         {isBulkDeleting ? <Icon icon="lucide:loader-2" className="animate-spin mr-1 w-3 h-3" /> : <Icon icon="lucide:trash-2" className="mr-1 w-3 h-3" />}
                         Delete
@@ -499,6 +530,14 @@ export default function Assets() {
           )}
         </div>
       )}
+      {/* Move to Project Modal */}
+      <MoveToProjectModal
+        isOpen={isMoveModalOpen}
+        onClose={() => setIsMoveModalOpen(false)}
+        onSubmit={handleBulkMove}
+        isLoading={isMoving}
+        selectedCount={selectedAssetIds.length}
+      />
     </div>
   );
 }

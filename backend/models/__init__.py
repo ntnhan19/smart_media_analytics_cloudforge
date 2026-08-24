@@ -4,5 +4,6 @@ from models.asset import Asset
 from models.scene import Scene
 from models.ingest_job import IngestJob
 from models.saved_search import SavedSearch
+from models.project import Project
 
-__all__ = ["Base", "Asset", "Scene", "IngestJob", "SavedSearch"]
+__all__ = ["Base", "Asset", "Scene", "IngestJob", "SavedSearch", "Project"]

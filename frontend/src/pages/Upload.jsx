@@ -22,7 +22,7 @@ export default function Upload() {
     setIsReviewOpen(true); // Tự động mở panel khi click vào queue
   };
 
-  const handleUpload = async (files) => {
+  const handleUpload = async (files, projectId) => {
     // Prevent synthetic events from being treated as files
     if (!files || files.type === 'click' || files._reactName === 'onClick') return;
 
@@ -39,7 +39,7 @@ export default function Upload() {
             // Sử dụng API upload file vật lý mới đã có ở BE
             const res = await uploadMediaFile(
               f,
-              { scene_detection: true, transcription: true, vision_caption: true, whisper_model: 'base' }
+              { scene_detection: true, transcription: true, vision_caption: true, whisper_model: 'base', project_id: projectId }
             );
             if (res?.job_id) addJob({ job_id: res.job_id, asset_id: res.asset_id ?? null, file_name: f.name, file_size: f.size, status: 'queued', progress: 0, current_step: null, error_message: null });
           } catch (e) { console.error(e); }

@@ -20,6 +20,7 @@ class AssetResponse(BaseModel):
     transcripts_json: Optional[list] = None
     thumbnail_url: Optional[str] = None
     is_favorite: bool = False
+    project_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -30,6 +31,9 @@ class PaginatedAssetResponse(BaseModel):
 
 class AssetFavoriteUpdate(BaseModel):
     is_favorite: bool
+
+class AssetProjectUpdate(BaseModel):
+    project_id: Optional[str]
 
 class SceneResponse(BaseModel):
     scene_id: str

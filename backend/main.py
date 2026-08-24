@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 
 from config import settings
 from core.limiter import limiter
-from api.routes import health, search, ingest, assets, scenes, media, clips, stats
+from api.routes import health, search, ingest, assets, scenes, media, clips, stats, saved_searches, projects
 
 class JSONFormatter(logging.Formatter):
     def format(self, record):
@@ -55,6 +55,7 @@ async def lifespan(app: FastAPI):
         import models.ingest_job
         import models.scene
         import models.saved_search
+        import models.project
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables initialized successfully via Auto-Migration.")
@@ -114,6 +115,7 @@ app.include_router(media.router, dependencies=[Depends(get_current_user)])
 app.include_router(clips.router, dependencies=[Depends(get_current_user)])
 app.include_router(stats.router)
 app.include_router(saved_searches.router, dependencies=[Depends(get_current_user)])
+app.include_router(projects.router, dependencies=[Depends(get_current_user)])
 
 if __name__ == "__main__":
     # pyrefly: ignore [missing-import]

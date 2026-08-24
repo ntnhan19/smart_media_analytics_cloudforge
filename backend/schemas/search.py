@@ -7,6 +7,7 @@ class TagFrequency(BaseModel):
 
 class SearchRequestFilters(BaseModel):
     asset_id: Optional[str] = Field(None, description="Filter by a specific asset ID for in-video search.")
+    project_id: Optional[str] = Field(None, description="Filter by a specific project ID.")
     media_type: List[str] = Field(default_factory=list, description="Filter by media type. Empty array = no filter.")
     tags: List[str] = Field(default_factory=list, description="Filter by tags. Empty array = no filter.")
 
