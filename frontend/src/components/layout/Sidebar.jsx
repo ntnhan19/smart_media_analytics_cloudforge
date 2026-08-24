@@ -41,7 +41,6 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
 
   const bottomNavItems = [
     { name: 'Settings', path: '/app/settings', id: 'settings', icon: Settings },
-    { name: 'Website', path: '/', id: 'home', icon: Home },
   ];
 
   return (
@@ -51,7 +50,7 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
       <div className={`pt-5 pb-5 shrink-0 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between pl-6 pr-4'}`}>
         {!isCollapsed && (
           <NavLink to="/" className="flex items-center">
-            <img src="/logo.png" alt="SMA Logo" className="h-9 w-auto object-contain dark:invert-0 invert transition-transform hover:scale-105" />
+            <img src="/logo.png" alt="SMA Logo" className="h-14 w-auto object-contain dark:invert-0 invert transition-transform hover:scale-105" />
           </NavLink>
         )}
         {(onClose || onOpen) && (
@@ -67,7 +66,7 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
 
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto scrollbar-hide">
         {/* Upload Button - Primary Action */}
-        <div className={`shrink-0 mb-6 ${isCollapsed ? 'px-2' : 'px-4'}`}>
+        <div className={`shrink-0 mb-6 flex ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
           <NavLink
             to="/app/upload"
             title={isCollapsed ? "Upload" : undefined}
