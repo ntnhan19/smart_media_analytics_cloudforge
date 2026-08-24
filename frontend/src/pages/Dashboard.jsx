@@ -139,9 +139,9 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Assets', value: totalAssets, icon: 'database', color: 'text-sma-purple', bg: 'bg-sma-purple/10', microcopy: totalAssets === 0 ? 'Upload to get started' : 'Ready to analyze' },
-          { label: 'AI Processing', value: processingJobs, icon: 'cpu', color: 'text-blue-500', bg: 'bg-blue-500/10', microcopy: processingJobs > 0 ? 'In progress...' : 'All caught up' },
-          { label: 'Favourites', value: favouritesCount, icon: 'heart', color: 'text-red-500', bg: 'bg-red-500/10', microcopy: favouritesCount > 0 ? 'Starred items' : 'No favourites yet' },
-          { label: 'Storage Used', value: `${(totalAssets * 12.5).toFixed(1)} MB`, icon: 'hard-drive', color: 'text-emerald-500', bg: 'bg-emerald-500/10', microcopy: 'Of 1GB limit' }
+          { label: 'AI Processing', value: processingJobs, icon: 'cpu', color: 'text-sma-purple', bg: 'bg-sma-purple/10', microcopy: processingJobs > 0 ? 'In progress...' : 'All caught up' },
+          { label: 'Favourites', value: favouritesCount, icon: 'heart', color: 'text-sma-purple', bg: 'bg-sma-purple/10', microcopy: favouritesCount > 0 ? 'Starred items' : 'No favourites yet' },
+          { label: 'Storage Used', value: `${(totalAssets * 12.5).toFixed(1)} MB`, icon: 'hard-drive', color: 'text-sma-purple', bg: 'bg-sma-purple/10', microcopy: 'Of 1GB limit' }
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-[#1a1b26] p-5 rounded-3xl border border-gray-100 dark:border-white/5 flex items-center justify-between shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all cursor-default">
             <div>

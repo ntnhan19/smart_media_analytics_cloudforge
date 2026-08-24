@@ -30,8 +30,8 @@ export default function Favourites() {
     <div className="max-w-7xl mx-auto space-y-4 relative min-h-full flex flex-col p-2">
       <div className="flex items-center justify-between mb-6 mt-2">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-red-100 dark:bg-red-500/20 rounded-xl">
-            <Icon icon="lucide:heart" width="24" height="24" className="text-red-500" />
+          <div className="p-2.5 bg-sma-purple/10 rounded-xl">
+            <Icon icon="lucide:heart" width="24" height="24" className="text-sma-purple" />
           </div>
           <div>
             <h1 className="text-2xl font-bold font-inter text-gray-900 dark:text-white tracking-tight">Favourites</h1>
