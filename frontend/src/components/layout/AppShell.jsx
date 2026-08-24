@@ -40,6 +40,7 @@ export default function AppShell() {
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pl-4 pr-3 pt-2 pb-2">
           <Outlet />
         </div>
+        <OnboardingChecklist />
       </main>
     </div>
   );
