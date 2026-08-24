@@ -32,26 +32,26 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
     trash: deletedCount,
   };
 
-  const navItems = [
+  const mainNavItems = [
     { name: 'Dashboard', path: '/app', id: 'dashboard', icon: LayoutDashboard },
     { name: 'Assets', path: '/app/assets', id: 'assets', icon: Folder },
     { name: 'Favourites', path: '/app/favourites', id: 'favourites', icon: Heart },
     { name: 'Trash', path: '/app/trash', id: 'trash', icon: Trash },
-    { name: 'Upload', path: '/app/upload', id: 'upload', icon: Upload },
+  ];
+
+  const bottomNavItems = [
     { name: 'Settings', path: '/app/settings', id: 'settings', icon: Settings },
     { name: 'Website', path: '/', id: 'home', icon: Home },
   ];
 
   return (
-    // Sửa h-screen thành h-full để Sidebar bám theo container cha
-    // Sử dụng overflow-hidden để ngăn chặn thanh cuộn ngoài ý muốn
-    <aside className={`${isCollapsed ? 'w-[64px]' : 'w-[310px]'} h-full bg-white dark:bg-[#16132A] border-r border-gray-200 dark:border-transparent flex flex-col shrink-0 overflow-hidden transition-all duration-300`}>
+    <aside className={`${isCollapsed ? 'w-[64px]' : 'w-[260px]'} h-full bg-white dark:bg-[#16132A] border-r border-gray-200 dark:border-transparent flex flex-col shrink-0 overflow-hidden transition-all duration-300 z-20`}>
 
-      {/* Header - Cố định */}
-      <div className={`pt-3 pb-3 shrink-0 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between pl-[20px] pr-[16px]'}`}>
+      {/* Header */}
+      <div className={`pt-5 pb-5 shrink-0 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between pl-6 pr-4'}`}>
         {!isCollapsed && (
           <NavLink to="/" className="flex items-center">
-            <img src="/logo.png" alt="SMA Logo" className="h-14 w-auto object-contain dark:invert-0 invert transition-transform hover:scale-105" />
+            <img src="/logo.png" alt="SMA Logo" className="h-9 w-auto object-contain dark:invert-0 invert transition-transform hover:scale-105" />
           </NavLink>
         )}
         {(onClose || onOpen) && (
@@ -65,57 +65,95 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
         )}
       </div>
 
-      {/* Nav - Cố định */}
-      <nav className={`flex flex-col items-center space-y-4 w-full shrink-0 my-2 ${isCollapsed ? 'px-2' : 'px-[31px]'}`}>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeMenu === item.id;
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              title={isCollapsed ? item.name : undefined}
-              className={`flex items-center rounded-lg transition-colors ${isActive ? (isCollapsed ? 'bg-sma-purple/10 dark:bg-sma-purple/20 text-sma-purple' : 'bg-sma-purple text-white') : 'bg-transparent hover:bg-gray-100 dark:hover:bg-[#1A1630]'} ${isCollapsed ? 'w-10 h-10 justify-center' : 'w-[240px] h-10 px-3 gap-3'}`}
-            >
-              <Icon className={`w-5 h-5 shrink-0 ${isActive ? (isCollapsed ? 'text-sma-purple dark:text-[#9A7DFF]' : 'text-white') : 'text-gray-600 dark:text-gray-400'}`} />
-              {!isCollapsed && (
-                <span className={`font-medium text-[15px] ${isActive ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>{item.name}</span>
-              )}
-            </NavLink>
-          );
-        })}
-      </nav>
-
-      {/* Phần trống để đẩy nội dung xuống nếu cần */}
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto scrollbar-hide">
+        {/* Upload Button - Primary Action */}
+        <div className={`shrink-0 mb-6 ${isCollapsed ? 'px-2' : 'px-4'}`}>
+          <NavLink
+            to="/app/upload"
+            title={isCollapsed ? "Upload" : undefined}
+            className={`flex items-center justify-center rounded-xl transition-all duration-200 bg-sma-purple hover:bg-sma-purple/90 text-white shadow-sm hover:shadow active:scale-[0.98] ${isCollapsed ? 'w-10 h-10' : 'w-full h-11 gap-2.5'}`}
+          >
+            <Upload className={`shrink-0 ${isCollapsed ? 'w-5 h-5' : 'w-4.5 h-4.5'}`} />
+            {!isCollapsed && (
+              <span className="font-semibold text-[14px]">Upload Media</span>
+            )}
+          </NavLink>
+        </div>
+
+        {/* Main Nav */}
+        <nav className={`flex flex-col space-y-1 shrink-0 ${isCollapsed ? 'px-2 items-center' : 'px-3'}`}>
+          {mainNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeMenu === item.id;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                title={isCollapsed ? item.name : undefined}
+                className={`flex items-center rounded-lg transition-all duration-200 ${isActive ? 'bg-sma-purple/10 text-sma-purple dark:bg-sma-purple/20 dark:text-[#9A7DFF]' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1A1630] hover:text-gray-900 dark:hover:text-gray-200'} ${isCollapsed ? 'w-10 h-10 justify-center' : 'w-full h-10 px-3 gap-3'}`}
+              >
+                <Icon className={`w-[18px] h-[18px] shrink-0`} />
+                {!isCollapsed && (
+                  <span className={`font-medium text-[14px]`}>{item.name}</span>
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Spacer to push bottom items down */}
+        <div className="flex-1"></div>
+
+        {/* Bottom Nav */}
+        <nav className={`flex flex-col space-y-1 shrink-0 ${isCollapsed ? 'px-2 items-center' : 'px-3'}`}>
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeMenu === item.id;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                title={isCollapsed ? item.name : undefined}
+                className={`flex items-center rounded-lg transition-all duration-200 ${isActive ? 'bg-sma-purple/10 text-sma-purple dark:bg-sma-purple/20 dark:text-[#9A7DFF]' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1A1630] hover:text-gray-900 dark:hover:text-gray-200'} ${isCollapsed ? 'w-10 h-10 justify-center' : 'w-full h-10 px-3 gap-3'}`}
+              >
+                <Icon className={`w-[18px] h-[18px] shrink-0`} />
+                {!isCollapsed && (
+                  <span className={`font-medium text-[14px]`}>{item.name}</span>
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* AI Processing Panel */}
         {!isCollapsed && (
-          <div className="flex justify-center w-full mt-auto py-4">
+          <div className="flex justify-center w-full py-4 px-4 shrink-0 mt-2">
             <AIProcessingPanel />
           </div>
         )}
       </div>
 
-      {/* Footer - Cố định */}
+      {/* Footer */}
       <div className={`pt-3 pb-4 flex flex-col justify-center shrink-0 border-t border-gray-200 dark:border-[#2D2844] transition-colors ${isCollapsed ? 'px-2 items-center' : 'px-4'}`}>
         {!isCollapsed ? (
-          <div className="flex items-center justify-between bg-gray-50 dark:bg-[#1A1630] rounded-lg p-2">
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-[#1A1630] rounded-xl p-2.5">
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-8 h-8 rounded-full bg-sma-purple text-white flex items-center justify-center font-bold text-sm shrink-0">
+              <div className="w-8 h-8 rounded-full bg-sma-purple text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
                 {(user?.attributes?.name || user?.username || 'U')[0].toUpperCase()}
               </div>
-              <div className="flex flex-col truncate">
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">
+              <div className="flex flex-col truncate pr-2">
+                <span className="text-[13px] font-semibold text-gray-800 dark:text-gray-200 truncate leading-tight">
                   {user?.attributes?.name || user?.username || 'User'}
                 </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate leading-tight mt-0.5">
                   {user?.email || ''}
                 </span>
               </div>
             </div>
             <button
               onClick={signOut}
-              title="Đăng xuất"
-              className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors shrink-0"
+              title="Log Out"
+              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors shrink-0"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -123,10 +161,10 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
         ) : (
           <button
             onClick={signOut}
-            title="Đăng xuất"
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 dark:text-gray-400 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors"
+            title="Log Out"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 dark:text-gray-400 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-[18px] h-[18px]" />
           </button>
         )}
       </div>
