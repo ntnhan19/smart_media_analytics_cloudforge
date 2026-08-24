@@ -142,3 +142,11 @@ export const toggleFavorite = async (assetId, isFavorite) => {
   });
   return response.data;
 };
+
+export const updateAssetTags = async (assetId, tags, mode = "append") => {
+  const response = await api.patch(`/assets/${assetId}/tags`, {
+    tags: tags,
+    mode: mode
+  });
+  return response.data;
+};

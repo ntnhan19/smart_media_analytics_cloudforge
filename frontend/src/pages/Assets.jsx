@@ -223,6 +223,46 @@ export default function Assets() {
     }
   };
 
+  const handleBulkFavorite = async () => {
+    setIsBulkDeleting(true); // Reusing this state for loading indicator
+    try {
+      const { toggleFavorite } = await import('../services/api');
+      await Promise.all(selectedAssetIds.map(id => toggleFavorite(id, true)));
+      showToast(`${selectedAssetIds.length} assets added to favorites`, 'success');
+      setSelectedAssetIds([]);
+      setIsSelectMode(false);
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+    } catch (err) {
+      console.error('Bulk favorite error:', err);
+      showToast('Failed to favorite assets', 'error');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkTag = async () => {
+    const tagsInput = window.prompt('Enter tags to add (comma separated):');
+    if (!tagsInput || !tagsInput.trim()) return;
+    
+    const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t);
+    if (tags.length === 0) return;
+
+    setIsBulkDeleting(true); // Reusing loading state
+    try {
+      const { updateAssetTags } = await import('../services/api');
+      await Promise.all(selectedAssetIds.map(id => updateAssetTags(id, tags, "append")));
+      showToast(`Added tags to ${selectedAssetIds.length} assets`, 'success');
+      setSelectedAssetIds([]);
+      setIsSelectMode(false);
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+    } catch (err) {
+      console.error('Bulk tag error:', err);
+      showToast('Failed to add tags', 'error');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const handleToggleMediaType = (type) => {
     setActiveMediaTypes(prev => {
       const next = prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type];
@@ -397,6 +437,22 @@ export default function Assets() {
                         disabled={isBulkDeleting || isMoving}
                       >
                         {selectedAssetIds.length === filteredAssets.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                      <button
+                        onClick={handleBulkFavorite}
+                        className="flex items-center px-2 py-1 bg-pink-500 hover:bg-pink-600 text-white text-xs rounded transition-colors disabled:opacity-50 ml-2"
+                        disabled={isBulkDeleting || isMoving || selectedAssetIds.length === 0}
+                      >
+                        <Icon icon="lucide:heart" className="mr-1 w-3 h-3" />
+                        Favorite
+                      </button>
+                      <button
+                        onClick={handleBulkTag}
+                        className="flex items-center px-2 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs rounded transition-colors disabled:opacity-50 ml-2"
+                        disabled={isBulkDeleting || isMoving || selectedAssetIds.length === 0}
+                      >
+                        <Icon icon="lucide:tag" className="mr-1 w-3 h-3" />
+                        Tag
                       </button>
                       <button
                         onClick={() => setIsMoveModalOpen(true)}

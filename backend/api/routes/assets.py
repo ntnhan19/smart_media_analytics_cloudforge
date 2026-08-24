@@ -8,7 +8,7 @@ from typing import List
 from database import get_db
 from models.asset import Asset
 from models.scene import Scene
-from schemas.asset import AssetResponse, AssetFavoriteUpdate, AssetProjectUpdate, PaginatedAssetResponse
+from schemas.asset import AssetResponse, AssetFavoriteUpdate, AssetProjectUpdate, AssetTagsUpdate, PaginatedAssetResponse
 from schemas.ingest import IngestOptions, IngestResponse
 from services.storage_service import storage_service
 from services.ingest_service import run_reingest_pipeline, run_regenerate_insights_job
@@ -246,6 +246,36 @@ async def update_asset_project(
         await db.refresh(asset)
         
         # Need to re-fetch scenes to build the response properly
+        await db.refresh(asset, ['scenes'])
+        return _build_asset_response(asset)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid asset ID format")
+
+@router.patch("/{asset_id}/tags", response_model=AssetResponse)
+async def update_asset_tags(
+    asset_id: str,
+    update_data: AssetTagsUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        asset_uuid = uuid.UUID(asset_id)
+        asset = await db.get(Asset, asset_uuid)
+        if not asset:
+            raise HTTPException(status_code=404, detail="Asset not found")
+        
+        current_tags = asset.tags or []
+        if update_data.mode == "replace":
+            asset.tags = update_data.tags
+        else:
+            # Append unique
+            for tag in update_data.tags:
+                if tag not in current_tags:
+                    current_tags.append(tag)
+            asset.tags = current_tags
+            
+        await db.commit()
+        await db.refresh(asset)
+        
         await db.refresh(asset, ['scenes'])
         return _build_asset_response(asset)
     except ValueError:

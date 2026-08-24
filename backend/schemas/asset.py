@@ -35,6 +35,10 @@ class AssetFavoriteUpdate(BaseModel):
 class AssetProjectUpdate(BaseModel):
     project_id: Optional[str]
 
+class AssetTagsUpdate(BaseModel):
+    tags: List[str]
+    mode: str = "append" # "append" or "replace"
+
 class SceneResponse(BaseModel):
     scene_id: str
     asset_id: str
