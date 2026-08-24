@@ -1,16 +1,15 @@
-import axios from 'axios';
-import { API_URL } from '../config';
+import api from '../services/api';
 
 export const savedSearchesApi = {
   list: async () => {
-    const response = await axios.get(`${API_URL}/saved-searches/`);
+    const response = await api.get(`/saved-searches/`);
     return response.data;
   },
   create: async (queryText) => {
-    const response = await axios.post(`${API_URL}/saved-searches/`, { query_text: queryText });
+    const response = await api.post(`/saved-searches/`, { query_text: queryText });
     return response.data;
   },
   delete: async (id) => {
-    await axios.delete(`${API_URL}/saved-searches/${id}`);
+    await api.delete(`/saved-searches/${id}`);
   }
 };
