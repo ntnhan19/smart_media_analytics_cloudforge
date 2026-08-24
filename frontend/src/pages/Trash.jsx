@@ -9,12 +9,14 @@ export default function Trash() {
   const [toast, setToast] = useState(null);
   const [isEmptying, setIsEmptying] = useState(false);
 
-  const { data: rawAssets = [], isLoading } = useQuery({
+  const { data: assetsData, isLoading } = useQuery({
     queryKey: ['assets'],
     queryFn: () => getAssets(null, 100, 0),
     retry: false,
     refetchOnWindowFocus: false,
   });
+
+  const rawAssets = assetsData?.items || [];
 
   const getTrashedIds = () => {
     try {
@@ -101,9 +103,13 @@ export default function Trash() {
               <Icon icon="lucide:trash" width="32" height="32" className="text-gray-300 dark:text-gray-600" />
             </div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Trash is empty</h2>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
               No items have been deleted recently.
             </p>
+            <a href="/app/assets" className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-lg font-medium transition-colors inline-flex items-center gap-2">
+              <Icon icon="lucide:layout-grid" width="18" height="18" />
+              View Library
+            </a>
           </div>
         </div>
       ) : (

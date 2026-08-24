@@ -5,12 +5,14 @@ import { Icon } from '@iconify/react';
 import { getAssets } from '../services/api';
 
 export default function Favourites() {
-  const { data: rawAssets = [], isLoading } = useQuery({
+  const { data: assetsData, isLoading } = useQuery({
     queryKey: ['assets'],
     queryFn: () => getAssets(null, 100, 0),
     retry: false,
     refetchOnWindowFocus: false,
   });
+
+  const rawAssets = assetsData?.items || [];
 
   // For this MVP, we simulate favourites via localStorage
   const getFavouriteIds = () => {
@@ -51,9 +53,13 @@ export default function Favourites() {
               <Icon icon="lucide:heart" width="32" height="32" className="text-red-300 dark:text-red-500/50" />
             </div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Favourites Yet</h2>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
               Click the heart icon on any media card to add it to your favourites.
             </p>
+            <a href="/app/assets" className="px-6 py-2.5 bg-sma-purple text-white rounded-lg font-medium shadow-sm hover:bg-[#6b4ce6] transition-colors inline-flex items-center gap-2">
+              <Icon icon="lucide:layout-grid" width="18" height="18" />
+              Go to Library
+            </a>
           </div>
         </div>
       ) : (
