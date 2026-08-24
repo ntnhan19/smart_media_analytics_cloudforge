@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { Menu, X } from 'lucide-react';
+import OnboardingChecklist from '../onboarding/OnboardingChecklist';
 
 export default function AppShell() {
   const location = useLocation();
