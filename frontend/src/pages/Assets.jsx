@@ -12,6 +12,7 @@ import MoveToProjectModal from '../components/project/MoveToProjectModal';
 import { projectsApi } from '../api/projects';
 
 import { getAssets, getTags } from '../services/api';
+import CompareView from '../components/media/CompareView';
 
 const removeAccents = (str) => {
   if (!str) return '';
@@ -24,6 +25,7 @@ export default function Assets() {
   const [activeTags, setActiveTags] = useState([]);
   const [activeMediaTypes, setActiveMediaTypes] = useState(['video', 'image', 'audio']);
   const [searchHistory, setSearchHistoryState] = useState(getSearchHistory());
+  const [isComparing, setIsComparing] = useState(false);
 
   const [sortBy, setSortBy] = useState('newest');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -438,6 +440,16 @@ export default function Assets() {
                       >
                         {selectedAssetIds.length === filteredAssets.length ? 'Deselect All' : 'Select All'}
                       </button>
+                      {selectedAssetIds.length > 1 && (
+                        <button
+                          onClick={() => setIsComparing(true)}
+                          className="flex items-center px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs rounded transition-colors disabled:opacity-50 ml-2"
+                          disabled={isBulkDeleting || isMoving}
+                        >
+                          <Icon icon="lucide:split-square-horizontal" className="mr-1 w-3 h-3" />
+                          Compare
+                        </button>
+                      )}
                       <button
                         onClick={handleBulkFavorite}
                         className="flex items-center px-2 py-1 bg-pink-500 hover:bg-pink-600 text-white text-xs rounded transition-colors disabled:opacity-50 ml-2"
@@ -586,6 +598,14 @@ export default function Assets() {
           )}
         </div>
       )}
+      
+      {isComparing && (
+        <CompareView 
+          assetIds={selectedAssetIds} 
+          onClose={() => setIsComparing(false)} 
+        />
+      )}
+
       {/* Move to Project Modal */}
       <MoveToProjectModal
         isOpen={isMoveModalOpen}
