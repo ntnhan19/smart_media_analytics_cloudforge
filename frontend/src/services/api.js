@@ -13,7 +13,10 @@ api.interceptors.response.use(
     if (axios.isCancel(error)) {
       return Promise.reject(error);
     }
-    console.error('API Error:', error);
+    // Suppress console error for 404s (expected when library is empty)
+    if (error.response && error.response.status !== 404) {
+      console.error('API Error:', error);
+    }
     return Promise.reject(error);
   }
 );
