@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAssets } from '../../services/api';
 import { projectsApi } from '../../api/projects';
-import { projectsApi } from '../../api/projects';
 import AIProcessingPanel from './AIProcessingPanel';
 import CreateProjectModal from '../project/CreateProjectModal';
 import { useToast } from '../../contexts/ToastContext';
