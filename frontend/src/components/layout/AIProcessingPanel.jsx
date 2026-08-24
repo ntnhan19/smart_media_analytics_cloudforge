@@ -86,7 +86,7 @@ export default function AIProcessingPanel() {
   const statusColor = totalJobs === 0 ? '#6B7280' : (failedJobs.length > 0 ? '#EF4444' : '#4ADE80');
 
   return (
-    <div className="w-[268px] bg-[#7B5CF5]/5 dark:bg-[#7B5CF5]/10 border border-sma-purple/30 dark:border-[#4F8EF7]/50 rounded-[8px] p-[12px] flex flex-col shrink-0 transition-colors">
+    <div className="w-full bg-[#7B5CF5]/5 dark:bg-[#7B5CF5]/10 border border-sma-purple/30 dark:border-[#4F8EF7]/50 rounded-[8px] p-[12px] flex flex-col shrink-0 transition-colors">
       <div className="flex items-center justify-between mb-[12px]">
         <h2 className="font-bold text-[10px] text-[#7B5CF5] uppercase truncate mr-2">SMA - AI Processing</h2>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -104,36 +104,38 @@ export default function AIProcessingPanel() {
         </div>
       </div>
 
-      <div className="flex flex-col space-y-[10px]">
-        {PANEL_STAGES.map((stage) => {
-          const stats = smoothStats[stage.id];
-          const hasError = errorStages[stage.id];
-          return (
-            <div key={stage.id} className="space-y-[4px]">
-              <div className="flex justify-between items-center text-gray-900 dark:text-white transition-colors">
-                <div className="flex items-center gap-1">
-                  <span className="font-medium text-[9px] uppercase text-gray-500 dark:text-gray-200 transition-colors">{stage.name}</span>
-                  {hasError && <AlertCircle className="w-2.5 h-2.5 text-[#EF4444]" />}
+      {totalJobs > 0 && (
+        <div className="flex flex-col space-y-[10px]">
+          {PANEL_STAGES.map((stage) => {
+            const stats = smoothStats[stage.id];
+            const hasError = errorStages[stage.id];
+            return (
+              <div key={stage.id} className="space-y-[4px]">
+                <div className="flex justify-between items-center text-gray-900 dark:text-white transition-colors">
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium text-[9px] uppercase text-gray-500 dark:text-gray-200 transition-colors">{stage.name}</span>
+                    {hasError && <AlertCircle className="w-2.5 h-2.5 text-[#EF4444]" />}
+                  </div>
+                  <span className={`font-bold text-[10px] transition-colors ${hasError ? 'text-[#EF4444]' : 'text-gray-900 dark:text-white'}`}>{Math.floor(stats.percent)}%</span>
                 </div>
-                <span className={`font-bold text-[10px] transition-colors ${hasError ? 'text-[#EF4444]' : 'text-gray-900 dark:text-white'}`}>{Math.floor(stats.percent)}%</span>
+                <div className="w-full h-[5px] bg-gray-200 dark:bg-[#D9D9D9]/10 rounded-full overflow-hidden transition-colors">
+                  <div className={`h-full transition-all duration-300 ${hasError ? 'bg-[#EF4444]' : 'bg-[#7B5CF5]'}`} style={{ width: `${stats.percent}%` }}></div>
+                </div>
               </div>
-              <div className="w-full h-[5px] bg-gray-200 dark:bg-[#D9D9D9]/10 rounded-full overflow-hidden transition-colors">
-                <div className={`h-full transition-all duration-300 ${hasError ? 'bg-[#EF4444]' : 'bg-[#7B5CF5]'}`} style={{ width: `${stats.percent}%` }}></div>
-              </div>
+            );
+          })}
+          <div className="h-[1px] w-full bg-gray-200 dark:bg-white/5 my-1 transition-colors"></div>
+          <div className="space-y-[4px]">
+            <div className="flex justify-between items-center transition-colors">
+              <span className="font-bold text-[10px] uppercase text-[#4ADE80]">GLOBAL PROGRESS</span>
+              <span className="font-bold text-[11px] text-[#4ADE80]">{Math.floor(smoothStats.overall)}%</span>
             </div>
-          );
-        })}
-        <div className="h-[1px] w-full bg-gray-200 dark:bg-white/5 my-1 transition-colors"></div>
-        <div className="space-y-[4px]">
-          <div className="flex justify-between items-center transition-colors">
-            <span className="font-bold text-[10px] uppercase text-[#4ADE80]">GLOBAL PROGRESS</span>
-            <span className="font-bold text-[11px] text-[#4ADE80]">{Math.floor(smoothStats.overall)}%</span>
-          </div>
-          <div className="w-full h-[5px] bg-gray-200 dark:bg-[#D9D9D9]/20 rounded-full overflow-hidden transition-colors">
-            <div className="h-full bg-[#4ADE80]" style={{ width: `${smoothStats.overall}%` }}></div>
+            <div className="w-full h-[5px] bg-gray-200 dark:bg-[#D9D9D9]/20 rounded-full overflow-hidden transition-colors">
+              <div className="h-full bg-[#4ADE80]" style={{ width: `${smoothStats.overall}%` }}></div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

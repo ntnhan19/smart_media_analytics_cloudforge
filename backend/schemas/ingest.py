@@ -7,6 +7,7 @@ class IngestOptions(BaseModel):
     transcription: bool = True
     vision_caption: bool = True
     whisper_model: str = "base"
+    project_id: Optional[str] = None
 
 class IngestRequest(BaseModel):
     source_path: str = Field(..., description="Path to the directory containing media files.", json_schema_extra={"example": "/app/data/media"})

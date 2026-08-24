@@ -6,12 +6,14 @@ import { Play } from 'lucide-react';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, signup } = useAuth();
   
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   const from = location.state?.from?.pathname || "/app";
 
@@ -24,14 +26,26 @@ export default function Login() {
 
     setLoading(true);
     setError('');
+    setMessage('');
     
     try {
-      const result = await login(email, password);
+      let result;
+      if (isSignUp) {
+        result = await signup(email, password);
+      } else {
+        result = await login(email, password);
+      }
+      
       if (result.success) {
-        navigate(from, { replace: true });
+        if (isSignUp && !result.session) {
+          setMessage('Successfully signed up! Please check your email to verify your account.');
+          setIsSignUp(false); // Switch back to login view
+        } else {
+          navigate(from, { replace: true });
+        }
       }
     } catch (err) {
-      setError('Failed to log in. Please check your credentials.');
+      setError(isSignUp ? 'Failed to create account. Email might be in use or password too weak.' : 'Failed to log in. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -54,12 +68,18 @@ export default function Login() {
              </div>
           </Link>
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-2">
-            Welcome back
+            {isSignUp ? 'Create an account' : 'Welcome back'}
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Sign in to access your media analytics
+            {isSignUp ? 'Sign up to start analyzing your media' : 'Sign in to access your media analytics'}
           </p>
         </div>
+
+        {message && (
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 text-green-700 dark:text-green-400 text-sm rounded-r-md">
+            {message}
+          </div>
+        )}
 
         <div className="bg-white dark:bg-[#1A162B] rounded-2xl shadow-xl border border-gray-100 dark:border-white/10 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -99,25 +119,27 @@ export default function Login() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-sma-purple focus:ring-sma-purple"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-500 dark:text-gray-400">
-                  Remember me
-                </label>
-              </div>
+            {!isSignUp && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-300 text-sma-purple focus:ring-sma-purple"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-500 dark:text-gray-400">
+                    Remember me
+                  </label>
+                </div>
 
-              <div className="text-sm">
-                <a href="#" className="font-medium text-sma-purple hover:text-sma-blue transition-colors">
-                  Forgot password?
-                </a>
+                <div className="text-sm">
+                  <a href="#" className="font-medium text-sma-purple hover:text-sma-blue transition-colors">
+                    Forgot password?
+                  </a>
+                </div>
               </div>
-            </div>
+            )}
 
             <button 
               type="submit" 
@@ -129,15 +151,15 @@ export default function Login() {
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 </div>
               ) : (
-                'Sign in'
+                isSignUp ? 'Sign up' : 'Sign in'
               )}
             </button>
             
             <p className="text-center text-sm text-gray-500 dark:text-gray-400 pt-2">
-              Don't have an account?{' '}
-              <a href="#" onClick={(e) => { e.preventDefault(); alert("Mock mode: Registration is currently disabled. You can log in with any email and password."); }} className="font-medium text-sma-purple hover:text-sma-blue transition-colors">
-                Sign up
-              </a>
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+              <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="font-medium text-sma-purple hover:text-sma-blue transition-colors">
+                {isSignUp ? 'Sign in' : 'Sign up'}
+              </button>
             </p>
           </form>
         </div>

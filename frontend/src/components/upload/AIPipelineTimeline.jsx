@@ -7,8 +7,8 @@ const PIPELINE_STAGES = [
   { id: 'metadata', name: 'Extract Metadata', desc: 'Reading metadata and file information', step_keys: ['metadata'] }, 
   { id: 'scene', name: 'Scene Detection', desc: 'Detecting scene changes in videos', step_keys: ['scene_detection'] },
   { id: 'thumbnail', name: 'Proxy & Thumbnail', desc: 'Generating thumbnails for each scene', step_keys: ['proxy'] }, 
-  { id: 'audio', name: 'Audio Transcription (Whisper)', desc: 'Transcribing speech to text', step_keys: ['transcription'] },
-  { id: 'caption', name: 'AI Caption Generation (LlaVa)', desc: 'Generating captions for each scene', step_keys: ['vision_caption', 'keyframe_extraction', 'keyframe_upload'] },
+  { id: 'audio', name: 'Audio Transcription', desc: 'Transcribing speech to text', step_keys: ['transcription'] },
+  { id: 'caption', name: 'AI Caption Generation', desc: 'Generating captions for each scene', step_keys: ['vision_caption', 'keyframe_extraction', 'keyframe_upload'] },
   { id: 'embedding', name: 'Embedding Generation', desc: 'Generating vectors embedding', step_keys: ['embedding'] },
   { id: 'index', name: 'Search Indexing', desc: 'Indexing to vector database', step_keys: ['persisting_results'] } 
 ];
@@ -133,7 +133,6 @@ export default function AIPipelineTimeline() {
       {/* Header */}
       <div className="flex justify-between items-center border-b border-gray-200 dark:border-white/5 pb-4 mb-6 transition-colors">
         <h3 className="text-gray-900 dark:text-white text-[14px] font-bold transition-colors">AI Processing Pipeline</h3>
-        <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-[11px] transition-colors">View Pipeline Docs</a>
       </div>
 
       {/* Stepper */}

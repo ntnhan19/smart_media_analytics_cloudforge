@@ -108,7 +108,12 @@ export default function GeneratedResultReview({ isOpen, onToggle, jobId, assetId
       </div>
 
       {/* Nội dung bên dưới chỉ hiện khi mở (isOpen = true) */}
-      {isOpen && status === 'failed' ? (
+      {isOpen && !jobId ? (
+        <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-gray-300 dark:border-white/10 rounded-xl min-h-[220px] transition-colors">
+          <Clock className="w-10 h-10 text-gray-400 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Select a video from the queue to view its AI processing results</p>
+        </div>
+      ) : isOpen && status === 'failed' ? (
         <div className="flex-1 flex flex-col items-center justify-center border border-[#EF4444]/20 bg-[#EF4444]/5 rounded-xl min-h-[220px] transition-colors">
           <div className="w-12 h-12 rounded-full bg-[#EF4444]/10 flex items-center justify-center mb-3 transition-colors">
             <svg className="w-6 h-6 text-[#EF4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor">

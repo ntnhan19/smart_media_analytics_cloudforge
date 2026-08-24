@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { searchMedia, getTags } from '../services/api';
 import { getSearchHistory, addSearchHistory, clearSearchHistory } from '../utils/history';
+import { Icon } from '@iconify/react';
+import { useToast } from '../contexts/ToastContext';
 import SearchBar from '../components/search/SearchBar';
 import SearchFilters from '../components/search/SearchFilters';
 import SearchHistory from '../components/search/SearchHistory';
@@ -13,6 +15,7 @@ import SearchSkeleton from '../components/search/SearchSkeleton';
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { showToast } = useToast();
   
   const urlQ = searchParams.get('q') || '';
   const urlScore = searchParams.get('score') || 'all';
@@ -163,18 +166,43 @@ export default function Search() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="bg-[#16132A] border border-[#2D2844] rounded-xl p-4 md:p-6 shadow-sm mb-4">
-        <SearchBar 
-          variant="large"
-          value={searchQuery}
-          onChange={(v) => {
-            setSearchQuery(v);
-            if (v.length > 500) setValidationError('Query cannot exceed 500 characters.');
-            else setValidationError('');
-          }}
-          onSearch={handleSearchSubmit}
-          placeholder="e.g. 'sunset over the ocean', 'person riding a bike'"
-          disabled={isDisabled}
-        />
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <SearchBar 
+              variant="large"
+              value={searchQuery}
+              onChange={(v) => {
+                setSearchQuery(v);
+                if (v.length > 500) setValidationError('Query cannot exceed 500 characters.');
+                else setValidationError('');
+              }}
+              onSearch={handleSearchSubmit}
+              placeholder="e.g. 'sunset over the ocean', 'person riding a bike'"
+              disabled={isDisabled}
+            />
+          </div>
+          <button 
+            onClick={async () => {
+              if (!searchQuery.trim()) return;
+              try {
+                // Need to import savedSearchesApi and useToast
+                const { savedSearchesApi } = await import('../api/savedSearches');
+                await savedSearchesApi.create(searchQuery.trim());
+                // Show toast
+                showToast('Search saved successfully!', 'success');
+              } catch (e) {
+                console.error(e);
+                showToast('Failed to save search', 'error');
+              }
+            }}
+            disabled={isDisabled || !searchQuery.trim()}
+            className={`shrink-0 flex items-center justify-center px-4 rounded-xl transition-all ${searchQuery.trim() ? 'bg-sma-purple text-white hover:bg-[#6044DD] shadow-md' : 'bg-[#2D2844] text-gray-500 cursor-not-allowed'}`}
+            title="Save Search"
+          >
+            <Icon icon="lucide:bookmark" width="20" className="mr-2" />
+            <span className="font-semibold">Save</span>
+          </button>
+        </div>
         {validationError && <p className="text-red-500 text-sm mt-2 ml-2 font-medium">{validationError}</p>}
         
         <div className="mt-4">

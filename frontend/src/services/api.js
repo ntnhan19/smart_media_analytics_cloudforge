@@ -13,12 +13,20 @@ api.interceptors.response.use(
     if (axios.isCancel(error)) {
       return Promise.reject(error);
     }
-    console.error('API Error:', error);
+    // Suppress console error for 404s (expected when library is empty)
+    if (error.response && error.response.status !== 404) {
+      console.error('API Error:', error);
+    }
     return Promise.reject(error);
   }
 );
 
 export default api;
+
+export const getPublicStats = async (signal) => {
+  const response = await api.get('/public/stats', { signal });
+  return response.data;
+};
 
 export const searchMedia = async (payload, signal) => {
   const response = await api.post('/search', payload, {
@@ -54,9 +62,20 @@ export const retryJob = async (jobId) => {
   return response.data;
 };
 
-export const getAssets = async (signal, limit = 50, offset = 0) => {
-  const response = await api.get(`/assets?limit=${limit}&offset=${offset}`, { signal });
-  return response.data;
+export const getAssets = async (signal, limit = 50, offset = 0, projectId = null) => {
+  try {
+    let url = `/assets?limit=${limit}&offset=${offset}`;
+    if (projectId) {
+      url += `&project_id=${projectId}`;
+    }
+    const response = await api.get(url, { signal });
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return { items: [], total: 0 };
+    }
+    throw error;
+  }
 };
 
 export const deleteAsset = async (assetId) => {
@@ -65,8 +84,15 @@ export const deleteAsset = async (assetId) => {
 };
 
 export const getTags = async (signal) => {
-  const response = await api.get('/search/tags', { signal });
-  return response.data;
+  try {
+    const response = await api.get('/search/tags', { signal });
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return { tags: [], items: [] };
+    }
+    throw error;
+  }
 };
 
 export const getAsset = async (assetId, signal) => {

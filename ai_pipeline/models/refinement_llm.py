@@ -363,34 +363,20 @@ class OllamaRefinementLLM(BaseRefinementLLM):
 # Bedrock Implementation
 # =============================================================================
 
-class BedrockRefinementLLM(BaseRefinementLLM):
-    def __init__(self, model_name: str = "apac.anthropic.claude-3-5-sonnet-20240620-v1:0"):
+class GeminiRefinementLLM(BaseRefinementLLM):
+    def __init__(self, model_name: str = "gemini-1.5-flash"):
         self.model_name = model_name
-        from botocore.config import Config
-        config = Config(retries={"max_attempts": 1, "mode": "standard"})
-        self.client = boto3.client("bedrock-runtime", config=config)
-        logger.info(f"☁️ BedrockRefinementLLM initialized with {model_name}")
-
-    def _invoke_with_fallback(self, body: str, scene_id: str = "asset") -> dict:
-        def _try_invoke(model_id: str) -> dict:
-            from botocore.exceptions import ClientError
-            try:
-                response = self.client.invoke_model(
-                    modelId=model_id,
-                    body=body,
-                    contentType="application/json",
-                    accept="application/json"
-                )
-                result = json.loads(response['body'].read().decode('utf-8'))
-                return result
-            except ClientError as e:
-                error_code = e.response["Error"]["Code"]
-                if error_code in ("ThrottlingException", "ValidationException") and "sonnet" in model_id.lower():
-                    fallback_id = "apac.anthropic.claude-3-haiku-20240307-v1:0"
-                    logger.warning(f"Refinement model {model_id} failed ({error_code}). Falling back to Haiku: {fallback_id}")
-                    return _try_invoke(fallback_id)
-                raise
-        return _try_invoke(self.model_name)
+        import google.generativeai as genai
+        import os
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is not set.")
+        genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel(
+            model_name=self.model_name,
+            generation_config={"response_mime_type": "application/json"}
+        )
+        logger.info(f"☁️ GeminiRefinementLLM initialized with {model_name}")
 
     def refine_analysis(self, vision_outputs, timestamp, scene_id, transcript_snippet=""):
         vision_text = str(vision_outputs.get("qwen_vl", "")).strip()
@@ -404,18 +390,11 @@ class BedrockRefinementLLM(BaseRefinementLLM):
             '- "summary": Viết 1 câu tiếng Việt ngắn gọn mô tả phân cảnh.\n'
             '- "scene_tags": Mảng chứa từ 3 đến 5 từ khóa (ví dụ: ["xe hơi", "đường phố"]).\n'
             '- "searchable_text": Câu summary viết lại tiếng Việt không dấu.\n'
-            "Chỉ trả về JSON hợp lệ."
         )
 
         try:
-            body = json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 512,
-                "messages": [{"role": "user", "content": prompt}]
-            })
-            result = self._invoke_with_fallback(body, str(scene_id))
-            text = result.get('content', [{}])[0].get('text', '')
-            parsed = json.loads(_repair_json(text))
+            response = self.model.generate_content(prompt)
+            parsed = json.loads(_repair_json(response.text))
             
             summary = str(parsed.get("summary", "")).strip()
             scene_tags = parsed.get("scene_tags", ["video"])
@@ -427,7 +406,7 @@ class BedrockRefinementLLM(BaseRefinementLLM):
                 "searchable_text": searchable_text[:750],
             }
         except Exception as e:
-            logger.error(f"Bedrock refine error scene {scene_id}: {e}")
+            logger.error(f"Gemini refine error scene {scene_id}: {e}")
             return {
                 "summary": f"Phân cảnh {scene_id} tại {timestamp:.1f} giây",
                 "tags": {"scene_tags": ["video"]},
@@ -437,7 +416,7 @@ class BedrockRefinementLLM(BaseRefinementLLM):
     def generate_asset_insights(self, aggregated_text: str) -> Dict[str, Any]:
         prompt = (
             "Dựa trên các phân cảnh và lời thoại sau đây của một video, hãy tổng hợp thông tin chung "
-            "về toàn bộ video này và xuất ra chuẩn JSON (không kèm markdown block).\n\n"
+            "về toàn bộ video này và xuất ra chuẩn JSON.\n\n"
             f"Nội dung:\n{aggregated_text[:3000]}\n\n"
             "Yêu cầu định dạng JSON:\n"
             "{\n"
@@ -448,14 +427,8 @@ class BedrockRefinementLLM(BaseRefinementLLM):
             "}"
         )
         try:
-            body = json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 1000,
-                "messages": [{"role": "user", "content": prompt}]
-            })
-            result = self._invoke_with_fallback(body, "asset")
-            text = result.get('content', [{}])[0].get('text', '')
-            parsed = json.loads(_repair_json(text))
+            response = self.model.generate_content(prompt)
+            parsed = json.loads(_repair_json(response.text))
             
             return {
                 "summary": parsed.get("summary", "Tổng hợp nội dung video."),
@@ -464,7 +437,7 @@ class BedrockRefinementLLM(BaseRefinementLLM):
                 "best_for": parsed.get("best_for", ["general"])
             }
         except Exception as e:
-            logger.error(f"Bedrock asset insights error: {e}")
+            logger.error(f"Gemini asset insights error: {e}")
             return {
                 "summary": "Video tổng hợp từ các phân cảnh.",
                 "moods": ["general"],
@@ -481,7 +454,7 @@ class BedrockRefinementLLM(BaseRefinementLLM):
 # =============================================================================
 
 def create_refinement_llm() -> BaseRefinementLLM:
-    provider = os.getenv("AI_PROVIDER", "local").strip().lower()
-    if provider == "aws":
-        return BedrockRefinementLLM()
+    provider = os.getenv("AI_PROVIDER", "gemini").strip().lower()
+    if provider == "gemini":
+        return GeminiRefinementLLM()
     return OllamaRefinementLLM()

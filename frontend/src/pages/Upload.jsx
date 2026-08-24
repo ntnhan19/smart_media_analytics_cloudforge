@@ -6,6 +6,7 @@ import UploadArea from '../components/upload/UploadArea';
 import AIPipelineTimeline from '../components/upload/AIPipelineTimeline';
 import GeneratedResultReview from '../components/upload/GeneratedResultReview';
 import { Settings, Plus, ChevronDown } from 'lucide-react';
+import { Icon } from '@iconify/react';
 
 export default function Upload() {
   const [isUploading, setIsUploading] = useState(false);
@@ -21,7 +22,7 @@ export default function Upload() {
     setIsReviewOpen(true); // Tự động mở panel khi click vào queue
   };
 
-  const handleUpload = async (files) => {
+  const handleUpload = async (files, projectId) => {
     // Prevent synthetic events from being treated as files
     if (!files || files.type === 'click' || files._reactName === 'onClick') return;
 
@@ -38,7 +39,7 @@ export default function Upload() {
             // Sử dụng API upload file vật lý mới đã có ở BE
             const res = await uploadMediaFile(
               f,
-              { scene_detection: true, transcription: true, vision_caption: true, whisper_model: 'base' }
+              { scene_detection: true, transcription: true, vision_caption: true, whisper_model: 'base', project_id: projectId }
             );
             if (res?.job_id) addJob({ job_id: res.job_id, asset_id: res.asset_id ?? null, file_name: f.name, file_size: f.size, status: 'queued', progress: 0, current_step: null, error_message: null });
           } catch (e) { console.error(e); }
@@ -51,17 +52,17 @@ export default function Upload() {
     <div className="h-full overflow-hidden text-gray-900 dark:text-white font-inter flex flex-col gap-2 transition-colors">
 
       {/* ── HEADER BAR ── */}
-      <div className="shrink-0 flex items-center justify-between py-1">
-        {/* Left: Title */}
-        <div>
-          <h1 className="text-[15px] font-bold leading-tight">Upload Media</h1>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight transition-colors">Add your media to your local library</p>
+      <div className="flex items-center justify-between mb-4 mt-2 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-sma-purple/10 rounded-xl">
+            <Icon icon="lucide:upload-cloud" width="24" height="24" className="text-sma-purple" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold font-inter text-gray-900 dark:text-white tracking-tight">Upload Media</h1>
+            <p className="text-sm font-inter text-gray-500 dark:text-gray-400">Add your media to your local library</p>
+          </div>
         </div>
-
       </div>
-
-      {/* Divider line */}
-      <div className="shrink-0 h-px bg-gray-200 dark:bg-white/5 transition-colors" />
 
       {/* ── MAIN GRID WRAPPER ── */}
       <div
@@ -87,8 +88,8 @@ export default function Upload() {
 
           {/* Cột 2: Configure AI */}
           <div className="min-h-0 overflow-hidden flex flex-col gap-2">
-            <h2 className="text-[11px] font-bold shrink-0">
-              2. {activeJobs?.length > 0 ? <span className="text-[#7B5CF5] underline underline-offset-4">Configure AI</span> : "Configure AI"}
+            <h2 className="text-[11px] font-bold shrink-0 flex items-center gap-1">
+              <span>2. {activeJobs?.length > 0 ? <span className="text-[#7B5CF5] underline underline-offset-4">Configure AI</span> : "Configure AI"}</span>
             </h2>
             <div className="flex-1 min-h-0 overflow-hidden">
               <AIPipelineTimeline />

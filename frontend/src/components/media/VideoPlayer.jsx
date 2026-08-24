@@ -306,14 +306,24 @@ export default function VideoPlayer({ src, seekTimestamp = 0, scenes = [], media
             />
           ))}
           {/* Active markers for object occurrences */}
-          {activeMarkers.map((marker, idx) => (
-            <div 
-              key={`marker-${idx}`}
-              className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-[#a78bfa] rounded-full border border-[#7B5CF5] shadow-[0_0_6px_#7B5CF5] z-10"
-              style={{ left: `${(marker.timestamp_start_sec / actualDuration) * 100}%`, transform: 'translate(-50%, -50%)' }}
-              title={`Object at ${marker.timestamp_start_sec}s`}
-            />
-          ))}
+          {activeMarkers.map((marker, idx) => {
+            const startPct = (marker.timestamp_start_sec / actualDuration) * 100;
+            const endPct = ((marker.timestamp_end_sec || marker.timestamp_start_sec + 3) / actualDuration) * 100;
+            const widthPct = Math.max(0.5, endPct - startPct);
+            
+            return (
+              <div 
+                key={`marker-${idx}`}
+                className="absolute top-1/2 -translate-y-1/2 h-2.5 bg-emerald-500/80 rounded-sm border border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)] z-10"
+                style={{ 
+                  left: `${startPct}%`, 
+                  width: `${widthPct}%`,
+                  transform: 'translateY(-50%)' 
+                }}
+                title={`Object detected: ${marker.timestamp_start_sec}s - ${marker.timestamp_end_sec || marker.timestamp_start_sec + 3}s`}
+              />
+            );
+          })}
         </div>
 
         {/* CC */}

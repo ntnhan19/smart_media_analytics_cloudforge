@@ -10,11 +10,14 @@ export default function AppShell() {
   const getActiveMenu = () => {
     if (location.pathname.startsWith('/app/upload')) return 'upload';
     if (location.pathname.startsWith('/app/settings')) return 'settings';
+    if (location.pathname.startsWith('/app/favourites')) return 'favourites';
+    if (location.pathname.startsWith('/app/trash')) return 'trash';
+    if (location.pathname.startsWith('/app/assets')) return 'assets';
     return 'dashboard';
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F8F9FA] dark:bg-sma-bg text-gray-900 dark:text-white transition-colors">
+    <div className="flex h-screen overflow-hidden bg-white dark:bg-[#0F0D15] text-gray-900 dark:text-white transition-colors">
 
       {/* Sidebar */}
       <div
@@ -34,7 +37,7 @@ export default function AppShell() {
 
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden relative">
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-hidden pl-4 pr-3 pt-2 pb-2">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pl-4 pr-3 pt-2 pb-2">
           <Outlet />
         </div>
       </main>

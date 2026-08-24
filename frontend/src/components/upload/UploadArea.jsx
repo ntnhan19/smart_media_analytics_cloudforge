@@ -1,9 +1,17 @@
 import { UploadCloud, X, Play } from 'lucide-react';
 import { useState, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { projectsApi } from '../../api/projects';
 
 export default function UploadArea({ onStartIngest, isUploading }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
   const fileInputRef = useRef(null);
+
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects'],
+    queryFn: projectsApi.list,
+  });
 
   const handleFileChange = (e) => {
     if (e.target.files) {
@@ -18,7 +26,7 @@ export default function UploadArea({ onStartIngest, isUploading }) {
   };
 
   const handleStartIngest = () => {
-    onStartIngest(selectedFiles);
+    onStartIngest(selectedFiles, selectedProjectId || null);
     setSelectedFiles([]);
   };
 
@@ -86,12 +94,24 @@ export default function UploadArea({ onStartIngest, isUploading }) {
         </div>
 
         {/* Start Ingest Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-white/5 flex justify-between items-center bg-gray-50 dark:bg-[#16132A]/50 transition-colors">
-          <span className="text-gray-500 dark:text-gray-400 text-[11px] transition-colors">Total {selectedFiles.length} files: {formattedSize}</span>
+        <div className="p-4 border-t border-gray-200 dark:border-white/5 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-3 bg-gray-50 dark:bg-[#16132A]/50 transition-colors">
+          <div className="flex flex-col gap-1 w-full sm:w-auto">
+            <span className="text-gray-500 dark:text-gray-400 text-[11px] transition-colors">Total {selectedFiles.length} files: {formattedSize}</span>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="text-[11px] w-full sm:w-48 bg-white dark:bg-[#2D2844] border border-gray-200 dark:border-transparent rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-sma-purple/50 text-gray-900 dark:text-white"
+            >
+              <option value="">-- Assign to Project (Optional) --</option>
+              {projectsData?.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
           <button 
             onClick={handleStartIngest}
             disabled={isUploading || selectedFiles.length === 0}
-            className="bg-[#7B5CF5] hover:bg-[#6A4BE4] disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded text-[12px] font-bold flex items-center gap-2 transition-colors"
+            className="w-full sm:w-auto justify-center bg-[#7B5CF5] hover:bg-[#6A4BE4] disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded text-[12px] font-bold flex items-center gap-2 transition-colors shrink-0"
           >
             {isUploading ? <span className="animate-spin text-[10px] mr-1">⌛</span> : <Play className="w-3 h-3" />}
             Start Ingest
