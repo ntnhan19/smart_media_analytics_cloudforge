@@ -1,17 +1,41 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Folder, Heart, Trash, Upload, Settings, Home, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAssets } from '../../services/api';
+import { projectsApi } from '../../api/projects';
 import AIProcessingPanel from './AIProcessingPanel';
+import CreateProjectModal from '../project/CreateProjectModal';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function Sidebar({ activeMenu, showLibraryCount = false, onClose, onOpen, isCollapsed = false }) {
   const { user, logout: signOut } = useAuth();
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { data: assets } = useQuery({
     queryKey: ['assets'],
     queryFn: ({ signal }) => getAssets(signal),
     enabled: showLibraryCount,
+  });
+
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects'],
+    queryFn: projectsApi.list,
+  });
+
+  const createProjectMutation = useMutation({
+    mutationFn: projectsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setIsCreateModalOpen(false);
+      showToast('Project created successfully', 'success');
+    },
+    onError: (err) => {
+      console.error(err);
+      showToast('Failed to create project', 'error');
+    }
   });
 
   const [deletedCount, setDeletedCount] = useState(() => {
@@ -100,6 +124,48 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
           })}
         </nav>
 
+        {/* Projects Section */}
+        <div className={`mt-6 mb-2 shrink-0 ${isCollapsed ? 'px-2 flex justify-center' : 'px-6'}`}>
+          {!isCollapsed && (
+            <div className="flex items-center justify-between mb-2 group">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Projects</h3>
+              <button 
+                onClick={() => setIsCreateModalOpen(true)}
+                className="text-gray-400 hover:text-sma-purple opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Create Project"
+              >
+                <Icon icon="lucide:plus" width="16" />
+              </button>
+            </div>
+          )}
+          
+          {projectsData && projectsData.length > 0 ? (
+            <nav className={`flex flex-col space-y-1 ${isCollapsed ? 'items-center' : ''}`}>
+              {projectsData.map(proj => (
+                <NavLink
+                  key={proj.id}
+                  to={`/app/assets?project=${proj.id}`}
+                  title={isCollapsed ? proj.name : undefined}
+                  className={`flex items-center rounded-lg transition-all duration-200 ${activeMenu === proj.id ? 'bg-sma-purple/10 text-sma-purple dark:bg-sma-purple/20 dark:text-[#9A7DFF]' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1A1630] hover:text-gray-900 dark:hover:text-gray-200'} ${isCollapsed ? 'w-10 h-10 justify-center' : 'w-full h-9 px-3 gap-3'}`}
+                >
+                  <div className="w-[18px] h-[18px] shrink-0 bg-sma-purple/20 rounded flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-sma-purple">{proj.name.charAt(0).toUpperCase()}</span>
+                  </div>
+                  {!isCollapsed && (
+                    <span className="font-medium text-[13px] truncate">{proj.name}</span>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+          ) : (
+            !isCollapsed && (
+              <div className="text-xs text-gray-400 text-center py-2 border border-dashed border-gray-200 dark:border-white/10 rounded-lg">
+                No projects yet.
+              </div>
+            )
+          )}
+        </div>
+
         {/* Spacer to push bottom items down */}
         <div className="flex-1"></div>
 
@@ -167,6 +233,13 @@ export default function Sidebar({ activeMenu, showLibraryCount = false, onClose,
           </button>
         )}
       </div>
+      
+      <CreateProjectModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+        onSubmit={(data) => createProjectMutation.mutate(data)}
+        isLoading={createProjectMutation.isLoading}
+      />
     </aside>
   );
 }

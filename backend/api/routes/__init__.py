@@ -1,1 +1,1 @@
-from . import health, search, ingest, assets, scenes, media, clips, stats, saved_searches
+from . import health, search, ingest, assets, scenes, media, clips, stats, saved_searches, projects

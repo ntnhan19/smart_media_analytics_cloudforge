@@ -8,7 +8,7 @@ from typing import List
 from database import get_db
 from models.asset import Asset
 from models.scene import Scene
-from schemas.asset import AssetResponse, AssetFavoriteUpdate, PaginatedAssetResponse
+from schemas.asset import AssetResponse, AssetFavoriteUpdate, AssetProjectUpdate, PaginatedAssetResponse
 from schemas.ingest import IngestOptions, IngestResponse
 from services.storage_service import storage_service
 from services.ingest_service import run_reingest_pipeline, run_regenerate_insights_job
@@ -39,23 +39,33 @@ def _build_asset_response(asset: Asset) -> AssetResponse:
         transcripts_json=asset.transcripts_json if hasattr(asset, 'transcripts_json') else None,
         thumbnail_url=storage_service.get_stream_url(thumbnail_s3_key) if thumbnail_s3_key else None,
         is_favorite=asset.is_favorite if hasattr(asset, 'is_favorite') else False,
+        project_id=asset.project_id if hasattr(asset, 'project_id') else None,
     )
 
 @router.get("", response_model=PaginatedAssetResponse)
 async def list_assets(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    project_id: str = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     from sqlalchemy import func
     from models.ingest_job import IngestJob
     
+    # Base query
+    query = select(Asset)
+    count_query = select(func.count(Asset.id))
+    
+    if project_id:
+        query = query.where(Asset.project_id == project_id)
+        count_query = count_query.where(Asset.project_id == project_id)
+    
     # Get total count
-    total_result = await db.execute(select(func.count(Asset.id)))
+    total_result = await db.execute(count_query)
     total_count = total_result.scalar() or 0
     
     result = await db.execute(
-        select(Asset).order_by(Asset.ingested_at.desc()).limit(limit).offset(offset)
+        query.order_by(Asset.ingested_at.desc()).limit(limit).offset(offset)
     )
     assets = result.scalars().all()
     if assets:
@@ -210,6 +220,28 @@ async def toggle_favorite(
             raise HTTPException(status_code=404, detail="Asset not found")
         
         asset.is_favorite = update_data.is_favorite
+        await db.commit()
+        await db.refresh(asset)
+        
+        # Need to re-fetch scenes to build the response properly
+        await db.refresh(asset, ['scenes'])
+        return _build_asset_response(asset)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid asset ID format")
+
+@router.patch("/{asset_id}/project", response_model=AssetResponse)
+async def update_asset_project(
+    asset_id: str,
+    update_data: AssetProjectUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        asset_uuid = uuid.UUID(asset_id)
+        asset = await db.get(Asset, asset_uuid)
+        if not asset:
+            raise HTTPException(status_code=404, detail="Asset not found")
+        
+        asset.project_id = update_data.project_id
         await db.commit()
         await db.refresh(asset)
         

@@ -51,14 +51,24 @@ async def get_popular_tags(db: AsyncSession = Depends(get_db)):
 async def search_media(
     request: SearchRequest,
     embedder: TextEmbedder = Depends(get_embedder),
-    vector_store = Depends(get_vector_store)
+    vector_store = Depends(get_vector_store),
+    db: AsyncSession = Depends(get_db)
 ):
     start_time = time.time()
     try:
+        # If project_id is provided, get allowed asset_ids
+        allowed_asset_ids = None
+        if request.filters and request.filters.project_id:
+            res = await db.execute(select(Asset.id).where(Asset.project_id == request.filters.project_id))
+            allowed_asset_ids = {str(a) for a in res.scalars().all()}
+            # If project has no assets, return empty early
+            if not allowed_asset_ids:
+                return SearchResponse(query=request.query, total_results=0, results=[], processing_time_ms=0)
+                
         # Generate embedding
         query_embedding = await embedder.embed(request.query)
         
-        # Build filters
+        # Build filters for vector store
         filters = None
         if request.filters:
             dumped = request.filters.model_dump(exclude_unset=True, exclude_none=True)
@@ -70,17 +80,20 @@ async def search_media(
             if not filters:
                 filters = None
             
+        # If we need post-filtering, get more results initially
+        fetch_k = request.top_k * 3 if allowed_asset_ids else request.top_k
+
         # Search Vector Store (handle sync vs async and parameter names difference)
         if __import__("inspect").iscoroutinefunction(vector_store.search):
             raw_results = await vector_store.search(
                 query_embedding=query_embedding,
-                n_results=request.top_k,
+                n_results=fetch_k,
                 filters=filters
             )
         else:
             raw_results = vector_store.search(
                 query_embedding=query_embedding,
-                top_k=request.top_k,
+                top_k=fetch_k,
                 filters=filters
             )
         
@@ -96,6 +109,10 @@ async def search_media(
                 metadata = res
                 score = 1.0  # Default score for pgvector results
                 doc_id = res.get("id") or res.get("scene_id")
+                
+            res_asset_id = metadata.get("asset_id", "")
+            if allowed_asset_ids and res_asset_id not in allowed_asset_ids:
+                continue
 
             scene_snippet = SceneSnippet(
                 scene_index=int(metadata.get("scene_index", 0)),
@@ -128,6 +145,9 @@ async def search_media(
                 tags=tags_list
             )
             results.append(result)
+            
+        # Slice back to top_k after post-filtering
+        results = results[:request.top_k]
             
         elapsed_ms = (time.time() - start_time) * 1000
         return SearchResponse(

@@ -62,9 +62,13 @@ export const retryJob = async (jobId) => {
   return response.data;
 };
 
-export const getAssets = async (signal, limit = 50, offset = 0) => {
+export const getAssets = async (signal, limit = 50, offset = 0, projectId = null) => {
   try {
-    const response = await api.get(`/assets?limit=${limit}&offset=${offset}`, { signal });
+    let url = `/assets?limit=${limit}&offset=${offset}`;
+    if (projectId) {
+      url += `&project_id=${projectId}`;
+    }
+    const response = await api.get(url, { signal });
     return response.data;
   } catch (error) {
     if (error.response && error.response.status === 404) {
