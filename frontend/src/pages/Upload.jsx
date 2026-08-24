@@ -6,6 +6,7 @@ import UploadArea from '../components/upload/UploadArea';
 import AIPipelineTimeline from '../components/upload/AIPipelineTimeline';
 import GeneratedResultReview from '../components/upload/GeneratedResultReview';
 import { Settings, Plus, ChevronDown } from 'lucide-react';
+import { Icon } from '@iconify/react';
 
 export default function Upload() {
   const [isUploading, setIsUploading] = useState(false);
