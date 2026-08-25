@@ -20,13 +20,13 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         unverified_header = jwt.get_unverified_header(token)
         alg = unverified_header.get("alg")
 
-        if alg == "RS256" and jwks_client:
-            # RS256 (Asymmetric JWT) used in newer Supabase projects
+        if alg in ["RS256", "ES256"] and jwks_client:
+            # RS256 or ES256 (Asymmetric JWT) used in newer Supabase projects
             signing_key = jwks_client.get_signing_key_from_jwt(token)
             payload = jwt.decode(
                 token,
                 signing_key.key,
-                algorithms=["RS256"],
+                algorithms=["RS256", "ES256"],
                 options={"verify_aud": False}
             )
         else:
