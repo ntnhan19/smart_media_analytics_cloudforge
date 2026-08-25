@@ -14,7 +14,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             token,
             settings.SUPABASE_JWT_SECRET,
             algorithms=["HS256"],
-            audience="authenticated"
+            options={"verify_aud": False}
         )
         return payload
     except jwt.ExpiredSignatureError:
@@ -23,9 +23,11 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except jwt.PyJWTError:
+    except jwt.PyJWTError as e:
+        import logging
+        logging.error(f"JWT Validation Error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
+            detail=f"Could not validate credentials: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
