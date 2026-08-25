@@ -13,7 +13,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         payload = jwt.decode(
             token,
             settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
+            algorithms=["HS256", "HS384", "HS512"],
             options={"verify_aud": False}
         )
         return payload
@@ -25,7 +25,12 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         )
     except jwt.PyJWTError as e:
         import logging
-        logging.error(f"JWT Validation Error: {e}")
+        alg = "unknown"
+        try:
+            alg = jwt.get_unverified_header(token).get("alg")
+        except Exception:
+            pass
+        logging.error(f"JWT Validation Error: {e} (Token alg: {alg})")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Could not validate credentials: {str(e)}",
