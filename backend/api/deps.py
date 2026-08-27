@@ -24,13 +24,10 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             if not iss:
                 raise HTTPException(status_code=401, detail="Missing issuer in token")
             
-            # iss is typically "https://<project_ref>.supabase.co/auth/v1"
-            # We need "https://<project_ref>.supabase.co/rest/v1/jwks"
             if iss.endswith("/auth/v1"):
-                jwks_url = iss.replace("/auth/v1", "/rest/v1/jwks")
+                jwks_url = iss.replace("/auth/v1", "/.well-known/jwks.json")
             else:
-                # Fallback if the format is slightly different
-                jwks_url = f"{iss.rstrip('/')}/rest/v1/jwks"
+                jwks_url = f"{iss.rstrip('/')}/.well-known/jwks.json"
 
             # Cache the client to avoid repeated HTTP requests
             if jwks_url not in jwks_clients:
