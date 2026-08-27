@@ -8,11 +8,7 @@ from config import settings
 
 security = HTTPBearer()
 
-# Try to extract Supabase project ref from DATABASE_URL to build JWKS URL
-project_ref_match = re.search(r"@db\.([^.]+)\.supabase\.co", settings.DATABASE_URL)
-project_ref = project_ref_match.group(1) if project_ref_match else None
-jwks_url = f"https://{project_ref}.supabase.co/rest/v1/jwks" if project_ref else None
-jwks_client = PyJWKClient(jwks_url) if jwks_url else None
+jwks_clients: Dict[str, PyJWKClient] = {}
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict:
     token = credentials.credentials
@@ -20,9 +16,29 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         unverified_header = jwt.get_unverified_header(token)
         alg = unverified_header.get("alg")
 
-        if alg in ["RS256", "ES256"] and jwks_client:
-            # RS256 or ES256 (Asymmetric JWT) used in newer Supabase projects
+        if alg in ["RS256", "ES256"]:
+            # Extract issuer to get the JWKS URL
+            unverified_payload = jwt.decode(token, options={"verify_signature": False})
+            iss = unverified_payload.get("iss")
+            
+            if not iss:
+                raise HTTPException(status_code=401, detail="Missing issuer in token")
+            
+            # iss is typically "https://<project_ref>.supabase.co/auth/v1"
+            # We need "https://<project_ref>.supabase.co/rest/v1/jwks"
+            if iss.endswith("/auth/v1"):
+                jwks_url = iss.replace("/auth/v1", "/rest/v1/jwks")
+            else:
+                # Fallback if the format is slightly different
+                jwks_url = f"{iss.rstrip('/')}/rest/v1/jwks"
+
+            # Cache the client to avoid repeated HTTP requests
+            if jwks_url not in jwks_clients:
+                jwks_clients[jwks_url] = PyJWKClient(jwks_url)
+            
+            jwks_client = jwks_clients[jwks_url]
             signing_key = jwks_client.get_signing_key_from_jwt(token)
+            
             payload = jwt.decode(
                 token,
                 signing_key.key,
