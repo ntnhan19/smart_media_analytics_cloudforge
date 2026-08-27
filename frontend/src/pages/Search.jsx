@@ -165,7 +165,20 @@ export default function Search() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="bg-[#16132A] border border-[#2D2844] rounded-xl p-4 md:p-6 shadow-sm mb-4">
+      {/* Page Header (Consistent Header) */}
+      <div className="flex items-center justify-between mb-2 mt-2">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-sma-purple/10 rounded-xl">
+            <Icon icon="lucide:search" width="24" height="24" className="text-sma-purple" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 leading-tight">Semantic Search</h1>
+            <p className="text-sm text-gray-500 font-medium">Find the exact scene using natural language.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm mb-4">
         <div className="flex gap-3">
           <div className="flex-1">
             <SearchBar 
@@ -196,7 +209,7 @@ export default function Search() {
               }
             }}
             disabled={isDisabled || !searchQuery.trim()}
-            className={`shrink-0 flex items-center justify-center px-4 rounded-xl transition-all ${searchQuery.trim() ? 'bg-sma-purple text-white hover:bg-[#6044DD] shadow-md' : 'bg-[#2D2844] text-gray-500 cursor-not-allowed'}`}
+            className={`shrink-0 flex items-center justify-center px-4 rounded-xl transition-all ${searchQuery.trim() ? 'bg-sma-purple text-white hover:bg-[#6044DD] shadow-md' : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'}`}
             title="Save Search"
           >
             <Icon icon="lucide:bookmark" width="20" className="mr-2" />
