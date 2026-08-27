@@ -280,7 +280,11 @@ export default function Assets() {
 
   useEffect(() => {
     if (error) {
-      showToast("Unable to sync library. Please try again later.", "error");
+      if (error.response?.status === 401) {
+        showToast("Your session has expired. Please log in again.", "error");
+      } else {
+        showToast("We couldn't load your media. Please refresh the page.", "error");
+      }
     }
   }, [error]);
 
