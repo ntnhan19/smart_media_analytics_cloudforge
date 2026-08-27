@@ -35,10 +35,9 @@ export default function SearchBar({
 
   const iconSizeClasses = isLarge ? 'h-4 w-4' : 'h-4 w-4';
 
-  const inputClasses = `block w-full text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none transition-all duration-300 ${isLarge
-      // Giảm padding y (py) và size chữ để thanh search thon gọn hơn
-      ? 'pl-9 pr-28 py-2.5 bg-gray-50 dark:bg-[#16132A] border rounded-xl text-sm sm:text-base ' + (isFocused ? 'border-[#7B5CF5] shadow-[0_0_15px_rgba(123,92,245,0.3)]' : 'border-gray-300 dark:border-[#2D2844] hover:border-[#7B5CF5]/50')
-      : 'pl-9 pr-[70px] py-1.5 bg-white dark:bg-[#0E0B1F] border rounded-[6px] text-sm ' + (isFocused ? 'border-[#7B5CF5] shadow-[0_0_10px_rgba(123,92,245,0.3)]' : 'border-gray-300 dark:border-[#4F8EF7]/30 hover:border-gray-400 dark:hover:border-[#4F8EF7]/70')
+  const inputClasses = `block w-full text-gray-900 placeholder-gray-400 focus:outline-none transition-all duration-300 ${isLarge
+      ? 'pl-9 pr-28 py-2.5 bg-gray-50 border rounded-xl text-sm sm:text-base ' + (isFocused ? 'border-[#7B5CF5] shadow-[0_0_15px_rgba(123,92,245,0.3)]' : 'border-gray-300 hover:border-[#7B5CF5]/50')
+      : 'pl-9 pr-[70px] py-1.5 bg-white border rounded-[6px] text-sm ' + (isFocused ? 'border-[#7B5CF5] shadow-[0_0_10px_rgba(123,92,245,0.3)]' : 'border-gray-300 hover:border-gray-400')
     }`;
 
   return (
@@ -65,7 +64,7 @@ export default function SearchBar({
             <button
               onClick={handleClear}
               disabled={disabled}
-              className={`p-1.5 rounded-full transition-all duration-200 focus:outline-none ${disabled ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10'}`}
+              className={`p-1.5 rounded-full transition-all duration-200 focus:outline-none ${disabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'}`}
               title="Clear search"
             >
               <X className="w-4 h-4" />
@@ -74,7 +73,7 @@ export default function SearchBar({
           <button
             onClick={() => onSearch && onSearch(value)}
             disabled={disabled || !value.trim()}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 focus:outline-none ${disabled || !value.trim() ? 'bg-gray-200 dark:bg-[#7B5CF5]/50 text-gray-400 dark:text-white/50 cursor-not-allowed' : 'bg-[#7B5CF5] hover:bg-[#6A4CE5] hover:shadow-[0_0_15px_rgba(123,92,245,0.5)] text-white'}`}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 focus:outline-none ${disabled || !value.trim() ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' : 'bg-[#7B5CF5] hover:bg-[#6A4CE5] hover:shadow-[0_0_15px_rgba(123,92,245,0.5)] text-white'}`}
           >
             Search
           </button>
@@ -87,7 +86,7 @@ export default function SearchBar({
             <button
               onClick={handleClear}
               disabled={disabled}
-              className={`p-1 rounded-full transition-all duration-200 focus:outline-none ${disabled ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10'}`}
+              className={`p-1 rounded-full transition-all duration-200 focus:outline-none ${disabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'}`}
               title="Clear search"
             >
               <X className="w-4 h-4" />
